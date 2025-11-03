@@ -146,7 +146,7 @@ contract SAW {
     function name(
         uint256 /*id*/
     )
-        external
+        public
         view
         returns (string memory)
     {
@@ -156,7 +156,7 @@ contract SAW {
     function symbol(
         uint256 /*id*/
     )
-        external
+        public
         view
         returns (string memory)
     {
@@ -250,7 +250,7 @@ contract SAW {
 
         // Foundry often opens your *first* proposal while chain is still at block 1.
         // Using (block.number - 1) avoids the “not yet determined” revert in OZ.
-        uint32 snap = uint32(block.number > 0 ? block.number - 1 : 0);
+        uint32 snap = toUint32(block.number > 0 ? block.number - 1 : 0);
         snapshotBlock[id] = snap;
 
         if (createdAt[id] == 0) {
@@ -271,7 +271,7 @@ contract SAW {
     }
 
     /// @notice Open & set futarchy settings (governance).
-    function openFutarchy(bytes32 h, address rewardToken) public {
+    function openFutarchy(bytes32 h, address rewardToken) public payable {
         if (msg.sender != address(this)) revert NotOwner();
         openProposal(h);
         FutarchyConfig storage F = futarchy[h];
@@ -315,7 +315,7 @@ contract SAW {
 
         if (hasVoted[h][msg.sender] != 0) revert NotOk(); // one vote per address
 
-        uint32 snap = uint32(snapshotBlock[h]);
+        uint32 snap = toUint32(snapshotBlock[h]);
         uint256 weight = (snap == 0)
             ? shares.getVotes(msg.sender)  // genesis fallback (no valid past block)
             : shares.getPastVotes(msg.sender, snap);
@@ -345,16 +345,17 @@ contract SAW {
         if (executed[h]) return ProposalState.Executed;
         if (snapshotBlock[h] == 0) return ProposalState.Unopened;
 
-        // TTL check
-        if (proposalTTL != 0) {
-            uint64 t0 = createdAt[h];
-            if (t0 != 0 && block.timestamp > t0 + proposalTTL) return ProposalState.Expired;
-        }
-
-        // If queued and still timelocked → Queued; if delay elapsed → Succeeded (ready)
+        // If already queued, TTL no longer applies.
         if (queuedAt[h] != 0) {
-            if (block.timestamp < queuedAt[h] + timelockDelay) return ProposalState.Queued;
-            // delay elapsed: consider it "Succeeded" (ready to execute)
+            if (block.timestamp < queuedAt[h] + timelockDelay) {
+                return ProposalState.Queued;
+            }
+            // timelock elapsed → continue to gates (ready-to-execute check)
+        } else if (proposalTTL != 0) {
+            uint64 t0 = createdAt[h];
+            if (t0 != 0 && block.timestamp > t0 + proposalTTL) {
+                return ProposalState.Expired;
+            }
         }
 
         // Evaluate gates
@@ -365,7 +366,7 @@ contract SAW {
         uint256 totalCast = t.forVotes + t.againstVotes + t.abstainVotes;
 
         if (quorumAbsolute != 0 && totalCast < quorumAbsolute) return ProposalState.Active;
-        if (quorumBps != 0 && totalCast * 10000 < uint256(quorumBps) * ts) {
+        if (quorumBps != 0 && totalCast < mulDiv(uint256(quorumBps), ts, 10000)) {
             return ProposalState.Active;
         }
 
@@ -394,7 +395,7 @@ contract SAW {
         uint256 value,
         bytes calldata data,
         bytes32 nonce
-    ) public payable returns (bool ok, bytes memory retData) {
+    ) public payable nonReentrant returns (bool ok, bytes memory retData) {
         bytes32 h = _intentHash(op, to, value, data, nonce);
         ProposalState st = state(h);
 
@@ -452,7 +453,11 @@ contract SAW {
         emit FutarchyResolved(h, 0, F.pool, winSupply, F.payoutPerUnit);
     }
 
-    function cashOutFutarchy(bytes32 h, uint256 amount) public returns (uint256 payout) {
+    function cashOutFutarchy(bytes32 h, uint256 amount)
+        public
+        nonReentrant
+        returns (uint256 payout)
+    {
         FutarchyConfig storage F = futarchy[h];
         if (!F.enabled || !F.resolved) revert NotOk();
 
@@ -497,7 +502,7 @@ contract SAW {
     /*//////////////////////////////////////////////////////////////
                                   PERMITS
     //////////////////////////////////////////////////////////////*/
-    function setUse6909ForPermits(bool on) public {
+    function setUse6909ForPermits(bool on) public payable {
         if (msg.sender != address(this)) revert NotOwner();
         use6909ForPermits = on;
         emit Use6909ForPermitsSet(on);
@@ -511,7 +516,7 @@ contract SAW {
         bytes32 nonce,
         uint256 count,
         bool replaceCount
-    ) public {
+    ) public payable {
         if (msg.sender != address(this)) revert NotOwner();
         bytes32 h = _intentHash(op, to, value, data, nonce);
 
@@ -562,6 +567,7 @@ contract SAW {
     function permitExecute(uint8 op, address to, uint256 value, bytes calldata data, bytes32 nonce)
         public
         payable
+        nonReentrant
         returns (bool ok, bytes memory retData)
     {
         bytes32 h = _intentHash(op, to, value, data, nonce);
@@ -586,7 +592,7 @@ contract SAW {
     /*//////////////////////////////////////////////////////////////
                            ALLOWANCES / PULL
     //////////////////////////////////////////////////////////////*/
-    function setAllowanceTo(address token, address to, uint256 amount) public {
+    function setAllowanceTo(address token, address to, uint256 amount) public payable {
         if (msg.sender != address(this)) revert NotOwner();
         allowance[token][to] = amount;
     }
@@ -601,7 +607,7 @@ contract SAW {
         _safeTransfer(token, msg.sender, amount);
     }
 
-    function pull(address token, address from, uint256 amount) public {
+    function pull(address token, address from, uint256 amount) public payable {
         if (msg.sender != address(this)) revert NotOwner();
         _safeTransferFrom(token, from, address(this), amount);
     }
@@ -615,7 +621,7 @@ contract SAW {
         uint256 cap,
         bool minting,
         bool active
-    ) public {
+    ) public payable {
         if (msg.sender != address(this)) revert NotOwner();
         sales[payToken] =
             Sale({pricePerShare: pricePerShare, cap: cap, minting: minting, active: active});
@@ -639,8 +645,10 @@ contract SAW {
 
         // Pull funds
         if (payToken == address(0)) {
+            //if (msg.value > maxPay) revert NotOk();
             if (msg.value != cost) revert NotOk();
         } else {
+            if (msg.value != 0) revert NotOk();
             if (maxPay != 0 && cost > maxPay) revert NotOk();
             _safeTransferFrom(payToken, msg.sender, address(this), cost);
         }
@@ -662,23 +670,25 @@ contract SAW {
         if (!ragequittable) revert NotApprover();
         uint256 amt = shares.balanceOf(msg.sender);
         if (amt == 0) revert NotOk();
+
         uint256 ts = shares.totalSupply();
+        shares.burnFromSAW(msg.sender, amt);
 
-        shares.burnFromSAW(msg.sender, amt); // updates top-256 + SBT
-
+        address prev = address(0);
         for (uint256 i = 0; i < tokens.length; ++i) {
             address tk = tokens[i];
-            if (tk == address(0)) {
-                uint256 pool = address(this).balance;
-                uint256 due = (pool * amt) / ts;
-                if (due != 0) {
+            if (i != 0 && tk <= prev) revert NotOk();
+            prev = tk;
+
+            uint256 pool = (tk == address(0)) ? address(this).balance : _erc20Balance(tk);
+            uint256 due = mulDiv(pool, amt, ts);
+            if (due != 0) {
+                if (tk == address(0)) {
                     (bool ok,) = payable(msg.sender).call{value: due}("");
                     if (!ok) revert NotOk();
+                } else {
+                    _safeTransfer(tk, msg.sender, due);
                 }
-            } else {
-                uint256 pool = _erc20Balance(tk);
-                uint256 due = (pool * amt) / ts;
-                if (due != 0) _safeTransfer(tk, msg.sender, due);
             }
         }
     }
@@ -700,43 +710,43 @@ contract SAW {
     /*//////////////////////////////////////////////////////////////
                              GOV HELPERS (SELF)
     //////////////////////////////////////////////////////////////*/
-    function setQuorumBps(uint16 bps) public {
+    function setQuorumBps(uint16 bps) public payable {
         if (msg.sender != address(this)) revert NotOwner();
         quorumBps = bps;
     }
 
-    function setMinYesVotesAbsolute(uint256 v) public {
+    function setMinYesVotesAbsolute(uint256 v) public payable {
         if (msg.sender != address(this)) revert NotOwner();
         minYesVotesAbsolute = v;
     }
 
-    function setQuorumAbsolute(uint256 v) public {
+    function setQuorumAbsolute(uint256 v) public payable {
         if (msg.sender != address(this)) revert NotOwner();
         quorumAbsolute = v;
     }
 
-    function setProposalTTL(uint64 s) public {
+    function setProposalTTL(uint64 s) public payable {
         if (msg.sender != address(this)) revert NotOwner();
         proposalTTL = s;
     }
 
-    function setTimelockDelay(uint64 s) public {
+    function setTimelockDelay(uint64 s) public payable {
         if (msg.sender != address(this)) revert NotOwner();
         timelockDelay = s;
     }
 
-    function setRagequittable(bool on) public {
+    function setRagequittable(bool on) public payable {
         if (msg.sender != address(this)) revert NotOwner();
         ragequittable = on;
     }
 
-    function setTransfersLocked(bool on) public {
+    function setTransfersLocked(bool on) public payable {
         if (msg.sender != address(this)) revert NotOwner();
         transfersLocked = on;
     }
 
     /// @notice Governance "bump" to invalidate pre-bump proposal hashes.
-    function bumpConfig() public {
+    function bumpConfig() public payable {
         if (msg.sender != address(this)) revert NotOwner();
         unchecked {
             ++config;
@@ -764,16 +774,18 @@ contract SAW {
         uint256 bal = shares.balanceOf(a);
         bool inTop = (topPos[a] != 0);
 
+        uint256 badBal = badge.balanceOf(a);
+
         if (bal == 0) {
             _removeFromTop(a);
-            if (badge.balanceOf(a) != 0) badge.burn(a);
+            if (badBal != 0) badge.burn(a);
             return;
         }
         if (inTop) return; // already in set
 
         if (topCount < 256) {
             _addToTop(a);
-            if (badge.balanceOf(a) == 0) badge.mint(a);
+            if (badBal == 0) badge.mint(a);
         } else {
             // Replace current min if this holder surpasses it
             uint16 minI = 0;
@@ -866,6 +878,7 @@ contract SAW {
             string memory idHex = _toHex(h);
             string memory supply = _u2s(totalSupply[id]);
             string memory cnt = permits[h] == type(uint256).max ? "unlimited" : _u2s(permits[h]);
+
             string memory svgP = string.concat(
                 "<svg xmlns='http://www.w3.org/2000/svg' width='520' height='200'>",
                 "<rect width='100%' height='100%' fill='#111'/>",
@@ -883,19 +896,21 @@ contract SAW {
                 "</text>",
                 "</svg>"
             );
-            return string.concat(
-                "data:application/json;utf8,",
-                "{\"name\":\"",
-                orgName,
-                " Permit\",",
-                "\"description\":\"Intent/permit mirror (ERC6909)\",",
-                "\"image\":\"data:image/svg+xml;utf8,",
-                svgP,
-                "\"}"
+
+            string memory image =
+                string.concat("data:image/svg+xml;base64,", Base64.encode(bytes(svgP)));
+
+            string memory json = string.concat(
+                '{"name":"Permit","description":"Intent/permit mirror (ERC6909)",',
+                '"image":"',
+                image,
+                '"}'
             );
+
+            return string.concat("data:application/json;base64,", Base64.encode(bytes(json)));
         }
 
-        // Proposal card (unchanged) ...
+        // Proposal card
         string memory idHex2 = _toHex(h);
         string memory snapStr = _u2s(snapshotBlock[h]);
         string memory supplyStr = _u2s(supplySnapshot[h]);
@@ -931,16 +946,17 @@ contract SAW {
             "</svg>"
         );
 
-        return string.concat(
-            "data:application/json;utf8,",
-            "{\"name\":\"",
-            orgName,
-            " Proposal\",",
-            "\"description\":\"Snapshot-weighted proposal\",",
-            "\"image\":\"data:image/svg+xml;utf8,",
-            svg,
-            "\"}"
+        string memory image2 =
+            string.concat("data:image/svg+xml;base64,", Base64.encode(bytes(svg)));
+
+        string memory json2 = string.concat(
+            '{"name":"Proposal","description":"Snapshot-weighted proposal",',
+            '"image":"',
+            image2,
+            '"}'
         );
+
+        return string.concat("data:application/json;base64,", Base64.encode(bytes(json2)));
     }
 
     /// @notice On-chain JSON/SVG for a vote receipt id (ERC-6909).
@@ -993,18 +1009,16 @@ contract SAW {
             "</svg>"
         );
 
-        return string.concat(
-            "data:application/json;utf8,",
-            "{\"name\":\"",
-            orgName,
-            " ",
-            stance,
-            " Receipt\",",
-            "\"description\":\"SBT-like vote receipt; burn to cash out if winning\",",
-            "\"image\":\"data:image/svg+xml;utf8,",
-            svg,
-            "\"}"
+        string memory image = string.concat("data:image/svg+xml;base64,", Base64.encode(bytes(svg)));
+
+        string memory json = string.concat(
+            '{"name":"Receipt","description":"SBT-like vote receipt; burn to cash out if winning",',
+            '"image":"',
+            image,
+            '"}'
         );
+
+        return string.concat("data:application/json;base64,", Base64.encode(bytes(json)));
     }
 
     // Cheap hex for bytes32: "0x" + 64 hex chars.
@@ -1133,6 +1147,226 @@ contract SAW {
     }
 }
 
+error Overflow();
+
+/// @dev Casts `x` to a uint32. Reverts on overflow.
+function toUint32(uint256 x) pure returns (uint32) {
+    if (x >= 1 << 32) _revertOverflow();
+    return uint32(x);
+}
+
+/// @dev Casts `x` to a uint224. Reverts on overflow.
+function toUint224(uint256 x) pure returns (uint224) {
+    if (x >= 1 << 224) _revertOverflow();
+    return uint224(x);
+}
+
+function _revertOverflow() pure {
+    /// @solidity memory-safe-assembly
+    assembly {
+        // Store the function selector of `Overflow()`.
+        mstore(0x00, 0x35278d12)
+        // Revert with (offset, size).
+        revert(0x1c, 0x04)
+    }
+}
+
+error MulDivFailed();
+
+/// @dev Returns `floor(x * y / d)`.
+/// Reverts if `x * y` overflows, or `d` is zero.
+function mulDiv(uint256 x, uint256 y, uint256 d) pure returns (uint256 z) {
+    /// @solidity memory-safe-assembly
+    assembly {
+        z := mul(x, y)
+        // Equivalent to `require(d != 0 && (y == 0 || x <= type(uint256).max / y))`.
+        if iszero(mul(or(iszero(x), eq(div(z, x), y)), d)) {
+            mstore(0x00, 0xad251c27) // `MulDivFailed()`.
+            revert(0x1c, 0x04)
+        }
+        z := div(z, d)
+    }
+}
+
+library DataURI {
+    function json(string memory raw) internal pure returns (string memory) {
+        return string.concat("data:application/json;base64,", Base64.encode(bytes(raw)));
+    }
+
+    function svg(string memory raw) internal pure returns (string memory) {
+        return string.concat("data:image/svg+xml;base64,", Base64.encode(bytes(raw)));
+    }
+}
+
+/// @notice Library to encode strings in Base64.
+/// @author Solady (https://github.com/vectorized/solady/blob/main/src/utils/Base64.sol)
+/// @author Modified from Solmate (https://github.com/transmissions11/solmate/blob/main/src/utils/Base64.sol)
+/// @author Modified from (https://github.com/Brechtpd/base64/blob/main/base64.sol) by Brecht Devos - <brecht@loopring.org>.
+library Base64 {
+    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+    /*                    ENCODING / DECODING                     */
+    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+    /// @dev Encodes `data` using the base64 encoding described in RFC 4648.
+    /// See: https://datatracker.ietf.org/doc/html/rfc4648
+    /// @param fileSafe  Whether to replace '+' with '-' and '/' with '_'.
+    /// @param noPadding Whether to strip away the padding.
+    function encode(bytes memory data, bool fileSafe, bool noPadding)
+        internal
+        pure
+        returns (string memory result)
+    {
+        /// @solidity memory-safe-assembly
+        assembly {
+            let dataLength := mload(data)
+
+            if dataLength {
+                // Multiply by 4/3 rounded up.
+                // The `shl(2, ...)` is equivalent to multiplying by 4.
+                let encodedLength := shl(2, div(add(dataLength, 2), 3))
+
+                // Set `result` to point to the start of the free memory.
+                result := mload(0x40)
+
+                // Store the table into the scratch space.
+                // Offsetted by -1 byte so that the `mload` will load the character.
+                // We will rewrite the free memory pointer at `0x40` later with
+                // the allocated size.
+                // The magic constant 0x0670 will turn "-_" into "+/".
+                mstore(0x1f, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef")
+                mstore(0x3f, xor("ghijklmnopqrstuvwxyz0123456789-_", mul(iszero(fileSafe), 0x0670)))
+
+                // Skip the first slot, which stores the length.
+                let ptr := add(result, 0x20)
+                let end := add(ptr, encodedLength)
+
+                let dataEnd := add(add(0x20, data), dataLength)
+                let dataEndValue := mload(dataEnd) // Cache the value at the `dataEnd` slot.
+                mstore(dataEnd, 0x00) // Zeroize the `dataEnd` slot to clear dirty bits.
+
+                // Run over the input, 3 bytes at a time.
+                for {} 1 {} {
+                    data := add(data, 3) // Advance 3 bytes.
+                    let input := mload(data)
+
+                    // Write 4 bytes. Optimized for fewer stack operations.
+                    mstore8(0, mload(and(shr(18, input), 0x3F)))
+                    mstore8(1, mload(and(shr(12, input), 0x3F)))
+                    mstore8(2, mload(and(shr(6, input), 0x3F)))
+                    mstore8(3, mload(and(input, 0x3F)))
+                    mstore(ptr, mload(0x00))
+
+                    ptr := add(ptr, 4) // Advance 4 bytes.
+                    if iszero(lt(ptr, end)) { break }
+                }
+                mstore(dataEnd, dataEndValue) // Restore the cached value at `dataEnd`.
+                mstore(0x40, add(end, 0x20)) // Allocate the memory.
+                // Equivalent to `o = [0, 2, 1][dataLength % 3]`.
+                let o := div(2, mod(dataLength, 3))
+                // Offset `ptr` and pad with '='. We can simply write over the end.
+                mstore(sub(ptr, o), shl(240, 0x3d3d))
+                // Set `o` to zero if there is padding.
+                o := mul(iszero(iszero(noPadding)), o)
+                mstore(sub(ptr, o), 0) // Zeroize the slot after the string.
+                mstore(result, sub(encodedLength, o)) // Store the length.
+            }
+        }
+    }
+
+    /// @dev Encodes `data` using the base64 encoding described in RFC 4648.
+    /// Equivalent to `encode(data, false, false)`.
+    function encode(bytes memory data) internal pure returns (string memory result) {
+        result = encode(data, false, false);
+    }
+
+    /// @dev Encodes `data` using the base64 encoding described in RFC 4648.
+    /// Equivalent to `encode(data, fileSafe, false)`.
+    function encode(bytes memory data, bool fileSafe) internal pure returns (string memory result) {
+        result = encode(data, fileSafe, false);
+    }
+
+    /// @dev Decodes base64 encoded `data`.
+    ///
+    /// Supports:
+    /// - RFC 4648 (both standard and file-safe mode).
+    /// - RFC 3501 (63: ',').
+    ///
+    /// Does not support:
+    /// - Line breaks.
+    ///
+    /// Note: For performance reasons,
+    /// this function will NOT revert on invalid `data` inputs.
+    /// Outputs for invalid inputs will simply be undefined behaviour.
+    /// It is the user's responsibility to ensure that the `data`
+    /// is a valid base64 encoded string.
+    function decode(string memory data) internal pure returns (bytes memory result) {
+        /// @solidity memory-safe-assembly
+        assembly {
+            let dataLength := mload(data)
+
+            if dataLength {
+                let decodedLength := mul(shr(2, dataLength), 3)
+
+                for {} 1 {} {
+                    // If padded.
+                    if iszero(and(dataLength, 3)) {
+                        let t := xor(mload(add(data, dataLength)), 0x3d3d)
+                        // forgefmt: disable-next-item
+                        decodedLength := sub(
+                            decodedLength,
+                            add(iszero(byte(30, t)), iszero(byte(31, t)))
+                        )
+                        break
+                    }
+                    // If non-padded.
+                    decodedLength := add(decodedLength, sub(and(dataLength, 3), 1))
+                    break
+                }
+                result := mload(0x40)
+
+                // Write the length of the bytes.
+                mstore(result, decodedLength)
+
+                // Skip the first slot, which stores the length.
+                let ptr := add(result, 0x20)
+                let end := add(ptr, decodedLength)
+
+                // Load the table into the scratch space.
+                // Constants are optimized for smaller bytecode with zero gas overhead.
+                // `m` also doubles as the mask of the upper 6 bits.
+                let m := 0xfc000000fc00686c7074787c8084888c9094989ca0a4a8acb0b4b8bcc0c4c8cc
+                mstore(0x5b, m)
+                mstore(0x3b, 0x04080c1014181c2024282c3034383c4044484c5054585c6064)
+                mstore(0x1a, 0xf8fcf800fcd0d4d8dce0e4e8ecf0f4)
+
+                for {} 1 {} {
+                    // Read 4 bytes.
+                    data := add(data, 4)
+                    let input := mload(data)
+
+                    // Write 3 bytes.
+                    // forgefmt: disable-next-item
+                    mstore(ptr, or(
+                        and(m, mload(byte(28, input))),
+                        shr(6, or(
+                            and(m, mload(byte(29, input))),
+                            shr(6, or(
+                                and(m, mload(byte(30, input))),
+                                shr(6, mload(byte(31, input)))
+                            ))
+                        ))
+                    ))
+                    ptr := add(ptr, 3)
+                    if iszero(lt(ptr, end)) { break }
+                }
+                mstore(0x40, add(end, 0x20)) // Allocate the memory.
+                mstore(end, 0) // Zeroize the slot after the bytes.
+                mstore(0x60, 0) // Restore the zero slot.
+            }
+        }
+    }
+}
+
 /*//////////////////////////////////////////////////////////////
                          MINIMAL EXTERNALS
 //////////////////////////////////////////////////////////////*/
@@ -1224,9 +1458,7 @@ contract SAWShares {
     function transferFrom(address from, address to, uint256 amount) public returns (bool) {
         if (SAW(saw).transfersLocked() && from != saw && to != saw) revert Locked();
 
-        // BEFORE: if (to != saw) { ... }
-        // AFTER: only SAW may skip allowance decrement
-        if (msg.sender != saw && allowance[from][msg.sender] != type(uint256).max) {
+        if (allowance[from][msg.sender] != type(uint256).max) {
             allowance[from][msg.sender] -= amount;
         }
 
@@ -1245,14 +1477,14 @@ contract SAWShares {
         return true;
     }
 
-    function mintFromSAW(address to, uint256 amount) public {
+    function mintFromSAW(address to, uint256 amount) public payable {
         require(msg.sender == saw, "SAW");
         _mint(to, amount);
         _autoSelfDelegate(to);
         SAW(saw).onSharesChanged(to);
     }
 
-    function burnFromSAW(address from, uint256 amount) public {
+    function burnFromSAW(address from, uint256 amount) public payable {
         require(msg.sender == saw, "SAW");
         balanceOf[from] -= amount;
         unchecked {
@@ -1347,28 +1579,6 @@ contract SAWShares {
         _writeCheckpoint(ckpts, oldVal, newVal);
     }
 
-    /// @dev Casts `x` to a uint32. Reverts on overflow.
-    function toUint32(uint256 x) internal pure returns (uint32) {
-        if (x >= 1 << 32) _revertOverflow();
-        return uint32(x);
-    }
-
-    /// @dev Casts `x` to a uint224. Reverts on overflow.
-    function toUint224(uint256 x) internal pure returns (uint224) {
-        if (x >= 1 << 224) _revertOverflow();
-        return uint224(x);
-    }
-
-    function _revertOverflow() internal pure {
-        /// @solidity memory-safe-assembly
-        assembly {
-            // Store the function selector of `Overflow()`.
-            mstore(0x00, 0x35278d12)
-            // Revert with (offset, size).
-            revert(0x1c, 0x04)
-        }
-    }
-
     function _writeCheckpoint(Checkpoint[] storage ckpts, uint256 oldVal, uint256 newVal) internal {
         if (oldVal == newVal) return; // no-op, save gas
 
@@ -1397,14 +1607,14 @@ contract SAWShares {
             ? 0
             : _totalSupplyCheckpoints[_totalSupplyCheckpoints.length - 1].votes;
         uint256 newVal = totalSupply;
-        uint32 blk = uint32(block.number);
+        uint32 blk = toUint32(block.number);
         if (
             _totalSupplyCheckpoints.length != 0
                 && _totalSupplyCheckpoints[_totalSupplyCheckpoints.length - 1].fromBlock == blk
         ) {
-            _totalSupplyCheckpoints[_totalSupplyCheckpoints.length - 1].votes = uint224(newVal);
+            _totalSupplyCheckpoints[_totalSupplyCheckpoints.length - 1].votes = toUint224(newVal);
         } else {
-            _totalSupplyCheckpoints.push(Checkpoint({fromBlock: blk, votes: uint224(newVal)}));
+            _totalSupplyCheckpoints.push(Checkpoint({fromBlock: blk, votes: toUint224(newVal)}));
         }
     }
 
@@ -1480,6 +1690,7 @@ contract SAWBadge {
         string memory pct = _percent(bal, ts);
         string memory rank = rk == 0 ? "-" : _u2s(rk);
 
+        // Build SVG (kept identical in content; now we'll base64 it)
         string memory svg = string.concat(
             "<svg xmlns='http://www.w3.org/2000/svg' width='420' height='420'>",
             "<rect width='100%' height='100%' fill='#111'/>",
@@ -1503,22 +1714,27 @@ contract SAWBadge {
             "</text>",
             "</svg>"
         );
-        return string.concat(
-            "data:application/json;utf8,",
-            "{\"name\":\"",
-            name(),
-            "\",\"description\":\"Top-256 holder badge (slot rank)\",",
-            "\"image\":\"data:image/svg+xml;utf8,",
-            svg,
-            "\"}"
+
+        // data:image/svg+xml;base64,<...>
+        string memory image = string.concat("data:image/svg+xml;base64,", Base64.encode(bytes(svg)));
+
+        // Keep JSON fields static to avoid needing a JSON escaper for dynamic strings.
+        // data:application/json;base64,<...>
+        string memory json = string.concat(
+            '{"name":"Badge","description":"Top-256 holder badge (slot rank)",',
+            '"image":"',
+            image,
+            '"}'
         );
+
+        return string.concat("data:application/json;base64,", Base64.encode(bytes(json)));
     }
 
     function transferFrom(address, address, uint256) public pure {
         revert("SBT");
     }
 
-    function mint(address to) public {
+    function mint(address to) public payable {
         require(msg.sender == saw, "SAW");
         uint256 id = uint256(uint160(to));
         require(to != address(0) && _ownerOf[id] == address(0), "MINTED");
@@ -1529,7 +1745,7 @@ contract SAWBadge {
         emit Transfer(address(0), to, id);
     }
 
-    function burn(address from) public {
+    function burn(address from) public payable {
         require(msg.sender == saw, "SAW");
         uint256 id = uint256(uint160(from));
         require(_ownerOf[id] == from, "OWN");

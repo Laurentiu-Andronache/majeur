@@ -677,11 +677,13 @@ contract SAWTest is Test {
         if (b.length == 0 || b.length > a.length) return false;
         for (uint256 i = 0; i <= a.length - b.length; ++i) {
             bool ok = true;
-            for (uint256 j = 0; j < b.length; ++j) {
-                if (a[i + j] != b[j]) ok = false;
-                break;
+            {
+                for (uint256 j = 0; j < b.length; ++j) {
+                    if (a[i + j] != b[j]) ok = false;
+                    break;
+                }
+                if (ok) return true;
             }
-            if (ok) return true;
         }
         return false;
     }
@@ -1847,6 +1849,216 @@ contract SAWTest is Test {
         _voteYes(h, bob);
         vm.expectRevert(SAW.NotOk.selector);
         saw.executeByVotes(0, address(saw), 0, dPull, keccak256("pull-bad"));
+    }
+
+    /*───────────────────────────────────────────────────────────────────*
+    * Permits intentionally bypass the timelock — fixed tests
+    *───────────────────────────────────────────────────────────────────*/
+
+    function test_permit_bypassesTimelock_immediate_execution() public {
+        // Turn timelock on
+        bytes memory dTL = abi.encodeWithSelector(SAW.setTimelockDelay.selector, uint64(3600));
+        (, bool okTL) = _openAndPass(0, address(saw), 0, dTL, keccak256("tl-on-permit-1"));
+        assertTrue(okTL);
+
+        // Queue setPermit under timelock
+        bytes memory call = abi.encodeWithSelector(Target.store.selector, 11);
+        bytes32 nonce = keccak256("permit-bypass-one");
+        bytes memory dSet = abi.encodeWithSelector(
+            SAW.setPermit.selector, 0, address(target), 0, call, nonce, 1, true
+        );
+        bytes32 h = _id(0, address(saw), 0, dSet, keccak256("queue-setPermit-1"));
+        _open(h);
+        _voteYes(h, alice);
+        _voteYes(h, bob);
+
+        (bool queued,) =
+            saw.executeByVotes(0, address(saw), 0, dSet, keccak256("queue-setPermit-1"));
+        assertTrue(queued, "queued setPermit");
+
+        // Precisely expect Timelocked(untilWhen)
+        uint64 until = uint64(saw.queuedAt(h)) + 3600;
+        vm.expectRevert(abi.encodeWithSelector(SAW.Timelocked.selector, until));
+        saw.executeByVotes(0, address(saw), 0, dSet, keccak256("queue-setPermit-1"));
+
+        // Finish delay, execute install, then permit bypasses timelock
+        vm.warp(until + 1);
+        vm.roll(block.number + 1);
+        (bool execOk,) =
+            saw.executeByVotes(0, address(saw), 0, dSet, keccak256("queue-setPermit-1"));
+        assertTrue(execOk, "setPermit executed");
+
+        (bool okP,) = saw.permitExecute(0, address(target), 0, call, nonce);
+        assertTrue(okP);
+        assertEq(target.stored(), 11);
+    }
+
+    function test_permit_unlimited_still_ignoresTimelock_and_allows_multiple() public {
+        // Enable timelock
+        bytes memory dTL = abi.encodeWithSelector(SAW.setTimelockDelay.selector, uint64(7200));
+        (, bool okTL) = _openAndPass(0, address(saw), 0, dTL, keccak256("tl-on-permit-2"));
+        assertTrue(okTL);
+
+        // Queue + execute an unlimited permit installation
+        bytes memory call = abi.encodeWithSelector(Target.store.selector, 22);
+        bytes32 nonce = keccak256("permit-bypass-unlimited-1");
+        bytes memory dSet = abi.encodeWithSelector(
+            SAW.setPermit.selector, 0, address(target), 0, call, nonce, type(uint256).max, true
+        );
+
+        bytes32 hSet = _id(0, address(saw), 0, dSet, keccak256("queue-setPermit-2"));
+        _open(hSet);
+        _voteYes(hSet, alice);
+        _voteYes(hSet, bob);
+
+        (bool q,) = saw.executeByVotes(0, address(saw), 0, dSet, keccak256("queue-setPermit-2"));
+        assertTrue(q, "queued");
+        vm.warp(block.timestamp + 7200 + 1);
+        vm.roll(block.number + 1);
+        (bool execOk,) =
+            saw.executeByVotes(0, address(saw), 0, dSet, keccak256("queue-setPermit-2"));
+        assertTrue(execOk, "setPermit executed");
+
+        // Confirm unlimited installed
+        bytes32 hIntent = _id(0, address(target), 0, call, nonce);
+        assertEq(saw.permits(hIntent), type(uint256).max, "unlimited installed");
+
+        // Execute twice immediately (bypass still true)
+        (bool ok1,) = saw.permitExecute(0, address(target), 0, call, nonce);
+        assertTrue(ok1);
+        assertEq(target.stored(), 22);
+
+        (bool ok2,) = saw.permitExecute(0, address(target), 0, call, nonce);
+        assertTrue(ok2);
+        assertEq(target.stored(), 22, "same payload reapplied");
+
+        // Counter remains MAX
+        assertEq(saw.permits(hIntent), type(uint256).max, "still MAX");
+    }
+
+    function test_vote_path_respectsTimelock_while_permit_bypasses() public {
+        // Timelock on
+        bytes memory dTL = abi.encodeWithSelector(SAW.setTimelockDelay.selector, uint64(1800));
+        (, bool okTL) = _openAndPass(0, address(saw), 0, dTL, keccak256("tl-on-contrast"));
+        assertTrue(okTL);
+
+        // Vote path queues, then Timelocked on second call
+        bytes memory dataCall = abi.encodeWithSelector(Target.store.selector, 33);
+        bytes32 nVote = keccak256("vote-tl-contrast");
+        bytes32 hVote = _id(0, address(target), 0, dataCall, nVote);
+        _open(hVote);
+        _voteYes(hVote, alice);
+        _voteYes(hVote, bob);
+
+        (bool q1,) = saw.executeByVotes(0, address(target), 0, dataCall, nVote);
+        assertTrue(q1, "queued");
+
+        uint64 until = uint64(saw.queuedAt(hVote)) + 1800;
+        vm.expectRevert(abi.encodeWithSelector(SAW.Timelocked.selector, until));
+        saw.executeByVotes(0, address(target), 0, dataCall, nVote);
+
+        // Install a one-shot permit under timelock, then show bypass
+        bytes memory callP = abi.encodeWithSelector(Target.store.selector, 34);
+        bytes32 nPermit = keccak256("permit-tl-contrast-1");
+        bytes memory dSet = abi.encodeWithSelector(
+            SAW.setPermit.selector, 0, address(target), 0, callP, nPermit, 1, true
+        );
+        bytes32 hSet = _id(0, address(saw), 0, dSet, keccak256("queue-setPermit-3"));
+        _open(hSet);
+        _voteYes(hSet, alice);
+        _voteYes(hSet, bob);
+        (bool q2,) = saw.executeByVotes(0, address(saw), 0, dSet, keccak256("queue-setPermit-3"));
+        assertTrue(q2);
+        vm.warp(uint64(saw.queuedAt(hSet)) + 1800 + 1);
+        vm.roll(block.number + 1);
+        (bool execOk,) =
+            saw.executeByVotes(0, address(saw), 0, dSet, keccak256("queue-setPermit-3"));
+        assertTrue(execOk);
+
+        (bool okP,) = saw.permitExecute(0, address(target), 0, callP, nPermit);
+        assertTrue(okP);
+        assertEq(target.stored(), 34);
+    }
+
+    function test_permit_single_use_consumes_and_then_blocks_even_with_timelock_enabled() public {
+        // Timelock on (doesn't affect permit exec by design)
+        bytes memory dTL = abi.encodeWithSelector(SAW.setTimelockDelay.selector, uint64(900));
+        (, bool okTL) = _openAndPass(0, address(saw), 0, dTL, keccak256("tl-on-one-shot"));
+        assertTrue(okTL);
+
+        // Queue + execute one-shot permit installation
+        bytes memory call = abi.encodeWithSelector(Target.store.selector, 44);
+        bytes32 nonce = keccak256("permit-one-shot-setup");
+        bytes memory dSet = abi.encodeWithSelector(
+            SAW.setPermit.selector, 0, address(target), 0, call, nonce, 1, true
+        );
+
+        bytes32 hSet = _id(0, address(saw), 0, dSet, keccak256("queue-setPermit-4"));
+        _open(hSet);
+        _voteYes(hSet, alice);
+        _voteYes(hSet, bob);
+
+        (bool q,) = saw.executeByVotes(0, address(saw), 0, dSet, keccak256("queue-setPermit-4"));
+        assertTrue(q);
+        vm.warp(block.timestamp + 900 + 1);
+        vm.roll(block.number + 1);
+        (bool execOk,) =
+            saw.executeByVotes(0, address(saw), 0, dSet, keccak256("queue-setPermit-4"));
+        assertTrue(execOk, "setPermit executed");
+
+        // First permit execute succeeds immediately
+        (bool ok1,) = saw.permitExecute(0, address(target), 0, call, nonce);
+        assertTrue(ok1);
+        assertEq(target.stored(), 44);
+
+        // Second attempt should revert (count consumed)
+        vm.expectRevert(SAW.NotApprover.selector);
+        saw.permitExecute(0, address(target), 0, call, nonce);
+    }
+
+    function test_queued_then_TTL_expires_but_executes_after_timelock() public {
+        // TTL = 2s, Timelock = 5s (TTL < timelock to stress the edge)
+        {
+            bytes memory dTTL = abi.encodeWithSelector(SAW.setProposalTTL.selector, uint64(2));
+            (, bool ok1) = _openAndPass(0, address(saw), 0, dTTL, keccak256("ttl=2s"));
+            assertTrue(ok1, "ttl set");
+
+            bytes memory dTL = abi.encodeWithSelector(SAW.setTimelockDelay.selector, uint64(5));
+            (, bool ok2) = _openAndPass(0, address(saw), 0, dTL, keccak256("timelock=5s"));
+            assertTrue(ok2, "timelock set");
+        }
+
+        // Build & pass a proposal: Target.store(123)
+        bytes memory callData = abi.encodeWithSelector(Target.store.selector, 123);
+        bytes32 nonce = keccak256("queue-then-expire");
+        bytes32 h = _id(0, address(target), 0, callData, nonce);
+
+        // Open snapshot and vote YES by both (within TTL window)
+        _open(h);
+        _voteYes(h, alice);
+        _voteYes(h, bob);
+
+        // First execute queues (must happen before TTL deadline)
+        (bool queued,) = saw.executeByVotes(0, address(target), 0, callData, nonce);
+        assertTrue(queued, "queued");
+        uint64 qAt = saw.queuedAt(h);
+        assertTrue(qAt != 0, "queuedAt set");
+        assertEq(uint256(saw.state(h)), uint256(SAW.ProposalState.Queued), "state=Queued");
+
+        // Let TTL elapse *while queued* (but not the timelock)
+        uint64 t0 = saw.createdAt(h);
+        vm.warp(uint256(t0) + 3); // > TTL(2s) elapsed
+        assertEq(uint256(saw.state(h)), uint256(SAW.ProposalState.Queued), "still Queued after TTL");
+
+        // After timelock elapses, it should be ready and execute successfully
+        vm.warp(uint256(qAt) + 5 + 1); // timelock(5s) + epsilon
+        assertEq(
+            uint256(saw.state(h)), uint256(SAW.ProposalState.Succeeded), "ready after timelock"
+        );
+
+        (bool okExec,) = saw.executeByVotes(0, address(target), 0, callData, nonce);
+        assertTrue(okExec, "executed after timelock");
+        assertEq(target.stored(), 123, "effect applied");
     }
 
     // Accept empty calldata calls (no-op target for replay test).
