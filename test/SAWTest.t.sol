@@ -2061,6 +2061,171 @@ contract SAWTest is Test {
         assertEq(target.stored(), 123, "effect applied");
     }
 
+    /*───────────────────────────────────────────────────────────────────*
+    * FRACTIONAL DELEGATION (SAWShares)
+    *───────────────────────────────────────────────────────────────────*/
+    /*
+    function test_fractionalDelegation_basicSplit_updatesVotes_andPast() public {
+        // Baseline
+        assertEq(shares.getVotes(alice), 60e18, "alice votes before");
+        assertEq(shares.getVotes(bob), 40e18, "bob votes before");
+        assertEq(shares.getVotes(charlie), 0, "charlie votes before");
+
+        // Snapshot current block to use with getPastVotes later
+        uint32 blkBefore = uint32(block.number);
+
+        // Alice splits 60e18: 50% to Bob, 50% to Charlie
+        address[] memory ds = new address[](2);
+        ds[0] = bob;
+        ds[1] = charlie;
+        uint32[] memory bps = new uint32[](2);
+        bps[0] = 5000;
+        bps[1] = 5000;
+
+        vm.prank(alice);
+        shares.setDelegateDistribution(ds, bps);
+
+        // Advance one block so getPastVotes(blkBefore) is valid and frozen
+        vm.roll(block.number + 1);
+
+        // Past at blkBefore (pre-split) must be unchanged
+        assertEq(shares.getPastVotes(alice, blkBefore), 60e18, "past alice");
+        assertEq(shares.getPastVotes(bob, blkBefore), 40e18, "past bob");
+        assertEq(shares.getPastVotes(charlie, blkBefore), 0, "past charlie");
+
+        // Current: Alice moved all 60e18 out; Bob +30e18; Charlie +30e18
+        assertEq(shares.getVotes(alice), 0, "alice now 0 (split away)");
+        assertEq(shares.getVotes(bob), 70e18, "bob = 40e18 + 30e18");
+        assertEq(shares.getVotes(charlie), 30e18, "charlie = 30e18");
+    }
+
+    function test_fractionalDelegation_transferRespectsDistribution() public {
+        address[] memory ds = new address[](2);
+        uint32[] memory bps = new uint32[](2);
+        // Install 50/50 split as above
+        {
+            address;
+            ds[0] = bob;
+            ds[1] = charlie;
+            uint32;
+            bps[0] = 5000;
+            bps[1] = 5000;
+            vm.prank(alice);
+            shares.setDelegateDistribution(ds, bps);
+        }
+
+        // Sanity after split
+        assertEq(shares.getVotes(alice), 0);
+        assertEq(shares.getVotes(bob), 70e18);
+        assertEq(shares.getVotes(charlie), 30e18);
+
+        // Alice transfers 10e18 to Mallory → should subtract 5e18 from Bob & 5e18 from Charlie
+        address mallory = address(0xBADDAD);
+        vm.prank(alice);
+        shares.transfer(mallory, 10e18);
+
+        assertEq(shares.balanceOf(alice), 50e18, "alice bal");
+        assertEq(shares.balanceOf(mallory), 10e18, "mallory bal");
+
+        // Votes: Bob 65e18, Charlie 25e18, Mallory self 10e18
+        assertEq(shares.getVotes(bob), 65e18, "bob after transfer");
+        assertEq(shares.getVotes(charlie), 25e18, "charlie after transfer");
+        assertEq(shares.getVotes(mallory), 10e18, "mallory self-delegated");
+    }
+
+    function test_fractionalDelegation_changeDistribution_movesDiffOnly() public {
+        address[] memory ds = new address[](2);
+        uint32[] memory bps = new uint32[](2);
+        // Start at 50/50, then change to 70/30; Alice currently has 60e18 → unchanged,
+        // but for a cleaner diff, first move 10e18 away so she has 50e18 outstanding.
+        {
+            address;
+            ds[0] = bob;
+            ds[1] = charlie;
+            uint32;
+            bps[0] = 5000;
+            bps[1] = 5000;
+            vm.prank(alice);
+            shares.setDelegateDistribution(ds, bps);
+        }
+        vm.prank(alice);
+        shares.transfer(address(0xD1), 10e18); // any sink holder; they self-delegate by default
+
+        // Before: Bob = 40 + 25 = 65; Charlie = 25 (from Alice's remaining 50e18 @ 50/50)
+        assertEq(shares.getVotes(bob), 65e18, "pre-change bob");
+        assertEq(shares.getVotes(charlie), 25e18, "pre-change charlie");
+
+        address[] memory ds2 = new address[](2);
+        uint32[] memory bps2 = new uint32[](2);
+
+        // Change to 70/30 → only the 20% (of 50e18) = 10e18 moves from Charlie to Bob
+        {
+            address;
+            ds2[0] = bob;
+            ds2[1] = charlie;
+            uint32;
+            bps2[0] = 7000;
+            bps2[1] = 3000;
+            vm.prank(alice);
+            shares.setDelegateDistribution(ds2, bps2);
+        }
+
+        assertEq(shares.getVotes(bob), 75e18, "post-change bob (65 + 10)");
+        assertEq(shares.getVotes(charlie), 15e18, "post-change charlie (25 - 10)");
+    }
+
+    function test_fractionalDelegation_clear_revertsToSelfDelegation() public {
+        address[] memory ds = new address[](2);
+        uint32[] memory bps = new uint32[](2);
+        // Alice splits and then clears; she currently has full 60e18
+        {
+            address;
+            ds[0] = bob;
+            ds[1] = charlie;
+            uint32;
+            bps[0] = 5000;
+            bps[1] = 5000;
+            vm.prank(alice);
+            shares.setDelegateDistribution(ds, bps);
+        }
+        // Sanity
+        assertEq(shares.getVotes(alice), 0);
+        assertEq(shares.getVotes(bob), 70e18);
+        assertEq(shares.getVotes(charlie), 30e18);
+
+        // Clear → all of Alice's remaining votes route back to Alice
+        vm.prank(alice);
+        shares.clearDelegateDistribution();
+
+        assertEq(shares.getVotes(alice), 60e18, "alice back to self");
+        assertEq(shares.getVotes(bob), 40e18, "bob back to own only");
+        assertEq(shares.getVotes(charlie), 0, "charlie back to zero");
+    }
+
+    function test_fractionalDelegation_inputGuards() public {
+        address[] memory ds1 = new address[](2);
+        uint32[] memory bps1 = new uint32[](1);
+        // Length mismatch should revert
+        ds1[0] = bob;
+        ds1[1] = charlie;
+        bps1[0] = 10_000;
+        vm.expectRevert(); // len mismatch error (implementation-specific)
+        vm.prank(alice);
+        shares.setDelegateDistribution(ds1, bps1);
+
+        address[] memory ds2 = new address[](2);
+        uint32[] memory bps2 = new uint32[](2);
+
+        // Sum != 10_000 should revert
+        ds2[0] = bob;
+        ds2[1] = charlie;
+        bps2[0] = 6000; // sums to 9000
+        bps2[1] = 3000;
+        vm.expectRevert(); // bad bps sum (implementation-specific)
+        vm.prank(alice);
+        shares.setDelegateDistribution(ds2, bps2);
+    }*/
+
     // Accept empty calldata calls (no-op target for replay test).
     receive() external payable {}
     fallback() external payable {}

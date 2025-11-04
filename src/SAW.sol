@@ -1409,12 +1409,24 @@ contract SAWShares {
     mapping(address => Checkpoint[]) internal _checkpoints;
     Checkpoint[] internal _totalSupplyCheckpoints;
 
+    /* --------- Split (sharded) delegation (non-custodial) --------- */
+    struct Split {
+        address delegate;
+        uint32 bps; // parts per 10_000
+    }
+    uint8 public constant MAX_SPLITS = 4;
+    uint32 public constant BPS_DENOM = 10_000;
+    mapping(address => Split[]) internal _splits;
+
+    event WeightedDelegationSet(address indexed delegator, address[] delegates, uint32[] bps);
+
     constructor(address[] memory to, uint256[] memory amt, address sawAddr) payable {
         saw = payable(sawAddr);
         if (to.length != amt.length) revert Len();
         for (uint256 i = 0; i < to.length; ++i) {
-            _mint(to[i], amt[i]);
-            _autoSelfDelegate(to[i]);
+            _mint(to[i], amt[i]); // balances + totalSupply + TS checkpoint
+            _autoSelfDelegate(to[i]); // default to self on first sight
+            _applyVotingDelta(to[i], int256(amt[i])); // route initial votes (checkpoint now)
         }
     }
 
@@ -1446,7 +1458,10 @@ contract SAWShares {
 
         _autoSelfDelegate(to);
         _autoSelfDelegate(msg.sender);
-        _moveVotingPower(_delegates[msg.sender], _delegates[to], amount);
+
+        // split-aware vote routing
+        _applyVotingDelta(msg.sender, -int256(amount));
+        _applyVotingDelta(to, int256(amount));
 
         SAW(saw).onSharesChanged(msg.sender);
         SAW(saw).onSharesChanged(to);
@@ -1468,7 +1483,10 @@ contract SAWShares {
 
         _autoSelfDelegate(to);
         _autoSelfDelegate(from);
-        _moveVotingPower(_delegates[from], _delegates[to], amount);
+
+        // split-aware vote routing
+        _applyVotingDelta(from, -int256(amount));
+        _applyVotingDelta(to, int256(amount));
 
         SAW(saw).onSharesChanged(from);
         SAW(saw).onSharesChanged(to);
@@ -1479,6 +1497,7 @@ contract SAWShares {
         require(msg.sender == saw, "SAW");
         _mint(to, amount);
         _autoSelfDelegate(to);
+        _applyVotingDelta(to, int256(amount)); // NEW: route votes via split
         SAW(saw).onSharesChanged(to);
     }
 
@@ -1492,7 +1511,8 @@ contract SAWShares {
 
         _autoSelfDelegate(from);
         _writeTotalSupplyCheckpoint();
-        _moveVotingPower(_delegates[from], address(0), amount);
+
+        _applyVotingDelta(from, -int256(amount)); // NEW: route vote removal via split
 
         SAW(saw).onSharesChanged(from);
     }
@@ -1503,9 +1523,8 @@ contract SAWShares {
             balanceOf[to] += amount;
         }
         emit Transfer(address(0), to, amount);
-
         _writeTotalSupplyCheckpoint();
-        _moveVotingPower(address(0), _delegates[to] == address(0) ? to : _delegates[to], amount);
+        // NOTE: vote movement handled by caller via _applyVotingDelta(...)
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -1521,13 +1540,13 @@ contract SAWShares {
     }
 
     function getVotes(address account) public view returns (uint256) {
-        uint256 n = _checkpoints[delegates(account)].length;
-        return n == 0 ? 0 : _checkpoints[delegates(account)][n - 1].votes;
+        uint256 n = _checkpoints[account].length;
+        return n == 0 ? 0 : _checkpoints[account][n - 1].votes;
     }
 
     function getPastVotes(address account, uint32 blockNumber) public view returns (uint256) {
         require(blockNumber < block.number, "bad block");
-        return _checkpointsLookup(_checkpoints[delegates(account)], blockNumber);
+        return _checkpointsLookup(_checkpoints[account], blockNumber);
     }
 
     function getPastTotalSupply(uint32 blockNumber) public view returns (uint256) {
@@ -1535,25 +1554,227 @@ contract SAWShares {
         return _checkpointsLookup(_totalSupplyCheckpoints, blockNumber);
     }
 
+    /* ---------- Split delegation public API ---------- */
+
+    function splitDelegationOf(address account)
+        external
+        view
+        returns (address[] memory delegates_, uint32[] memory bps_)
+    {
+        Split[] storage sp = _splits[account];
+        if (sp.length == 0) {
+            delegates_ = _singleton(delegates(account));
+            bps_ = _singletonBps();
+            return (delegates_, bps_);
+        }
+        uint256 n = sp.length;
+        delegates_ = new address[](n);
+        bps_ = new uint32[](n);
+        for (uint256 i = 0; i < n; ++i) {
+            delegates_[i] = sp[i].delegate;
+            bps_[i] = sp[i].bps;
+        }
+    }
+
+    function setSplitDelegation(address[] calldata delegates_, uint32[] calldata bps_) external {
+        uint256 n = delegates_.length;
+        require(n == bps_.length && n > 0 && n <= MAX_SPLITS, "split/len");
+        uint256 sum = 0;
+        for (uint256 i = 0; i < n; ++i) {
+            require(delegates_[i] != address(0), "split/zero");
+            sum += bps_[i];
+            for (uint256 j = i + 1; j < n; ++j) {
+                require(delegates_[i] != delegates_[j], "split/dupe");
+            }
+        }
+        require(sum == BPS_DENOM, "split/sum");
+
+        (address[] memory oldD, uint32[] memory oldB) = _currentDistribution(msg.sender);
+
+        delete _splits[msg.sender];
+        for (uint256 i = 0; i < n; ++i) {
+            _splits[msg.sender].push(Split({delegate: delegates_[i], bps: bps_[i]}));
+        }
+
+        _repointVotesForHolder(msg.sender, oldD, oldB);
+
+        emit WeightedDelegationSet(msg.sender, delegates_, bps_);
+    }
+
+    function clearSplitDelegation() external {
+        if (_splits[msg.sender].length == 0) return;
+        (address[] memory oldD, uint32[] memory oldB) = _currentDistribution(msg.sender);
+        delete _splits[msg.sender];
+        _repointVotesForHolder(msg.sender, oldD, oldB);
+        emit WeightedDelegationSet(msg.sender, _singleton(delegates(msg.sender)), _singletonBps());
+    }
+
+    /* ---------- Internal voting helpers ---------- */
+
     function _delegate(address delegator, address delegatee) internal {
         address current = delegates(delegator);
         if (delegatee == address(0)) delegatee = delegator; // self by default
+
+        // If unchanged and no splits, no-op
+        if (_splits[delegator].length == 0 && current == delegatee) return;
+
+        (address[] memory oldD, uint32[] memory oldB) = _currentDistribution(delegator);
+
+        delete _splits[delegator]; // switch to single 100%
         _delegates[delegator] = delegatee;
+
         emit DelegateChanged(delegator, current, delegatee);
 
-        uint256 bal = balanceOf[delegator];
-        _moveVotingPower(current, delegatee, bal);
+        _repointVotesForHolder(delegator, oldD, oldB);
     }
 
     function _autoSelfDelegate(address account) internal {
         if (_delegates[account] == address(0)) {
             _delegates[account] = account;
             emit DelegateChanged(account, address(0), account);
-            // write a zero->bal checkpoint when first seen
-            uint256 bal = balanceOf[account];
-            if (bal != 0) _writeCheckpoint(_checkpoints[account], 0, bal);
+            // NOTE: do NOT write checkpoints here; routing happens via _applyVotingDelta/_repointVotesForHolder
         }
     }
+
+    function _currentDistribution(address account)
+        internal
+        view
+        returns (address[] memory delegates_, uint32[] memory bps_)
+    {
+        Split[] storage sp = _splits[account];
+        if (sp.length == 0) {
+            delegates_ = _singleton(delegates(account));
+            bps_ = _singletonBps();
+            return (delegates_, bps_);
+        }
+        uint256 n = sp.length;
+        delegates_ = new address[](n);
+        bps_ = new uint32[](n);
+        for (uint256 i = 0; i < n; ++i) {
+            delegates_[i] = sp[i].delegate;
+            bps_[i] = sp[i].bps;
+        }
+    }
+
+    // Apply +/− voting power change for an account according to its split.
+    function _applyVotingDelta(address account, int256 delta) internal {
+        if (delta == 0) return;
+        (address[] memory D, uint32[] memory B) = _currentDistribution(account);
+
+        uint256 abs = delta > 0 ? uint256(delta) : uint256(-delta);
+        uint256 rem = abs;
+
+        for (uint256 i = 0; i < D.length; ++i) {
+            uint256 part = (abs * B[i]) / BPS_DENOM;
+            // give remainder to the last delegate to avoid dust
+            if (i == D.length - 1) part = rem;
+            else rem -= part;
+            if (part == 0) continue;
+
+            if (delta > 0) _moveVotingPower(address(0), D[i], part);
+            else _moveVotingPower(D[i], address(0), part);
+        }
+    }
+
+    // Re-route an existing holder's *current* voting power from old distribution to new.
+    // Re-route an existing holder's *current* voting power from old distribution to new.
+    function _repointVotesForHolder(address holder, address[] memory oldD, uint32[] memory oldB)
+        internal
+    {
+        (address[] memory newD, uint32[] memory newB) = _currentDistribution(holder);
+        uint256 bal = balanceOf[holder];
+        if (bal == 0) return;
+
+        // Build diffs in bps per delegate over the union set
+        uint256 maxK = oldD.length + newD.length;
+        address[] memory all = new address[](maxK);
+        int256[] memory diff = new int256[](maxK);
+        uint256 k = 0;
+
+        // start with +old (will remove if old > new)
+        for (uint256 i = 0; i < oldD.length; ++i) {
+            all[k] = oldD[i];
+            diff[k] = int256(uint256(oldB[i]));
+            ++k;
+        }
+
+        // subtract new
+        for (uint256 i = 0; i < newD.length; ++i) {
+            bool found = false;
+            for (uint256 j = 0; j < k; ++j) {
+                if (all[j] == newD[i]) {
+                    diff[j] -= int256(uint256(newB[i]));
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                all[k] = newD[i];
+                diff[k] = -int256(uint256(newB[i]));
+                ++k;
+            }
+        }
+
+        uint256 totalRem = 0;
+        uint256 totalAdd = 0;
+
+        // 1) Remove where old > new
+        for (uint256 i = 0; i < k; ++i) {
+            int256 d = diff[i];
+            if (d > 0) {
+                // d is positive here; safe to cast
+                uint256 amt = (bal * uint256(d)) / BPS_DENOM;
+                totalRem += amt;
+                if (amt != 0) _moveVotingPower(all[i], address(0), amt);
+            }
+        }
+
+        // 2) Add where new > old
+        for (uint256 i = 0; i < k; ++i) {
+            int256 d = diff[i];
+            if (d < 0) {
+                // -d is positive here; safe to cast
+                uint256 amt = (bal * uint256(-d)) / BPS_DENOM;
+                totalAdd += amt;
+                if (amt != 0) _moveVotingPower(address(0), all[i], amt);
+            }
+        }
+
+        // 3) Dust fix (at most a few wei): reconcile totals to be exactly equal
+        if (totalRem != totalAdd) {
+            if (totalRem < totalAdd) {
+                // remove the excess from the last-added new delegate
+                uint256 excess = totalAdd - totalRem;
+                for (uint256 i = k; i > 0; --i) {
+                    if (diff[i - 1] < 0) {
+                        _moveVotingPower(all[i - 1], address(0), excess);
+                        break;
+                    }
+                }
+            } else {
+                // add missing to last new delegate (or last old if no new)
+                uint256 missing = totalRem - totalAdd;
+                bool added = false;
+                for (uint256 i = k; i > 0; --i) {
+                    if (diff[i - 1] < 0) {
+                        _moveVotingPower(address(0), all[i - 1], missing);
+                        added = true;
+                        break;
+                    }
+                }
+                if (!added) {
+                    for (uint256 i = k; i > 0; --i) {
+                        if (diff[i - 1] > 0) {
+                            _moveVotingPower(address(0), all[i - 1], missing);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /* ---------- Core checkpoint machinery ---------- */
 
     function _moveVotingPower(address src, address dst, uint256 amount) internal {
         if (src == dst || amount == 0) return;
@@ -1579,31 +1800,23 @@ contract SAWShares {
 
     function _writeCheckpoint(Checkpoint[] storage ckpts, uint256 oldVal, uint256 newVal) internal {
         if (oldVal == newVal) return; // no-op, save gas
-
         uint32 blk = toUint32(block.number);
         uint256 len = ckpts.length;
 
         if (len != 0) {
             Checkpoint storage last = ckpts[len - 1];
-
             // If we've already written this block, just update it.
             if (last.fromBlock == blk) {
                 last.votes = toUint224(newVal);
                 return;
             }
-
             // If the last checkpoint (previous block) already has this value, skip pushing a duplicate.
             if (last.votes == newVal) return;
         }
-
         ckpts.push(Checkpoint({fromBlock: blk, votes: toUint224(newVal)}));
     }
 
     function _writeTotalSupplyCheckpoint() internal {
-        /*uint256 oldVal =*/
-        _totalSupplyCheckpoints.length == 0
-            ? 0
-            : _totalSupplyCheckpoints[_totalSupplyCheckpoints.length - 1].votes;
         uint256 newVal = totalSupply;
         uint32 blk = toUint32(block.number);
         if (
@@ -1641,6 +1854,25 @@ contract SAWShares {
         }
         return ckpts[low].votes;
     }
+
+    /* ---------- tiny array helpers ---------- */
+    function _singleton(address d) internal pure returns (address[] memory a) {
+        a = new address[](1);
+        a[0] = d;
+    }
+
+    function _singletonBps() internal pure returns (uint32[] memory a) {
+        a = new uint32[](1);
+        a[0] = uint32(BPS_DENOM);
+    }
+}
+
+/* Interfaces used by SAWShares dynamic calls */
+interface ISAW {
+    function orgName() external view returns (string memory);
+    function orgSymbol() external view returns (string memory);
+    function transfersLocked() external view returns (bool);
+    function onSharesChanged(address a) external;
 }
 
 /*//////////////////////////////////////////////////////////////
