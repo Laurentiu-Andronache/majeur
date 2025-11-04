@@ -370,11 +370,6 @@ contract Cell {
         );
     }
 
-    /// @dev Bubble up revert errors.
-    function _revertWith(bytes memory ret) internal pure {
-        assembly ("memory-safe") { revert(add(ret, 0x20), mload(ret)) }
-    }
-
     /// @dev Receive Cell ETH.
     receive() external payable {}
 
@@ -404,6 +399,11 @@ contract Cell {
             if (!ok) _revertWith(ret);
             retDatas[i] = ret;
         }
+    }
+
+    /// @dev Bubble up revert errors.
+    function _revertWith(bytes memory ret) internal pure {
+        assembly ("memory-safe") { revert(add(ret, 0x20), mload(ret)) }
     }
 }
 
