@@ -397,16 +397,12 @@ contract Cell {
     }
 
     /// @dev Execute sequence of calls to this Cell contract.
-    function multicall(bytes[] calldata data) public payable returns (bytes[] memory results) {
-        results = new bytes[](data.length);
+    function multicall(bytes[] calldata data) public payable returns (bytes[] memory retDatas) {
+        retDatas = new bytes[](data.length);
         for (uint256 i; i != data.length; ++i) {
-            (bool success, bytes memory result) = address(this).delegatecall(data[i]);
-            if (!success) {
-                assembly {
-                    revert(add(result, 0x20), mload(result))
-                }
-            }
-            results[i] = result;
+            (bool ok, bytes memory ret) = address(this).delegatecall(data[i]);
+            if (!ok) _revertWith(ret);
+            retDatas[i] = ret;
         }
     }
 }
