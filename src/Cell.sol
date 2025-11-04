@@ -29,7 +29,7 @@ contract Cell {
 
     event OwnershipTransferred(address indexed from, address indexed to);
 
-    /// @dev Construct 2/2 Cell with owners and optional third guardian.
+    /// @dev Construct 2/2 Cell with sorted owners and optional guardian.
     constructor(address owner0, address owner1, address guardian) payable {
         require(owner0 != address(0) && owner1 != address(0) && owner0 != owner1, BadOwner());
         (owner0, owner1) = owner1 < owner0 ? (owner1, owner0) : (owner0, owner1);
@@ -290,12 +290,31 @@ contract Cell {
         token.approve(byOwner ? owners[is0 ? 1 : 0] : spender, amount);
     }
 
-    /// @dev Transfer 1/2 Cell ownership slot to new owner.
+    /// @dev Transfer 1/2 Cell sorted ownership slot to new owner.
     function transferOwnership(address to) public payable returns (bool is0) {
-        is0 = (msg.sender == owners[0]);
-        require(is0 || msg.sender == owners[1], NotOwner());
-        require(to != address(0) && to != msg.sender && to != owners[is0 ? 1 : 0], BadOwner());
-        emit OwnershipTransferred(msg.sender, owners[is0 ? 0 : 1] = to);
+        address o0 = owners[0];
+        address o1 = owners[1];
+
+        is0 = (msg.sender == o0);
+        if (!is0 && msg.sender != o1) revert NotOwner();
+
+        if (to == address(0) || to == msg.sender) revert BadOwner();
+        if (to == (is0 ? o1 : o0)) revert BadOwner();
+
+        if (is0 ? (to > o1) : (to < o0)) {
+            if (is0) {
+                owners[1] = to;
+                owners[0] = o1;
+            } else {
+                owners[0] = to;
+                owners[1] = o0;
+            }
+        } else {
+            if (is0) owners[0] = to;
+            else owners[1] = to;
+        }
+
+        emit OwnershipTransferred(msg.sender, to);
     }
 
     /// @dev Set a third signer with limited direct Cell powers.
