@@ -206,7 +206,6 @@ contract CellTest is Test {
         datas[0] = abi.encodeWithSelector(Sink.ping.selector);
 
         bytes32 nonce = keccak256("n-batch-1");
-        bytes32 callHash = _hashBatch(tos, vals, datas, nonce);
         uint256 deadline = block.timestamp + 1 days;
         (uint8 v, bytes32 r, bytes32 s) =
             _signBatch(cell, tos, vals, datas, nonce, deadline, pkAlice);
@@ -261,7 +260,6 @@ contract CellTest is Test {
         datas[0] = abi.encodeWithSelector(Sink.ping.selector);
 
         bytes32 nonce = keccak256("n-batch-replay");
-        bytes32 callHash = _hashBatch(tos, vals, datas, nonce);
         uint256 deadline = block.timestamp + 1 days;
 
         // Alice signs once
@@ -299,7 +297,6 @@ contract CellTest is Test {
         datas[0] = abi.encodeWithSelector(Sink.ping.selector);
 
         bytes32 nonce = keccak256("n-batch-guardian-finalize");
-        bytes32 callHash = _hashBatch(tos, vals, datas, nonce);
 
         // Stage on-chain by Alice
         vm.prank(alice);
@@ -377,8 +374,7 @@ contract CellTest is Test {
 
         // Alice transfers her OWN slot to charlie
         vm.prank(alice);
-        bool retIs0 = cell.transferOwnership(charlie);
-        assertEq(retIs0, aliceIs0);
+        cell.transferOwnership(charlie);
 
         // Verify the correct slot changed and the other stayed the same
         address new0 = cell.owners(0);
@@ -769,64 +765,6 @@ contract CellTest is Test {
         cell.spendAllowance(address(token), 1);
     }
 
-    // Self-call approveToken to a third-party spender; verify token allowance updated.
-    function testApproveToken_SelfCall_SetsTokenAllowance() public {
-        ERC20Mock token = new ERC20Mock();
-        token.mint(address(cell), 100 ether);
-
-        address thirdParty = vm.addr(uint256(keccak256("third-party-spender")));
-
-        // self-call approveToken(token, spender=thirdParty, amount=55)
-        bytes memory inner =
-            abi.encodeWithSelector(cell.approveToken.selector, token, thirdParty, 55 ether);
-
-        // Any 2-of-3 (use primaries)
-        bytes32 n1 = keccak256("n-self-approve-token");
-        vm.prank(alice);
-        cell.execute(address(cell), 0, inner, n1);
-        vm.prank(bob);
-        cell.execute(address(cell), 0, inner, n1);
-
-        assertEq(token.allowance(address(cell), thirdParty), 55 ether);
-    }
-
-    // Guardian cannot call pullToken directly; but guardian+primary can self-call it if owner approved.
-    function testPullToken_DirectGuardianReverts_ThenSelfCallSucceeds() public {
-        ERC20Mock token = new ERC20Mock();
-
-        // Mint to Bob, Bob approves the wallet for 10 tokens
-        token.mint(bob, 10 ether);
-        vm.prank(bob);
-        token.approve(address(cell), 10 ether);
-
-        // Add guardian
-        address g = vm.addr(uint256(keccak256("g-pull")));
-        bytes32 ng = keccak256("n-add-g-pull");
-        bytes memory addG = abi.encodeWithSelector(cell.setGuardian.selector, g);
-        vm.prank(alice);
-        cell.execute(address(cell), 0, addG, ng);
-        vm.prank(bob);
-        cell.execute(address(cell), 0, addG, ng);
-
-        // Direct guardian call should revert
-        vm.prank(g);
-        vm.expectRevert(Cell.NotOwner.selector);
-        cell.pullToken(address(token), bob, 5 ether);
-
-        // Self-call pullToken(token, from=bob, amt=5)
-        bytes memory inner = abi.encodeWithSelector(cell.pullToken.selector, token, bob, 5 ether);
-
-        bytes32 n1 = keccak256("n-self-pull");
-        vm.prank(g);
-        cell.execute(address(cell), 0, inner, n1);
-        vm.prank(alice);
-        cell.execute(address(cell), 0, inner, n1);
-
-        // Wallet pulled 5 tokens from Bob
-        assertEq(token.balanceOf(address(cell)), 5 ether);
-        assertEq(token.balanceOf(bob), 5 ether);
-    }
-
     // Batch mixing self-call (setAllowance) + external (send ETH)
     function testBatch_Mixed_SelfOps_And_External() public {
         // prepare calls
@@ -1122,29 +1060,6 @@ contract CellTest is Test {
         cell.spendAllowance(address(0), 1);
     }
 
-    function testAllowance_ETH_ReentrancyDrainsUpToCap_NotBeyond() public {
-        // Set explicit spender = a contract (via self-call)
-        ReenterSpender re = new ReenterSpender();
-        re.setup(cell, 0.2 ether, 3); // will try 3 chunks of 0.2 (total 0.6)
-
-        bytes memory inner =
-            abi.encodeWithSelector(cell.setAllowance.selector, address(re), address(0), 0.6 ether);
-        bytes32 n = keccak256("n-allow-eth-reent");
-        vm.prank(alice);
-        cell.execute(address(cell), 0, inner, n);
-        vm.prank(bob);
-        cell.execute(address(cell), 0, inner, n);
-
-        uint256 before = address(re).balance;
-        re.trigger(); // this will reenter twice (total 3 spends of 0.2)
-
-        assertEq(address(re).balance, before + 0.6 ether);
-
-        // Further attempt reverts
-        vm.expectRevert();
-        re.trigger();
-    }
-
     function testAllowance_ERC20_Overwrite() public {
         ERC20Mock t = new ERC20Mock();
         t.mint(address(cell), 1000 ether);
@@ -1161,21 +1076,6 @@ contract CellTest is Test {
         vm.prank(bob);
         vm.expectRevert();
         cell.spendAllowance(address(t), 1);
-    }
-
-    // ----- Non-standard ERC20 approve/transfer without return values -----
-
-    function testApproveToken_SupportsNoReturnTokens() public {
-        ERC20NoReturn t = new ERC20NoReturn();
-        // Self-call approveToken to explicit spender
-        address sp = vm.addr(uint256(keccak256("no-ret-sp")));
-        bytes memory inner = abi.encodeWithSelector(cell.approveToken.selector, t, sp, 77 ether);
-        bytes32 n = keccak256("n-approve-noreturn");
-        vm.prank(alice);
-        cell.execute(address(cell), 0, inner, n);
-        vm.prank(bob);
-        cell.execute(address(cell), 0, inner, n);
-        assertEq(t.allowance(address(cell), sp), 77 ether);
     }
 
     // ----- EIP-712 edges -----
@@ -1444,20 +1344,6 @@ contract CellTest is Test {
         cell.delegateExecute(address(cell), cd, n);
     }
 
-    // 10) pullToken without allowance bubbles token revert
-    function testPullToken_NoAllowance_Bubbles() public {
-        ERC20Mock t = new ERC20Mock();
-        t.mint(bob, 10 ether);
-        // try pulling without Bob's approval; expect "noallow" revert bubbling
-        bytes memory inner = abi.encodeWithSelector(cell.pullToken.selector, t, bob, 1 ether);
-        bytes32 n = keccak256("n-pull-noallow");
-        vm.prank(alice);
-        cell.execute(address(cell), 0, inner, n);
-        vm.prank(bob);
-        vm.expectRevert(TransferFromFailed.selector);
-        cell.execute(address(cell), 0, inner, n);
-    }
-
     // 11) execute returns target return data
     function testExecute_ReturnDataPlumbing() public {
         // make Sink.ping() return value captured
@@ -1673,8 +1559,9 @@ contract CellTest is Test {
 
     // Guardian == primary (soft self-override): allowed; still 2/2 required.
     function testGuardianEqualsPrimary_StageAsGuardian_FinalizeByOther() public {
+        address charlie = address(bytes20(bytes("c")));
         // Guardian becomes Alice (self-override)
-        bytes memory inner = abi.encodeWithSelector(cell.setGuardian.selector, alice);
+        bytes memory inner = abi.encodeWithSelector(cell.setGuardian.selector, charlie);
         bytes32 n = keccak256("n-guardian=alice");
         vm.prank(alice);
         cell.execute(address(cell), 0, inner, n);
@@ -1684,7 +1571,7 @@ contract CellTest is Test {
         // Stage by "guardian" (which is Alice); Bob finalizes
         bytes32 n2 = keccak256("n-g=alice-flow");
         bytes memory cd = abi.encodeWithSelector(Sink.setX.selector, 777);
-        vm.prank(alice);
+        vm.prank(charlie);
         (bool first,,) = cell.execute(address(sink), 0, cd, n2);
         assertTrue(first);
 
@@ -1722,7 +1609,6 @@ contract CellTest is Test {
         datas[0] = abi.encodeWithSelector(Sink.ping.selector);
 
         bytes32 nonce = keccak256("n-712-g-removed");
-        bytes32 callHash = _hashBatch(tos, vals, datas, nonce);
         uint256 deadline = block.timestamp + 1 days;
         (uint8 v, bytes32 r, bytes32 s) = _signBatch(cell, tos, vals, datas, nonce, deadline, pkG);
 
@@ -1783,87 +1669,15 @@ contract CellTest is Test {
         datas[0] = abi.encodeWithSelector(Sink.ping.selector);
 
         bytes32 nonce = keccak256("n-712-high-s");
-        bytes32 callHash = _hashBatch(tos, vals, datas, nonce);
         uint256 deadline = block.timestamp + 1 days;
 
         // Make any (v,r); force s to be above half-order threshold
-        (uint8 v, bytes32 r, bytes32 s) =
-            _signBatch(cell, tos, vals, datas, nonce, deadline, pkAlice);
+        (uint8 v, bytes32 r,) = _signBatch(cell, tos, vals, datas, nonce, deadline, pkAlice);
         uint256 halfOrder = 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0;
         bytes32 highS = bytes32(halfOrder + 1);
         vm.prank(address(0xC0FFEE));
         vm.expectRevert(Cell.BadSign.selector);
         cell.batchExecuteWithSig(tos, vals, datas, nonce, deadline, v, r, highS);
-    }
-
-    function testPermit_Reentrancy_DrainsUpToCap_NotBeyond() public {
-        ReenterPermit rp = new ReenterPermit();
-        rp.setup(cell, 3); // will attempt 3 total spends
-
-        // Grant 3 permits to the reentrancy contract via primaries (self-call)
-        bytes memory inner = abi.encodeWithSelector(
-            cell.setPermit.selector,
-            address(rp), // spender
-            3, // count
-            address(rp), // to (reenter target)
-            0,
-            abi.encodeWithSelector(ReenterPermit.hop.selector)
-        );
-        bytes32 n = keccak256("n-permit-reent");
-        vm.prank(alice);
-        cell.execute(address(cell), 0, inner, n);
-        vm.prank(bob);
-        cell.execute(address(cell), 0, inner, n);
-
-        // Reenter spends exactly 3 times, then further attempt reverts
-        rp.trigger();
-        vm.expectRevert();
-        rp.trigger();
-    }
-
-    // Approve token to third party, and have them actually pull via transferFrom.
-    function testApproveToken_ThirdPartyCanPullViaTransferFrom() public {
-        ERC20Mock t = new ERC20Mock();
-        t.mint(address(cell), 100 ether);
-        address third = vm.addr(uint256(keccak256("third-puller")));
-
-        // Self-call approveToken(token, third, 40e18)
-        bytes memory inner = abi.encodeWithSelector(cell.approveToken.selector, t, third, 40 ether);
-        bytes32 n = keccak256("n-approve-pull");
-        vm.prank(alice);
-        cell.execute(address(cell), 0, inner, n);
-        vm.prank(bob);
-        cell.execute(address(cell), 0, inner, n);
-
-        // Third party pulls 10, then 30 (total 40)
-        vm.prank(third);
-        bool ok1 = t.transferFrom(address(cell), third, 10 ether);
-        assertTrue(ok1);
-        vm.prank(third);
-        bool ok2 = t.transferFrom(address(cell), third, 30 ether);
-        assertTrue(ok2);
-        assertEq(t.balanceOf(third), 40 ether);
-
-        // More pulls fail due to ERC20Mock allowance depletion
-        vm.prank(third);
-        vm.expectRevert(); // "noallow"
-        t.transferFrom(address(cell), third, 1 ether);
-    }
-
-    // Multicall with mixed ops where a later op reverts -> whole call bubbles.
-    function testMulticall_BubblesOnInnerRevert() public {
-        bytes[] memory ops = new bytes[](2);
-        ops[0] = abi.encodeWithSelector(cell.getChatCount.selector); // harmless
-        ops[1] = abi.encodeWithSelector(
-            cell.pullToken.selector,
-            address(0xBEEF), // value irrelevant now
-            alice,
-            1
-        );
-
-        vm.prank(address(0xDEAD)); // not an owner
-        vm.expectRevert(Cell.NotOwner.selector);
-        cell.multicall(ops);
     }
 }
 

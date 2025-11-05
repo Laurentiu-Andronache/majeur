@@ -22,7 +22,7 @@ contract Cell {
     mapping(address token => mapping(address spender => uint256)) public allowance;
     mapping(bytes32 hash => mapping(address spender => uint256 count)) public permits;
 
-    address immutable CREATOR;
+    address immutable CELLS;
     uint256 immutable INITIAL_CHAIN_ID;
     bytes32 immutable INITIAL_DOMAIN_SEPARATOR;
 
@@ -38,17 +38,21 @@ contract Cell {
         (owner0, owner1) = owner1 < owner0 ? (owner1, owner0) : (owner0, owner1);
         emit OwnershipTransferred(owners[0] = owner0, owners[1] = owner1);
 
-        CREATOR = msg.sender;
+        CELLS = msg.sender;
         INITIAL_CHAIN_ID = block.chainid;
         INITIAL_DOMAIN_SEPARATOR = _computeDomainSeparator();
 
-        if (guardian != address(0)) emit OwnershipTransferred(address(this), owners[2] = guardian);
+        if (guardian != address(0)) {
+            require(guardian != owner0 && guardian != owner1, BadOwner());
+            emit OwnershipTransferred(address(this), owners[2] = guardian);
+        }
     }
 
     /// @dev Execute Cell call to contract or EOA.
     function execute(address to, uint256 value, bytes calldata data, bytes32 nonce)
         public
         payable
+        nonReentrant
         returns (bool first, bool ok, bytes memory retData)
     {
         bytes32 hash = keccak256(
@@ -79,7 +83,7 @@ contract Cell {
         uint256[] calldata values,
         bytes[] calldata datas,
         bytes32 nonce
-    ) public payable returns (bool first, bool[] memory oks, bytes[] memory retDatas) {
+    ) public payable nonReentrant returns (bool first, bool[] memory oks, bytes[] memory retDatas) {
         uint256 len = tos.length;
         require(len == values.length && len == datas.length, WrongLen());
 
@@ -118,7 +122,7 @@ contract Cell {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) public payable returns (bool first, bool[] memory oks, bytes[] memory retDatas) {
+    ) public payable nonReentrant returns (bool first, bool[] memory oks, bytes[] memory retDatas) {
         uint256 len = tos.length;
         require(len == values.length && len == datas.length, WrongLen());
         require(deadline >= block.timestamp, Expired());
@@ -226,6 +230,7 @@ contract Cell {
     function delegateExecute(address to, bytes calldata data, bytes32 nonce)
         public
         payable
+        nonReentrant
         returns (bool first, bool ok, bytes memory retData)
     {
         bytes32 hash = keccak256(
@@ -249,20 +254,22 @@ contract Cell {
         if (!ok) _revertWith(retData);
     }
 
-    /// @dev Cancel Cell execution from approving owner.
+    /// @dev Cancel Cell execution by approving owner.
     function cancel(bytes32 hash) public payable {
         require(msg.sender == approved[hash], NotApprover());
         delete approved[hash];
     }
 
-    /// @dev Spend permit counter for Cell call execution by owner.
+    /// @dev Spend from permit counter for Cell call execution.
     function spendPermit(address to, uint256 value, bytes calldata data)
         public
         payable
+        nonReentrant
         returns (bool ok, bytes memory retData)
     {
-        bytes32 hash =
-            keccak256(abi.encodePacked(this.execute.selector, to, value, keccak256(data)));
+        bytes32 hash = keccak256(
+            abi.encodePacked(this.execute.selector, to, value, keccak256(data))
+        );
 
         --permits[hash][msg.sender];
 
@@ -280,17 +287,17 @@ contract Cell {
     ) public payable returns (bool is0, bool byOwner) {
         is0 = (msg.sender == owners[0]);
         require(
-            is0 || msg.sender == owners[1] || msg.sender == address(this) || msg.sender == CREATOR,
+            is0 || msg.sender == owners[1] || msg.sender == address(this) || msg.sender == CELLS,
             NotOwner()
         );
         bytes32 hash =
             keccak256(abi.encodePacked(this.execute.selector, to, value, keccak256(data)));
-        if (msg.sender != address(this) && msg.sender != CREATOR) byOwner = true;
+        if (msg.sender != address(this) && msg.sender != CELLS) byOwner = true;
         permits[hash][byOwner ? owners[is0 ? 1 : 0] : spender] = count;
     }
 
     /// @dev Spend allowance set by owner.
-    function spendAllowance(address token, uint256 amount) public payable {
+    function spendAllowance(address token, uint256 amount) public payable nonReentrant {
         allowance[token][msg.sender] -= amount;
         if (token == address(0)) {
             safeTransferETH(msg.sender, amount);
@@ -307,48 +314,31 @@ contract Cell {
     {
         is0 = (msg.sender == owners[0]);
         require(
-            is0 || msg.sender == owners[1] || msg.sender == address(this) || msg.sender == CREATOR,
+            is0 || msg.sender == owners[1] || msg.sender == address(this) || msg.sender == CELLS,
             NotOwner()
         );
-        if (msg.sender != address(this) && msg.sender != CREATOR) byOwner = true;
+        if (msg.sender != address(this) && msg.sender != CELLS) byOwner = true;
         allowance[token][byOwner ? owners[is0 ? 1 : 0] : spender] = amount;
     }
 
-    /// @dev Pull token from allowance preset by owner.
-    function pullToken(address token, address owner, uint256 amount) public payable {
-        require(
-            msg.sender == owners[0] || msg.sender == owners[1] || msg.sender == address(this)
-                || msg.sender == CREATOR,
-            NotOwner()
-        );
-        safeTransferFrom(token, owner, amount);
-    }
-
-    /// @dev Approve token allowance to another spender by owner.
-    function approveToken(address token, address spender, uint256 amount)
-        public
-        payable
-        returns (bool is0, bool byOwner)
-    {
-        is0 = (msg.sender == owners[0]);
-        require(
-            is0 || msg.sender == owners[1] || msg.sender == address(this) || msg.sender == CREATOR,
-            NotOwner()
-        );
-        if (msg.sender != address(this) && msg.sender != CREATOR) byOwner = true;
-        safeApprove(token, byOwner ? owners[is0 ? 1 : 0] : spender, amount);
+    /// @dev Set a third signer with limited Cell powers.
+    function setGuardian(address guardian) public payable {
+        require(msg.sender == address(this), NotOwner());
+        require(guardian != owners[0] && guardian != owners[1], BadOwner());
+        emit OwnershipTransferred(address(this), owners[2] = guardian);
     }
 
     /// @dev Transfer 1/2 Cell sorted ownership slot to new owner.
-    function transferOwnership(address to) public payable returns (bool is0) {
+    function transferOwnership(address to) public payable {
         address o0 = owners[0];
         address o1 = owners[1];
 
-        is0 = (msg.sender == o0);
+        bool is0 = (msg.sender == o0);
         if (!is0 && msg.sender != o1) revert NotOwner();
 
         if (to == address(0) || to == msg.sender) revert BadOwner();
         if (to == (is0 ? o1 : o0)) revert BadOwner();
+        if (to == owners[2]) revert BadOwner();
 
         if (is0 ? (to > o1) : (to < o0)) {
             if (is0) {
@@ -366,13 +356,7 @@ contract Cell {
         emit OwnershipTransferred(msg.sender, to);
     }
 
-    /// @dev Set a third signer with limited direct Cell powers.
-    function setGuardian(address guardian) public payable {
-        require(msg.sender == address(this), NotOwner());
-        emit OwnershipTransferred(address(this), owners[2] = guardian);
-    }
-
-    /// @dev Get message array count between owners.
+    /// @dev Get message array push count among owners.
     function getChatCount() public view returns (uint256) {
         return messages.length;
     }
@@ -442,7 +426,26 @@ contract Cell {
     function _revertWith(bytes memory ret) internal pure {
         assembly ("memory-safe") { revert(add(ret, 0x20), mload(ret)) }
     }
+
+    /// @dev Optimized reentrancy guard.
+    modifier nonReentrant() {
+        assembly ("memory-safe") {
+            if tload(REENTRANCY_GUARD_SLOT) {
+                mstore(0x00, 0xab143c06)
+                revert(0x1c, 0x04)
+            }
+            tstore(REENTRANCY_GUARD_SLOT, address())
+        }
+        _;
+        assembly ("memory-safe") {
+            tstore(REENTRANCY_GUARD_SLOT, 0)
+        }
+    }
 }
+
+error Reentrancy();
+
+uint256 constant REENTRANCY_GUARD_SLOT = 0x929eee149b4bd21268;
 
 error ETHTransferFailed();
 
@@ -473,49 +476,13 @@ function safeTransfer(address token, address to, uint256 amount) {
     }
 }
 
-error ApproveFailed();
-
-function safeApprove(address token, address to, uint256 amount) {
-    assembly ("memory-safe") {
-        mstore(0x14, to)
-        mstore(0x34, amount)
-        mstore(0x00, 0x095ea7b3000000000000000000000000)
-        let success := call(gas(), token, 0, 0x10, 0x44, 0x00, 0x20)
-        if iszero(and(eq(mload(0x00), 1), success)) {
-            if iszero(lt(or(iszero(extcodesize(token)), returndatasize()), success)) {
-                mstore(0x00, 0x3e3f8f73)
-                revert(0x1c, 0x04)
-            }
-        }
-        mstore(0x34, 0)
-    }
-}
-
-error TransferFromFailed();
-
-function safeTransferFrom(address token, address from, uint256 amount) {
-    assembly ("memory-safe") {
-        let m := mload(0x40)
-        mstore(0x60, amount)
-        mstore(0x40, address())
-        mstore(0x2c, shl(96, from))
-        mstore(0x0c, 0x23b872dd000000000000000000000000)
-        let success := call(gas(), token, 0, 0x1c, 0x64, 0x00, 0x20)
-        if iszero(and(eq(mload(0x00), 1), success)) {
-            if iszero(lt(or(iszero(extcodesize(token)), returndatasize()), success)) {
-                mstore(0x00, 0x7939f424)
-                revert(0x1c, 0x04)
-            }
-        }
-        mstore(0x60, 0)
-        mstore(0x40, m)
-    }
-}
-
-/// @title Cell Wallet Creator (Cell/CellWall.eth)
+/// @title Cell Wallet: Cells (Cell/CellWall.eth)
 contract Cells {
-    event NewCell(Cell indexed cell);
-    mapping(address owner => Cell[]) public cells;
+    event NewCell(address indexed creator, Cell indexed cell);
+    mapping(address owner => Cell[]) public ownerCells;
+    Cell[] public cells;
+
+    constructor() payable {}
 
     /// @dev Construct new Cell with initialization calls.
     function createCell(
@@ -525,12 +492,13 @@ contract Cells {
         bytes32 salt,
         bytes[] calldata initCalls
     ) public payable returns (Cell cell, bool[] memory oks, bytes[] memory retDatas) {
-        emit NewCell(cell = new Cell{value: msg.value, salt: salt}(owner0, owner1, guardian));
-        cells[owner0].push(cell);
-        cells[owner1].push(cell);
-        if (guardian != address(0) && guardian != owner0 && guardian != owner1) {
-            cells[guardian].push(cell);
-        }
+        emit NewCell(
+            msg.sender, cell = new Cell{value: msg.value, salt: salt}(owner0, owner1, guardian)
+        );
+        cells.push(cell);
+        ownerCells[owner0].push(cell);
+        ownerCells[owner1].push(cell);
+        if (guardian != address(0)) ownerCells[guardian].push(cell);
         uint256 len = initCalls.length;
         if (len != 0) {
             oks = new bool[](len);
@@ -539,5 +507,10 @@ contract Cells {
                 (oks[i], retDatas[i]) = address(cell).call(initCalls[i]);
             }
         }
+    }
+
+    /// @dev Get cell array push count.
+    function getCellCount() public view returns (uint256) {
+        return cells.length;
     }
 }
