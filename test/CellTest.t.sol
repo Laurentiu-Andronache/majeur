@@ -33,8 +33,6 @@ contract CellTest is Test {
     address internal bob;
     address internal guardian;
 
-    bytes32 constant SIGN_BATCH_TYPEHASH = keccak256("SignBatch(bytes32 hash,uint256 deadline)");
-
     function setUp() public payable {
         alice = vm.addr(pkAlice);
         bob = vm.addr(pkBob);
@@ -67,7 +65,7 @@ contract CellTest is Test {
         );
     }
 
-    // Match contract's execute hash: abi.encodePacked + keccak256(data)
+    // Single-call hash (matches Cell.execute inline hashing)
     function _hashExecute(address to, uint256 value, bytes memory data, bytes32 nonce)
         internal
         pure
@@ -76,17 +74,75 @@ contract CellTest is Test {
         return keccak256(abi.encodePacked(Cell.execute.selector, to, value, keccak256(data), nonce));
     }
 
-    function _signBatch(bytes32 callHash, uint256 deadline, uint256 pk)
+    // (Optional) no-nonce variant — handy for permit/allowance test helpers
+    function _hashExecute(address to, uint256 value, bytes memory data)
         internal
-        view
-        returns (uint8, bytes32, bytes32)
+        pure
+        returns (bytes32)
     {
-        bytes32 domain = cell.DOMAIN_SEPARATOR();
-        bytes32 structHash = keccak256(abi.encode(SIGN_BATCH_TYPEHASH, callHash, deadline));
-        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domain, structHash));
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, digest);
+        return keccak256(abi.encodePacked(Cell.execute.selector, to, value, keccak256(data)));
+    }
+
+    bytes32 constant SIGN_BATCH_ARRAYS_TYPEHASH = keccak256(
+        "SignBatch(address[] tos,uint256[] values,bytes32[] dataHashes,bytes32 nonce,uint256 deadline)"
+    );
+
+    function _hashTos(address[] memory arr) internal pure returns (bytes32 h) {
+        bytes32[] memory w = new bytes32[](arr.length);
+        for (uint256 i; i < arr.length;) {
+            w[i] = bytes32(uint256(uint160(arr[i])));
+            unchecked {
+                ++i;
+            }
+        }
+        h = keccak256(abi.encodePacked(w));
+    }
+
+    function _hashValues(uint256[] memory arr) internal pure returns (bytes32 h) {
+        bytes32[] memory w = new bytes32[](arr.length);
+        for (uint256 i; i < arr.length;) {
+            w[i] = bytes32(arr[i]);
+            unchecked {
+                ++i;
+            }
+        }
+        h = keccak256(abi.encodePacked(w));
+    }
+
+    function _hashDatas(bytes[] memory arr) internal pure returns (bytes32 h) {
+        bytes32[] memory w = new bytes32[](arr.length);
+        for (uint256 i; i < arr.length;) {
+            w[i] = keccak256(arr[i]);
+            unchecked {
+                ++i;
+            }
+        }
+        h = keccak256(abi.encodePacked(w));
+    }
+
+    function _signBatch(
+        Cell _cell,
+        address[] memory tos,
+        uint256[] memory values,
+        bytes[] memory datas,
+        bytes32 nonce,
+        uint256 deadline,
+        uint256 pk
+    ) internal view returns (uint8 v, bytes32 r, bytes32 s) {
+        bytes32 structHash = keccak256(
+            abi.encode(
+                SIGN_BATCH_ARRAYS_TYPEHASH,
+                _hashTos(tos),
+                _hashValues(values),
+                _hashDatas(datas),
+                nonce,
+                deadline
+            )
+        );
+        bytes32 digest =
+            keccak256(abi.encodePacked("\x19\x01", _cell.DOMAIN_SEPARATOR(), structHash));
+        (v, r, s) = vm.sign(pk, digest);
         if (v < 27) v += 27;
-        return (v, r, s);
     }
 
     // -------- tests --------
@@ -152,7 +208,8 @@ contract CellTest is Test {
         bytes32 nonce = keccak256("n-batch-1");
         bytes32 callHash = _hashBatch(tos, vals, datas, nonce);
         uint256 deadline = block.timestamp + 1 days;
-        (uint8 v, bytes32 r, bytes32 s) = _signBatch(callHash, deadline, pkAlice);
+        (uint8 v, bytes32 r, bytes32 s) =
+            _signBatch(cell, tos, vals, datas, nonce, deadline, pkAlice);
 
         // anyone stages with Alice's sig
         vm.prank(address(0xBEEF));
@@ -208,7 +265,8 @@ contract CellTest is Test {
         uint256 deadline = block.timestamp + 1 days;
 
         // Alice signs once
-        (uint8 v, bytes32 r, bytes32 s) = _signBatch(callHash, deadline, pkAlice);
+        (uint8 v, bytes32 r, bytes32 s) =
+            _signBatch(cell, tos, vals, datas, nonce, deadline, pkAlice);
 
         // Stage with signature (any relayer)
         vm.prank(address(0xBEEF));
@@ -250,7 +308,7 @@ contract CellTest is Test {
 
         // Guardian finalizes with a signature
         uint256 deadline = block.timestamp + 1 days;
-        (uint8 v, bytes32 r, bytes32 s) = _signBatch(callHash, deadline, pkG);
+        (uint8 v, bytes32 r, bytes32 s) = _signBatch(cell, tos, vals, datas, nonce, deadline, pkG);
 
         uint256 sinkBefore = address(sink).balance;
         uint256 walletBefore = address(cell).balance;
@@ -440,7 +498,8 @@ contract CellTest is Test {
         bytes32 callHash = _hashBatch(tos, vals, datas, nonce);
 
         uint256 deadline = block.timestamp - 1; // in the past
-        (uint8 v, bytes32 r, bytes32 s) = _signBatch(callHash, deadline, pkAlice);
+        (uint8 v, bytes32 r, bytes32 s) =
+            _signBatch(cell, tos, vals, datas, nonce, deadline, pkAlice);
 
         vm.prank(address(0xBEEF));
         vm.expectRevert(Cell.Expired.selector);
@@ -463,7 +522,7 @@ contract CellTest is Test {
         bytes32 callHash = _hashBatch(tos, vals, datas, nonce);
         uint256 deadline = block.timestamp + 1 days;
 
-        (uint8 v, bytes32 r, bytes32 s) = _signBatch(callHash, deadline, pkBad);
+        (uint8 v, bytes32 r, bytes32 s) = _signBatch(cell, tos, vals, datas, nonce, deadline, pkBad);
 
         vm.prank(address(0xBEEF));
         vm.expectRevert(Cell.NotOwner.selector);
@@ -884,7 +943,8 @@ contract CellTest is Test {
         bytes32 callHash = _hashBatch(tos, vals, datas, nonce);
         uint256 deadline = block.timestamp + 1 days;
 
-        (uint8 v, bytes32 r, bytes32 s) = _signBatch(callHash, deadline, pkAlice);
+        (uint8 v, bytes32 r, bytes32 s) =
+            _signBatch(cell, tos, vals, datas, nonce, deadline, pkAlice);
         // convert to {0,1}
         if (v >= 27) v -= 27;
 
@@ -913,7 +973,8 @@ contract CellTest is Test {
         bytes32 nonce = keccak256("n-712-rpf");
         bytes32 callHash = _hashBatch(tos, vals, datas, nonce);
         uint256 deadline = block.timestamp + 1 days;
-        (uint8 v, bytes32 r, bytes32 s) = _signBatch(callHash, deadline, pkAlice);
+        (uint8 v, bytes32 r, bytes32 s) =
+            _signBatch(cell, tos, vals, datas, nonce, deadline, pkAlice);
 
         // Stage
         vm.prank(address(0xDEAD));
@@ -1132,7 +1193,8 @@ contract CellTest is Test {
 
         // craft digest & signature using Foundry then bump v to 29
         uint256 deadline = block.timestamp + 1 days;
-        (uint8 v, bytes32 r, bytes32 s) = _signBatch(callHash, deadline, pkAlice);
+        (uint8 v, bytes32 r, bytes32 s) =
+            _signBatch(cell, tos, vals, datas, nonce, deadline, pkAlice);
         v = 29;
         vm.prank(address(0xBEEF));
         vm.expectRevert(Cell.BadSign.selector);
@@ -1197,7 +1259,8 @@ contract CellTest is Test {
         // Now finalize with Alice's signature -> AlreadyApproved
         bytes32 callHash = _hashBatch(tos, vals, datas, nonce);
         uint256 deadline = block.timestamp + 1 days;
-        (uint8 v, bytes32 r, bytes32 s) = _signBatch(callHash, deadline, pkAlice);
+        (uint8 v, bytes32 r, bytes32 s) =
+            _signBatch(cell, tos, vals, datas, nonce, deadline, pkAlice);
 
         vm.prank(address(0xD00D));
         vm.expectRevert(Cell.AlreadyApproved.selector);
@@ -1338,9 +1401,9 @@ contract CellTest is Test {
         datas[0] = abi.encodeWithSelector(Sink.ping.selector);
 
         bytes32 n = keccak256("n-dom-change");
-        bytes32 callHash = _hashBatch(tos, vals, datas, n);
         uint256 deadline = block.timestamp + 1 days;
-        (uint8 v, bytes32 r, bytes32 s) = _signBatch(callHash, deadline, pkAlice);
+        (uint8 v, bytes32 r, bytes32 s) =
+            _signBatch(cell, tos, vals, datas, bytes32(0), deadline, pkAlice);
 
         // change chainId and try to stage with the same sig -> NotOwner (ecrecover zero)
         vm.chainId(block.chainid + 7);
@@ -1564,7 +1627,8 @@ contract CellTest is Test {
 
         bytes32 callHash = _hashBatch(tos, vals, datas, nonce);
         uint256 deadline = block.timestamp + 1 days;
-        (uint8 sv, bytes32 r, bytes32 s) = _signBatch(callHash, deadline, pkAlice);
+        (uint8 sv, bytes32 r, bytes32 s) =
+            _signBatch(cell, tos, vals, datas, nonce, deadline, pkAlice);
 
         vm.prank(address(0xBEEF));
         (bool first,,) = cell.batchExecuteWithSig(tos, vals, datas, nonce, deadline, sv, r, s);
@@ -1660,7 +1724,7 @@ contract CellTest is Test {
         bytes32 nonce = keccak256("n-712-g-removed");
         bytes32 callHash = _hashBatch(tos, vals, datas, nonce);
         uint256 deadline = block.timestamp + 1 days;
-        (uint8 v, bytes32 r, bytes32 s) = _signBatch(callHash, deadline, pkG);
+        (uint8 v, bytes32 r, bytes32 s) = _signBatch(cell, tos, vals, datas, nonce, deadline, pkG);
 
         vm.prank(address(0xBEEF));
         vm.expectRevert(Cell.NotOwner.selector);
@@ -1688,13 +1752,15 @@ contract CellTest is Test {
 
         // Alice signs & stages (via relayer)
         uint256 deadline = block.timestamp + 1 days;
-        (uint8 vA, bytes32 rA, bytes32 sA) = _signBatch(callHash, deadline, pkAlice);
+        (uint8 vA, bytes32 rA, bytes32 sA) =
+            _signBatch(cell, tos, vals, datas, nonce, deadline, pkAlice);
         vm.prank(address(0xAA01));
         (bool first,,) = cell.batchExecuteWithSig(tos, vals, datas, nonce, deadline, vA, rA, sA);
         assertTrue(first);
 
         // Bob signs & finalizes (via relayer)
-        (uint8 vB, bytes32 rB, bytes32 sB) = _signBatch(callHash, deadline, pkBob);
+        (uint8 vB, bytes32 rB, bytes32 sB) =
+            _signBatch(cell, tos, vals, datas, nonce, deadline, pkBob);
         uint256 sinkBefore = address(sink).balance;
         vm.prank(address(0xBB02));
         (, bool[] memory oks,) =
@@ -1721,7 +1787,8 @@ contract CellTest is Test {
         uint256 deadline = block.timestamp + 1 days;
 
         // Make any (v,r); force s to be above half-order threshold
-        (uint8 v, bytes32 r,) = _signBatch(callHash, deadline, pkAlice);
+        (uint8 v, bytes32 r, bytes32 s) =
+            _signBatch(cell, tos, vals, datas, nonce, deadline, pkAlice);
         uint256 halfOrder = 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0;
         bytes32 highS = bytes32(halfOrder + 1);
         vm.prank(address(0xC0FFEE));

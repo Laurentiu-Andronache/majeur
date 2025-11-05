@@ -26,7 +26,9 @@ contract Cell {
     uint256 immutable INITIAL_CHAIN_ID;
     bytes32 immutable INITIAL_DOMAIN_SEPARATOR;
 
-    bytes32 constant SIGN_BATCH_TYPEHASH = keccak256("SignBatch(bytes32 hash,uint256 deadline)");
+    bytes32 constant SIGN_BATCH_ARRAYS_TYPEHASH = keccak256(
+        "SignBatch(address[] tos,uint256[] values,bytes32[] dataHashes,bytes32 nonce,uint256 deadline)"
+    );
 
     event OwnershipTransferred(address indexed from, address indexed to);
 
@@ -126,7 +128,16 @@ contract Cell {
             abi.encodePacked(
                 "\x19\x01",
                 DOMAIN_SEPARATOR(),
-                keccak256(abi.encode(SIGN_BATCH_TYPEHASH, hash, deadline))
+                keccak256(
+                    abi.encode(
+                        SIGN_BATCH_ARRAYS_TYPEHASH,
+                        _hashTos(tos),
+                        _hashValues(values),
+                        _hashDatas(datas),
+                        nonce,
+                        deadline
+                    )
+                )
             )
         );
 
@@ -182,6 +193,33 @@ contract Cell {
                 nonce
             )
         );
+    }
+
+    /// @dev Batch address hash helper.
+    function _hashTos(address[] calldata arr) internal pure returns (bytes32 h) {
+        bytes32[] memory w = new bytes32[](arr.length);
+        for (uint256 i; i != arr.length; ++i) {
+            w[i] = bytes32(uint256(uint160(arr[i])));
+        }
+        h = keccak256(abi.encodePacked(w));
+    }
+
+    /// @dev Batch value hash helper.
+    function _hashValues(uint256[] calldata arr) internal pure returns (bytes32 h) {
+        bytes32[] memory w = new bytes32[](arr.length);
+        for (uint256 i; i != arr.length; ++i) {
+            w[i] = bytes32(arr[i]);
+        }
+        h = keccak256(abi.encodePacked(w));
+    }
+
+    /// @dev Batch data hash helper.
+    function _hashDatas(bytes[] calldata arr) internal pure returns (bytes32 h) {
+        bytes32[] memory w = new bytes32[](arr.length);
+        for (uint256 i; i != arr.length; ++i) {
+            w[i] = keccak256(arr[i]);
+        }
+        h = keccak256(abi.encodePacked(w));
     }
 
     /// @dev Delegate Cell call execution to contract.
