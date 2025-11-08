@@ -4,6 +4,8 @@ pragma solidity ^0.8.30;
 import {Test} from "../lib/forge-std/src/Test.sol";
 import {MolochMajeur, MolochShares, MolochBadge} from "../src/MolochMajeur.sol";
 
+import {console2} from "../lib/forge-std/src/console2.sol";
+
 contract MMTest is Test {
     MolochMajeur internal moloch;
     MolochShares internal shares;
@@ -2263,6 +2265,262 @@ contract MMTest is Test {
         assertEq(shares.getVotes(charlie), 0, "charlie back to zero");
     }
 
+    /// Handy debug test: logs decoded SVG for a proposal card and a YES vote receipt.
+    function test_logProposalAndReceiptSVG() public {
+        // Build a simple proposal so we get SVG metadata
+        bytes32 h = _id(
+            0, // call op
+            address(target), // target
+            0, // value
+            abi.encodeWithSelector(Target.store.selector, 123),
+            keccak256("SVG-DEMO")
+        );
+
+        // Open & vote YES with both holders (also mints YES receipts)
+        _voteYes(h);
+
+        // ---------- Proposal NFT ----------
+        string memory proposalURI = moloch.tokenURI(uint256(h));
+        console2.log("=== Proposal tokenURI ===");
+        console2.log(proposalURI);
+
+        string memory proposalJson = _decodeDataURI(proposalURI, "data:application/json;base64,");
+        console2.log("=== Proposal JSON ===");
+        console2.log(proposalJson);
+
+        string memory proposalSvg = _extractAndDecodeImageSvg(proposalJson);
+        console2.log("=== Proposal SVG ===");
+        console2.log(proposalSvg);
+
+        // ---------- YES vote receipt NFT ----------
+        uint256 ridYes = uint256(keccak256(abi.encodePacked("Moloch:receipt", h, uint8(1))));
+        string memory receiptURI = moloch.tokenURI(ridYes); // routes to receiptURI(id)
+        console2.log("=== Receipt tokenURI ===");
+        console2.log(receiptURI);
+
+        string memory receiptJson = _decodeDataURI(receiptURI, "data:application/json;base64,");
+        console2.log("=== Receipt JSON ===");
+        console2.log(receiptJson);
+
+        string memory receiptSvg = _extractAndDecodeImageSvg(receiptJson);
+        console2.log("=== Receipt SVG ===");
+        console2.log(receiptSvg);
+    }
+
+    /// Decode a `data:*;base64,...` string into its raw text using the same Base64 lib as the contract.
+    function _decodeDataURI(string memory dataURI, string memory expectedPrefix)
+        internal
+        pure
+        returns (string memory)
+    {
+        bytes memory uriBytes = bytes(dataURI);
+        bytes memory prefixBytes = bytes(expectedPrefix);
+
+        require(uriBytes.length > prefixBytes.length, "data URI too short");
+
+        // Basic sanity check on prefix
+        for (uint256 i = 0; i < prefixBytes.length; ++i) {
+            require(uriBytes[i] == prefixBytes[i], "unexpected data URI prefix");
+        }
+
+        uint256 b64Len = uriBytes.length - prefixBytes.length;
+        bytes memory b64 = new bytes(b64Len);
+        for (uint256 i = 0; i < b64Len; ++i) {
+            b64[i] = uriBytes[i + prefixBytes.length];
+        }
+
+        bytes memory decoded = Base64.decode(string(b64));
+        return string(decoded);
+    }
+
+    /// Given the JSON from tokenURI, pull out the `"image":"data:image/svg+xml;base64,..."`
+    /// field, decode the base64, and return the raw `<svg ...>` string.
+    function _extractAndDecodeImageSvg(string memory json) internal pure returns (string memory) {
+        bytes memory j = bytes(json);
+        bytes memory key = '"image":"';
+
+        int256 idx = _indexOfBytes(j, key);
+        require(idx >= 0, "image key not found");
+
+        uint256 start = uint256(idx) + key.length;
+
+        // Find closing quote
+        uint256 end = start;
+        while (end < j.length && j[end] != '"') {
+            ++end;
+        }
+        require(end > start, "malformed image field");
+
+        bytes memory imageVal = new bytes(end - start);
+        for (uint256 i = 0; i < imageVal.length; ++i) {
+            imageVal[i] = j[start + i];
+        }
+
+        string memory imageDataUri = string(imageVal);
+        // Now decode the inner SVG data URI
+        return _decodeDataURI(imageDataUri, "data:image/svg+xml;base64,");
+    }
+
+    /// Simple indexOf for bytes; returns -1 if not found.
+    function _indexOfBytes(bytes memory haystack, bytes memory needle)
+        internal
+        pure
+        returns (int256)
+    {
+        if (needle.length == 0 || needle.length > haystack.length) {
+            return -1;
+        }
+        for (uint256 i = 0; i <= haystack.length - needle.length; ++i) {
+            bool match_ = true;
+            for (uint256 j = 0; j < needle.length; ++j) {
+                if (haystack[i + j] != needle[j]) {
+                    match_ = false;
+                    break;
+                }
+            }
+            if (match_) {
+                return int256(i);
+            }
+        }
+        return -1;
+    }
+
+    /*───────────────────────────────────────────────────────────────────*
+    * PREVIEW: Top holder Badge (SBT) SVG
+    *───────────────────────────────────────────────────────────────────*/
+
+    function test_logTopHolderBadgeSVG_Alice() public view {
+        uint256 badgeIdAlice = uint256(uint160(alice));
+
+        // Full on-chain data URI (data:application/json;base64,...)
+        string memory dataUri = badge.tokenURI(badgeIdAlice);
+
+        // Decode JSON and pull out the "image" field
+        string memory json = _decodeDataUriToString(dataUri);
+        string memory imageDataUri = _extractJsonImageField(json);
+
+        // Try to decode the image to raw SVG (supports both base64 and utf8)
+        string memory svg = _tryDecodeSvgDataUri(imageDataUri);
+
+        console2.log("=== Badge tokenURI (Alice) ===");
+        console2.log(dataUri);
+        console2.log("=== Badge JSON (Alice) ===");
+        console2.log(json);
+        console2.log("=== Badge image data URI (Alice) ===");
+        console2.log(imageDataUri);
+        console2.log("=== Badge SVG (Alice / Top Holder) ===");
+        console2.log(svg);
+    }
+
+    function test_logTopHolderBadgeSVG_Bob() public view {
+        uint256 badgeIdBob = uint256(uint160(bob));
+
+        string memory dataUri = badge.tokenURI(badgeIdBob);
+        string memory json = _decodeDataUriToString(dataUri);
+        string memory imageDataUri = _extractJsonImageField(json);
+        string memory svg = _tryDecodeSvgDataUri(imageDataUri);
+
+        console2.log("=== Badge tokenURI (Bob) ===");
+        console2.log(dataUri);
+        console2.log("=== Badge JSON (Bob) ===");
+        console2.log(json);
+        console2.log("=== Badge image data URI (Bob) ===");
+        console2.log(imageDataUri);
+        console2.log("=== Badge SVG (Bob / Top Holder) ===");
+        console2.log(svg);
+    }
+
+    /*──────────────────────── helpers (pure) ────────────────────────*/
+
+    function _decodeDataUriToString(string memory dataUri) internal pure returns (string memory) {
+        // Expect something like: "data:application/json;base64,<payload>"
+        bytes memory u = bytes(dataUri);
+        bytes memory needle = bytes("base64,");
+        int256 idx = _indexOf(u, needle);
+        require(idx >= 0, "json data: no base64,");
+        uint256 start = uint256(idx) + needle.length;
+        bytes memory b64 = _slice(u, start, u.length - start);
+        return string(Base64.decode(string(b64)));
+    }
+
+    function _extractJsonImageField(string memory json) internal pure returns (string memory) {
+        // Find `"image":"..."`
+        bytes memory j = bytes(json);
+        bytes memory key = bytes("\"image\":\"");
+        int256 at = _indexOf(j, key);
+        require(at >= 0, "json: image missing");
+
+        uint256 start = uint256(at) + key.length;
+        uint256 end = start;
+        while (end < j.length && j[end] != '"') {
+            unchecked {
+                ++end;
+            }
+        }
+        require(end < j.length, "json: unterminated image");
+        return string(_slice(j, start, end - start));
+    }
+
+    function _tryDecodeSvgDataUri(string memory svgDataUri) internal pure returns (string memory) {
+        // Handles BOTH:
+        //  - data:image/svg+xml;base64,<payload>
+        //  - data:image/svg+xml;utf8,<svg...>
+        bytes memory u = bytes(svgDataUri);
+
+        // Case 1: base64-encoded SVG
+        {
+            bytes memory n1 = bytes("base64,");
+            int256 i1 = _indexOf(u, n1);
+            if (i1 >= 0) {
+                uint256 start = uint256(i1) + n1.length;
+                bytes memory b64 = _slice(u, start, u.length - start);
+                return string(Base64.decode(string(b64)));
+            }
+        }
+
+        // Case 2: inline utf8 SVG
+        {
+            bytes memory n2 = bytes(";utf8,");
+            int256 i2 = _indexOf(u, n2);
+            if (i2 >= 0) {
+                uint256 start = uint256(i2) + n2.length;
+                return string(_slice(u, start, u.length - start));
+            }
+        }
+
+        // Fallback: return the raw data URI if format is unexpected
+        return svgDataUri;
+    }
+
+    /* bytes utils */
+    function _indexOf(bytes memory haystack, bytes memory needle) internal pure returns (int256) {
+        if (needle.length == 0 || needle.length > haystack.length) return -1;
+        for (uint256 i = 0; i <= haystack.length - needle.length; ++i) {
+            bool match_ = true;
+            for (uint256 j = 0; j < needle.length; ++j) {
+                if (haystack[i + j] != needle[j]) {
+                    match_ = false;
+                    break;
+                }
+            }
+            if (match_) return int256(i);
+        }
+        return -1;
+    }
+
+    function _slice(bytes memory data, uint256 start, uint256 len)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        require(start + len <= data.length, "slice OOB");
+        bytes memory out = new bytes(len);
+        for (uint256 i = 0; i < len; ++i) {
+            out[i] = data[start + i];
+        }
+        return out;
+    }
+
     // Accept empty calldata calls (no-op target for replay test).
     receive() external payable {}
     fallback() external payable {}
@@ -2410,6 +2668,175 @@ contract RageQuitHook {
     function reenterRageQuit() public {
         // This runs during ERC20.transfer() → must hit nonReentrant
         moloch.rageQuit(toks);
+    }
+}
+
+/// @notice Library to encode strings in Base64.
+/// @author Solady (https://github.com/vectorized/solady/blob/main/src/utils/Base64.sol)
+/// @author Modified from Solmate (https://github.com/transmissions11/solmate/blob/main/src/utils/Base64.sol)
+/// @author Modified from (https://github.com/Brechtpd/base64/blob/main/base64.sol) by Brecht Devos - <brecht@loopring.org>.
+library Base64 {
+    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+    /*                    ENCODING / DECODING                     */
+    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+    /// @dev Encodes `data` using the base64 encoding described in RFC 4648.
+    /// See: https://datatracker.ietf.org/doc/html/rfc4648
+    /// @param fileSafe  Whether to replace '+' with '-' and '/' with '_'.
+    /// @param noPadding Whether to strip away the padding.
+    function encode(bytes memory data, bool fileSafe, bool noPadding)
+        internal
+        pure
+        returns (string memory result)
+    {
+        /// @solidity memory-safe-assembly
+        assembly {
+            let dataLength := mload(data)
+
+            if dataLength {
+                // Multiply by 4/3 rounded up.
+                // The `shl(2, ...)` is equivalent to multiplying by 4.
+                let encodedLength := shl(2, div(add(dataLength, 2), 3))
+
+                // Set `result` to point to the start of the free memory.
+                result := mload(0x40)
+
+                // Store the table into the scratch space.
+                // Offsetted by -1 byte so that the `mload` will load the character.
+                // We will rewrite the free memory pointer at `0x40` later with
+                // the allocated size.
+                // The magic constant 0x0670 will turn "-_" into "+/".
+                mstore(0x1f, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef")
+                mstore(0x3f, xor("ghijklmnopqrstuvwxyz0123456789-_", mul(iszero(fileSafe), 0x0670)))
+
+                // Skip the first slot, which stores the length.
+                let ptr := add(result, 0x20)
+                let end := add(ptr, encodedLength)
+
+                let dataEnd := add(add(0x20, data), dataLength)
+                let dataEndValue := mload(dataEnd) // Cache the value at the `dataEnd` slot.
+                mstore(dataEnd, 0x00) // Zeroize the `dataEnd` slot to clear dirty bits.
+
+                // Run over the input, 3 bytes at a time.
+                for {} 1 {} {
+                    data := add(data, 3) // Advance 3 bytes.
+                    let input := mload(data)
+
+                    // Write 4 bytes. Optimized for fewer stack operations.
+                    mstore8(0, mload(and(shr(18, input), 0x3F)))
+                    mstore8(1, mload(and(shr(12, input), 0x3F)))
+                    mstore8(2, mload(and(shr(6, input), 0x3F)))
+                    mstore8(3, mload(and(input, 0x3F)))
+                    mstore(ptr, mload(0x00))
+
+                    ptr := add(ptr, 4) // Advance 4 bytes.
+                    if iszero(lt(ptr, end)) { break }
+                }
+                mstore(dataEnd, dataEndValue) // Restore the cached value at `dataEnd`.
+                mstore(0x40, add(end, 0x20)) // Allocate the memory.
+                // Equivalent to `o = [0, 2, 1][dataLength % 3]`.
+                let o := div(2, mod(dataLength, 3))
+                // Offset `ptr` and pad with '='. We can simply write over the end.
+                mstore(sub(ptr, o), shl(240, 0x3d3d))
+                // Set `o` to zero if there is padding.
+                o := mul(iszero(iszero(noPadding)), o)
+                mstore(sub(ptr, o), 0) // Zeroize the slot after the string.
+                mstore(result, sub(encodedLength, o)) // Store the length.
+            }
+        }
+    }
+
+    /// @dev Encodes `data` using the base64 encoding described in RFC 4648.
+    /// Equivalent to `encode(data, false, false)`.
+    function encode(bytes memory data) internal pure returns (string memory result) {
+        result = encode(data, false, false);
+    }
+
+    /// @dev Encodes `data` using the base64 encoding described in RFC 4648.
+    /// Equivalent to `encode(data, fileSafe, false)`.
+    function encode(bytes memory data, bool fileSafe) internal pure returns (string memory result) {
+        result = encode(data, fileSafe, false);
+    }
+
+    /// @dev Decodes base64 encoded `data`.
+    ///
+    /// Supports:
+    /// - RFC 4648 (both standard and file-safe mode).
+    /// - RFC 3501 (63: ',').
+    ///
+    /// Does not support:
+    /// - Line breaks.
+    ///
+    /// Note: For performance reasons,
+    /// this function will NOT revert on invalid `data` inputs.
+    /// Outputs for invalid inputs will simply be undefined behaviour.
+    /// It is the user's responsibility to ensure that the `data`
+    /// is a valid base64 encoded string.
+    function decode(string memory data) internal pure returns (bytes memory result) {
+        /// @solidity memory-safe-assembly
+        assembly {
+            let dataLength := mload(data)
+
+            if dataLength {
+                let decodedLength := mul(shr(2, dataLength), 3)
+
+                for {} 1 {} {
+                    // If padded.
+                    if iszero(and(dataLength, 3)) {
+                        let t := xor(mload(add(data, dataLength)), 0x3d3d)
+                        // forgefmt: disable-next-item
+                        decodedLength := sub(
+                            decodedLength,
+                            add(iszero(byte(30, t)), iszero(byte(31, t)))
+                        )
+                        break
+                    }
+                    // If non-padded.
+                    decodedLength := add(decodedLength, sub(and(dataLength, 3), 1))
+                    break
+                }
+                result := mload(0x40)
+
+                // Write the length of the bytes.
+                mstore(result, decodedLength)
+
+                // Skip the first slot, which stores the length.
+                let ptr := add(result, 0x20)
+                let end := add(ptr, decodedLength)
+
+                // Load the table into the scratch space.
+                // Constants are optimized for smaller bytecode with zero gas overhead.
+                // `m` also doubles as the mask of the upper 6 bits.
+                let m := 0xfc000000fc00686c7074787c8084888c9094989ca0a4a8acb0b4b8bcc0c4c8cc
+                mstore(0x5b, m)
+                mstore(0x3b, 0x04080c1014181c2024282c3034383c4044484c5054585c6064)
+                mstore(0x1a, 0xf8fcf800fcd0d4d8dce0e4e8ecf0f4)
+
+                for {} 1 {} {
+                    // Read 4 bytes.
+                    data := add(data, 4)
+                    let input := mload(data)
+
+                    // Write 3 bytes.
+                    // forgefmt: disable-next-item
+                    mstore(ptr, or(
+                        and(m, mload(byte(28, input))),
+                        shr(6, or(
+                            and(m, mload(byte(29, input))),
+                            shr(6, or(
+                                and(m, mload(byte(30, input))),
+                                shr(6, mload(byte(31, input)))
+                            ))
+                        ))
+                    ))
+                    ptr := add(ptr, 3)
+                    if iszero(lt(ptr, end)) { break }
+                }
+                mstore(0x40, add(end, 0x20)) // Allocate the memory.
+                mstore(end, 0) // Zeroize the slot after the bytes.
+                mstore(0x60, 0) // Restore the zero slot.
+            }
+        }
     }
 }
 
