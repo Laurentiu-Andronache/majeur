@@ -878,19 +878,22 @@ contract MolochMajeur {
 
         // ----- Proposal Card -----
         string memory stateStr;
-        if (executed[h]) {
-            stateStr = "EXECUTED";
-        } else if (snap == 0) {
+        ProposalState st = state(h);
+
+        if (st == ProposalState.Unopened) {
             stateStr = "UNOPENED";
-        } else if (proposalTTL != 0) {
-            uint64 t0 = createdAt[h];
-            if (t0 != 0 && block.timestamp > t0 + proposalTTL) {
-                stateStr = "EXPIRED";
-            } else {
-                stateStr = "ACTIVE";
-            }
-        } else {
-            stateStr = "OPEN";
+        } else if (st == ProposalState.Active) {
+            stateStr = "ACTIVE";
+        } else if (st == ProposalState.Queued) {
+            stateStr = "QUEUED";
+        } else if (st == ProposalState.Succeeded) {
+            stateStr = "SUCCEEDED";
+        } else if (st == ProposalState.Defeated) {
+            stateStr = "DEFEATED";
+        } else if (st == ProposalState.Expired) {
+            stateStr = "EXPIRED";
+        } else if (st == ProposalState.Executed) {
+            stateStr = "EXECUTED";
         }
 
         string memory svg = _svgCardBase();
