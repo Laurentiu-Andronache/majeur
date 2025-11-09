@@ -59,8 +59,8 @@ contract MolochMajeur {
     /*//////////////////////////////////////////////////////////////
                       TOKENS: SHARES (ERC20) / BADGE (SBT)
     //////////////////////////////////////////////////////////////*/
-    MolochShares public shares;
-    MolochBadge public badge;
+    MolochShares public immutable shares;
+    MolochBadge public immutable badge;
 
     event SharesDeployed(address token);
     event BadgeDeployed(address badge);
@@ -282,7 +282,7 @@ contract MolochMajeur {
         if (!F.enabled || F.resolved) revert NotOk();
         if (F.rewardToken == address(0)) {
             if (msg.value != amount) revert NotOk();
-            F.pool += amount;
+            F.pool += msg.value;
         } else {
             if (msg.value != 0) revert NotOk();
             uint256 before = _erc20Balance(F.rewardToken);
@@ -342,37 +342,55 @@ contract MolochMajeur {
     //////////////////////////////////////////////////////////////*/
     function state(bytes32 id) public view returns (ProposalState) {
         if (executed[id]) return ProposalState.Executed;
+
         if (snapshotBlock[id] == 0) return ProposalState.Unopened;
 
+        uint64 queued = queuedAt[id];
+
         // If already queued, TTL no longer applies.
-        if (queuedAt[id] != 0) {
-            if (block.timestamp < queuedAt[id] + timelockDelay) {
+        if (queued != 0) {
+            uint64 delay = timelockDelay;
+            // If delay is zero, this condition is always false once block.timestamp >= queued,
+            // which matches the original behavior (queuedAt is only set when delay != 0).
+            if (delay != 0 && block.timestamp < queued + delay) {
                 return ProposalState.Queued;
             }
-            // timelock elapsed → continue to gates (ready-to-execute check)
-        } else if (proposalTTL != 0) {
-            uint64 t0 = createdAt[id];
-            if (t0 != 0 && block.timestamp > t0 + proposalTTL) {
-                return ProposalState.Expired;
+        } else {
+            uint64 ttl = proposalTTL;
+            if (ttl != 0) {
+                uint64 t0 = createdAt[id];
+                if (t0 != 0 && block.timestamp > t0 + ttl) {
+                    return ProposalState.Expired;
+                }
             }
         }
 
         // Evaluate gates
         uint256 ts = supplySnapshot[id];
-        if (ts == 0) return ProposalState.Active; // unusual; treat as active
+        if (ts == 0) return ProposalState.Active;
 
-        Tally memory t = tallies[id];
-        uint256 totalCast = t.forVotes + t.againstVotes + t.abstainVotes;
+        Tally storage t = tallies[id];
+        uint256 forVotes = t.forVotes;
+        uint256 againstVotes = t.againstVotes;
+        uint256 abstainVotes = t.abstainVotes;
 
-        if (quorumAbsolute != 0 && totalCast < quorumAbsolute) return ProposalState.Active;
-        if (quorumBps != 0 && totalCast < mulDiv(uint256(quorumBps), ts, 10000)) {
+        uint256 totalCast = forVotes + againstVotes + abstainVotes;
+
+        // Absolute quorum
+        uint256 absQuorum = quorumAbsolute;
+        if (absQuorum != 0 && totalCast < absQuorum) return ProposalState.Active;
+
+        // Dynamic quorum (BPS)
+        uint16 bps = quorumBps;
+        if (bps != 0 && totalCast < mulDiv(uint256(bps), ts, 10000)) {
             return ProposalState.Active;
         }
 
-        if (minYesVotesAbsolute != 0 && t.forVotes < minYesVotesAbsolute) {
-            return ProposalState.Defeated;
-        }
-        if (t.forVotes <= t.againstVotes) return ProposalState.Defeated;
+        // Absolute YES floor
+        uint256 minYes = minYesVotesAbsolute;
+        if (minYes != 0 && forVotes < minYes) return ProposalState.Defeated;
+
+        if (forVotes <= againstVotes) return ProposalState.Defeated;
 
         return ProposalState.Succeeded;
     }
@@ -435,25 +453,14 @@ contract MolochMajeur {
     function resolveFutarchyNo(bytes32 id) public {
         FutarchyConfig storage F = futarchy[id];
         if (!F.enabled || F.resolved || executed[id]) revert NotOk();
-        if (proposalTTL == 0) revert NotOk();
+
+        uint64 ttl = proposalTTL;
+        if (ttl == 0) revert NotOk();
+
         uint64 t0 = createdAt[id];
-        if (t0 == 0) revert NotOk();
-        if (block.timestamp <= t0 + proposalTTL) revert NotOk();
+        if (t0 == 0 || block.timestamp <= t0 + ttl) revert NotOk();
 
-        uint256 idNo = _receiptId(id, 0);
-        uint256 winSupply = totalSupply[idNo];
-        if (winSupply == 0 || F.pool == 0) {
-            F.resolved = true;
-            F.winner = 0;
-            emit FutarchyResolved(id, 0, F.pool, winSupply, 0);
-            return;
-        }
-
-        F.finalWinningSupply = winSupply;
-        F.payoutPerUnit = F.pool / winSupply;
-        F.resolved = true;
-        F.winner = 0;
-        emit FutarchyResolved(id, 0, F.pool, winSupply, F.payoutPerUnit);
+        _finalizeFutarchy(id, F, 0);
     }
 
     function cashOutFutarchy(bytes32 id, uint256 amount)
@@ -475,31 +482,32 @@ contract MolochMajeur {
             return 0;
         }
 
-        if (F.rewardToken == address(0)) {
-            (bool sendOk,) = payable(msg.sender).call{value: payout}("");
-            if (!sendOk) revert NotOk();
-        } else {
-            _safeTransfer(F.rewardToken, msg.sender, payout);
-        }
+        _payout(F.rewardToken, msg.sender, payout);
         emit FutarchyClaimed(id, msg.sender, amount, payout);
     }
 
     function _resolveFutarchyYes(bytes32 id) internal {
         FutarchyConfig storage F = futarchy[id];
         if (!F.enabled || F.resolved) return;
-        uint256 idYes = _receiptId(id, 1);
-        uint256 winSupply = totalSupply[idYes];
-        if (winSupply == 0 || F.pool == 0) {
-            F.resolved = true;
-            F.winner = 1;
-            emit FutarchyResolved(id, 1, F.pool, winSupply, 0);
-            return;
+        _finalizeFutarchy(id, F, 1);
+    }
+
+    function _finalizeFutarchy(bytes32 id, FutarchyConfig storage F, uint8 winner) internal {
+        uint256 rid = _receiptId(id, winner);
+        uint256 winSupply = totalSupply[rid];
+        uint256 pool = F.pool;
+        uint256 ppu;
+
+        if (winSupply != 0 && pool != 0) {
+            F.finalWinningSupply = winSupply;
+            ppu = pool / winSupply;
+            F.payoutPerUnit = ppu;
         }
-        F.finalWinningSupply = winSupply;
-        F.payoutPerUnit = F.pool / winSupply;
+
         F.resolved = true;
-        F.winner = 1;
-        emit FutarchyResolved(id, 1, F.pool, winSupply, F.payoutPerUnit);
+        F.winner = winner;
+
+        emit FutarchyResolved(id, winner, pool, winSupply, ppu);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -575,15 +583,19 @@ contract MolochMajeur {
         uint256 p = permits[id];
         if (p == 0) revert NotApprover();
 
-        if (!executed[id]) executed[id] = true;
+        executed[id] = true;
+
         if (p != type(uint256).max) {
-            permits[id] = p - 1;
-            if (use6909ForPermits) _burn6909(address(this), uint256(id), 1);
+            unchecked {
+                permits[id] = p - 1;
+            }
+            if (use6909ForPermits) {
+                _burn6909(address(this), uint256(id), 1);
+            }
         }
 
         (ok, retData) = _execute(op, to, value, data);
 
-        // settle YES if futarchy was enabled for this intent hash
         _resolveFutarchyYes(id);
 
         emit PermitSpent(id, msg.sender, op, to, value);
@@ -598,12 +610,7 @@ contract MolochMajeur {
 
     function claimAllowance(address token, uint256 amount) public nonReentrant {
         allowance[token][msg.sender] -= amount;
-        if (token == address(0)) {
-            (bool ok,) = payable(msg.sender).call{value: amount}("");
-            if (!ok) revert NotOk();
-            return;
-        }
-        _safeTransfer(token, msg.sender, amount);
+        _payout(token, msg.sender, amount);
     }
 
     function pull(address token, address from, uint256 amount) public payable onlySelf {
@@ -632,23 +639,28 @@ contract MolochMajeur {
         payable
         nonReentrant
     {
-        Sale memory s = sales[payToken];
+        Sale storage s = sales[payToken];
         if (!s.active) revert NotApprover();
 
-        if (s.cap != 0 && shareAmount > s.cap) revert NotOk();
-        uint256 cost = shareAmount * s.pricePerShare;
-        if (shareAmount != 0 && cost / shareAmount != s.pricePerShare) revert NotOk(); // overflow guard
+        uint256 cap = s.cap;
+        if (cap != 0 && shareAmount > cap) revert NotOk();
+
+        uint256 price = s.pricePerShare;
+        uint256 cost = shareAmount * price; // overflow already checked by Solidity
 
         // EFFECTS (CEI)
-        if (s.cap != 0) sales[payToken].cap = s.cap - shareAmount;
+        if (cap != 0) {
+            unchecked {
+                s.cap = cap - shareAmount;
+            }
+        }
 
         // Pull funds
         if (payToken == address(0)) {
-            if (msg.value > maxPay) revert NotOk();
-            if (msg.value != cost) revert NotOk();
+            // Same logic: require(msg.value <= maxPay && msg.value == cost)
+            if (msg.value != cost || msg.value > maxPay) revert NotOk();
         } else {
-            if (msg.value != 0) revert NotOk();
-            if (maxPay != 0 && cost > maxPay) revert NotOk();
+            if (msg.value != 0 || (maxPay != 0 && cost > maxPay)) revert NotOk();
             _safeTransferFrom(payToken, msg.sender, address(this), cost);
         }
 
@@ -656,7 +668,7 @@ contract MolochMajeur {
         if (s.minting) {
             shares.mintFromMolochMajeur(msg.sender, shareAmount);
         } else {
-            shares.transfer(msg.sender, shareAmount); // SAW must hold enough
+            shares.transfer(msg.sender, shareAmount);
         }
 
         emit SharesPurchased(msg.sender, payToken, shareAmount, cost);
@@ -667,28 +679,26 @@ contract MolochMajeur {
     //////////////////////////////////////////////////////////////*/
     function rageQuit(address[] calldata tokens) public nonReentrant {
         if (!ragequittable) revert NotApprover();
+
         uint256 amt = shares.balanceOf(msg.sender);
         if (amt == 0) revert NotOk();
 
         uint256 ts = shares.totalSupply();
         shares.burnFromMolochMajeur(msg.sender, amt);
 
-        address prev = address(0);
-        for (uint256 i = 0; i < tokens.length; ++i) {
+        uint256 len = tokens.length;
+        address prev;
+
+        for (uint256 i; i < len; ++i) {
             address tk = tokens[i];
             if (i != 0 && tk <= prev) revert NotOk();
             prev = tk;
 
-            uint256 pool = (tk == address(0)) ? address(this).balance : _erc20Balance(tk);
+            uint256 pool = tk == address(0) ? address(this).balance : _erc20Balance(tk);
             uint256 due = mulDiv(pool, amt, ts);
-            if (due != 0) {
-                if (tk == address(0)) {
-                    (bool ok,) = payable(msg.sender).call{value: due}("");
-                    if (!ok) revert NotOk();
-                } else {
-                    _safeTransfer(tk, msg.sender, due);
-                }
-            }
+            if (due == 0) continue;
+
+            _payout(tk, msg.sender, due);
         }
     }
 
@@ -760,64 +770,76 @@ contract MolochMajeur {
         _onSharesChanged(a);
     }
 
+    /// Maintains a sticky top-256 set.
+    /// - A holder keeps their slot as long as their balance is non-zero.
+    /// - We only consider demotion when:
+    ///   (a) a non-member's balance changes and exceeds the current minimum, or
+    ///   (b) a member's balance falls to zero.
+    /// - This means the set may diverge from the true mathematical top-256.
     function _onSharesChanged(address a) internal {
         uint256 bal = shares.balanceOf(a);
         uint16 pos = topPos[a];
 
-        // If holder has no shares, ensure they are not in the top set and burn badge.
+        // 1) Zero balance → drop from top set and burn badge if currently in.
         if (bal == 0) {
             if (pos != 0) {
-                topHolders[pos - 1] = address(0);
+                unchecked {
+                    topHolders[pos - 1] = address(0);
+                }
                 topPos[a] = 0;
+                badge.burn(a);
             }
-            if (badge.balanceOf(a) != 0) badge.burn(a);
             return;
         }
 
-        // Already in top set: nothing else to do (we only track membership, not order).
+        // 2) Already in top set → keep slot; we don't rebalance / re-rank.
         if (pos != 0) return;
 
-        // Try to insert into any free slot first.
-        for (uint16 i = 0; i < 256; ++i) {
+        // 3) Not in top set, non-zero balance: try to fill a free slot first.
+        uint256 len = 256;
+        for (uint16 i; i != len; ++i) {
             if (topHolders[i] == address(0)) {
                 topHolders[i] = a;
-                topPos[a] = i + 1;
-                if (badge.balanceOf(a) == 0) badge.mint(a);
+                unchecked {
+                    topPos[a] = i + 1;
+                }
+                badge.mint(a);
                 return;
             }
         }
 
-        // No free slot: find the lowest-balance current top holder.
+        // 4) Full set: find the lowest-balance current top holder.
         uint16 minI;
         uint256 minBal = type(uint256).max;
-        for (uint16 i = 0; i < 256; ++i) {
+
+        for (uint16 i; i != len; ++i) {
             address cur = topHolders[i];
-            uint256 cbal = shares.balanceOf(cur);
+            uint256 cbal = (cur == address(0)) ? 0 : shares.balanceOf(cur);
+
             if (cbal < minBal) {
                 minBal = cbal;
                 minI = i;
             }
         }
 
-        // Only replace if strictly larger than the current minimum.
+        // 5) Only replace if strictly larger than the current minimum.
         if (bal > minBal) {
             address evict = topHolders[minI];
+
             topHolders[minI] = a;
-            topPos[a] = minI + 1;
+            unchecked {
+                topPos[a] = minI + 1;
+            }
             topPos[evict] = 0;
 
-            if (badge.balanceOf(evict) != 0) badge.burn(evict);
-            if (badge.balanceOf(a) == 0) badge.mint(a);
+            badge.burn(evict);
+            badge.mint(a);
         }
     }
 
     /*//////////////////////////////////////////////////////////////
                              ERC6909 INTERNALS
     //////////////////////////////////////////////////////////////*/
-    function _receiptId(bytes32 id, uint8 support) internal pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked("Moloch:receipt", id, support)));
-    }
-
     function _mint6909(address to, uint256 id, uint256 amount) internal {
         totalSupply[id] += amount;
         balanceOf[to][id] += amount;
@@ -833,6 +855,10 @@ contract MolochMajeur {
     /*//////////////////////////////////////////////////////////////
                               SVG / TOKEN URIs
     //////////////////////////////////////////////////////////////*/
+    /*//////////////////////////////////////////////////////////////
+                            PROPOSAL CARD URI
+    //////////////////////////////////////////////////////////////*/
+
     /// @notice On-chain JSON/SVG card for a proposal id, or routes to receiptURI for vote receipts.
     function tokenURI(uint256 id) public view returns (string memory) {
         // 1) If this id is a vote receipt, delegate to the full receipt renderer.
@@ -842,171 +868,332 @@ contract MolochMajeur {
 
         Tally memory t = tallies[h];
         bool touchedTallies = (t.forVotes | t.againstVotes | t.abstainVotes) != 0;
-        bool opened = snapshotBlock[h] != 0 || createdAt[h] != 0;
+
+        uint256 snap = snapshotBlock[h];
+        bool opened = snap != 0 || createdAt[h] != 0;
 
         bool looksLikePermit = use6909ForPermits && !opened && !touchedTallies
             && (totalSupply[id] != 0 || permits[h] != 0);
 
         if (looksLikePermit) {
-            // ----- Permit card -----
-            string memory cnt = permits[h] == type(uint256).max ? "unlimited" : _u2s(permits[h]);
-
-            string memory svgP = string.concat(
-                "<svg xmlns='http://www.w3.org/2000/svg' width='520' height='200'>",
-                "<rect width='100%' height='100%' fill='#111'/>",
-                "<text x='18' y='38' font-family='Courier New, monospace' font-size='18' fill='#fff'>",
-                orgName,
-                " Permit</text>",
-                "<text x='18' y='72' font-family='Courier New, monospace' font-size='12' fill='#fff'>id: ",
-                _toHex(h),
-                "</text>",
-                "<text x='18' y='92' font-family='Courier New, monospace' font-size='12' fill='#fff'>mirror supply: ",
-                _u2s(totalSupply[id]),
-                "</text>",
-                "<text x='18' y='112' font-family='Courier New, monospace' font-size='12' fill='#fff'>remaining: ",
-                cnt,
-                "</text>",
-                "</svg>"
-            );
-
-            string memory jsonP = string.concat(
-                '{"name":"Permit","description":"Intent/permit mirror (ERC6909)",',
-                '"image":"',
-                DataURI.svg(svgP),
-                '"}'
-            );
-
-            return DataURI.json(jsonP);
+            return _permitCardURI(h, id);
         }
 
-        // ----- Proposal card -----
+        // ----- Proposal Card -----
         string memory stateStr;
         if (executed[h]) {
-            stateStr = "executed";
-        } else if (snapshotBlock[h] == 0) {
-            stateStr = "unopened";
+            stateStr = "EXECUTED";
+        } else if (snap == 0) {
+            stateStr = "UNOPENED";
         } else if (proposalTTL != 0) {
             uint64 t0 = createdAt[h];
             if (t0 != 0 && block.timestamp > t0 + proposalTTL) {
-                stateStr = "expired";
+                stateStr = "EXPIRED";
             } else {
-                stateStr = "open";
+                stateStr = "ACTIVE";
             }
         } else {
-            stateStr = "open";
+            stateStr = "OPEN";
         }
 
-        string memory svg = string.concat(
-            "<svg xmlns='http://www.w3.org/2000/svg' width='520' height='240'>",
-            "<rect width='100%' height='100%' fill='#111'/>",
-            "<text x='18' y='36' font-family='Courier New, monospace' font-size='18' fill='#fff'>",
+        string memory svg = _svgCardBase();
+
+        // Title
+        svg = string.concat(
+            svg,
+            "<text x='210' y='55' class='garamond-bold' font-size='18' fill='#fff' text-anchor='middle' letter-spacing='3'>",
             orgName,
-            " Proposal</text>",
-            "<text x='18' y='66' font-family='Courier New, monospace' font-size='12' fill='#fff'>id: ",
-            _toHex(h),
             "</text>",
-            "<text x='18' y='86' font-family='Courier New, monospace' font-size='12' fill='#fff'>snapshot: ",
-            _u2s(snapshotBlock[h]),
-            " (supply ",
-            _u2s(supplySnapshot[h]),
-            ")</text>",
-            "<text x='18' y='106' font-family='Courier New, monospace' font-size='12' fill='#fff'>for: ",
-            _u2s(t.forVotes),
-            "  against: ",
-            _u2s(t.againstVotes),
-            "  abstain: ",
-            _u2s(t.abstainVotes),
-            "</text>",
-            "<text x='18' y='126' font-family='Courier New, monospace' font-size='12' fill='#fff'>state: ",
+            "<text x='210' y='75' class='garamond' font-size='11' fill='#fff' text-anchor='middle' letter-spacing='2'>PROPOSAL</text>",
+            "<line x1='40' y1='90' x2='380' y2='90' stroke='#fff' stroke-width='1'/>"
+        );
+
+        // ASCII Eye (minimalist)
+        svg = string.concat(
+            svg,
+            "<text x='210' y='155' class='mono' font-size='9' fill='#fff' text-anchor='middle'>.---------.</text>",
+            "<text x='210' y='166' class='mono' font-size='9' fill='#fff' text-anchor='middle'>(     O     )</text>",
+            "<text x='210' y='177' class='mono' font-size='9' fill='#fff' text-anchor='middle'>'---------'</text>",
+            "<line x1='40' y1='220' x2='380' y2='220' stroke='#fff' stroke-width='1'/>"
+        );
+
+        // Data section
+        svg = string.concat(
+            svg,
+            "<text x='60' y='255' class='garamond' font-size='10' fill='#aaa' letter-spacing='1'>ID</text>",
+            "<text x='60' y='272' class='mono' font-size='9' fill='#fff'>",
+            _shortHex(h),
+            "</text>"
+        );
+
+        // Snapshot data (only if opened)
+        if (opened) {
+            svg = string.concat(
+                svg,
+                "<text x='60' y='305' class='garamond' font-size='10' fill='#aaa' letter-spacing='1'>Snapshot</text>",
+                "<text x='60' y='322' class='mono' font-size='9' fill='#fff'>Block ",
+                _u2s(snap),
+                "</text>",
+                "<text x='60' y='335' class='mono' font-size='9' fill='#fff'>Supply ",
+                _formatNumber(supplySnapshot[h]),
+                "</text>"
+            );
+        }
+
+        // Tally section (only if votes exist)
+        if (touchedTallies) {
+            svg = string.concat(
+                svg,
+                "<text x='60' y='368' class='garamond' font-size='10' fill='#aaa' letter-spacing='1'>Tally</text>",
+                "<text x='60' y='385' class='mono' font-size='9' fill='#fff'>For      ",
+                _formatNumber(t.forVotes),
+                "</text>",
+                "<text x='60' y='398' class='mono' font-size='9' fill='#fff'>Against  ",
+                _formatNumber(t.againstVotes),
+                "</text>",
+                "<text x='60' y='411' class='mono' font-size='9' fill='#fff'>Abstain  ",
+                _formatNumber(t.abstainVotes),
+                "</text>"
+            );
+        }
+
+        // Status
+        svg = string.concat(
+            svg,
+            "<text x='210' y='465' class='garamond' font-size='12' fill='#fff' text-anchor='middle' letter-spacing='2'>",
             stateStr,
             "</text>",
+            "<line x1='40' y1='495' x2='380' y2='495' stroke='#fff' stroke-width='1'/>",
             "</svg>"
         );
 
-        string memory json = string.concat(
-            '{"name":"Proposal","description":"Snapshot-weighted proposal",',
-            '"image":"',
-            DataURI.svg(svg),
-            '"}'
+        return _jsonImage(
+            string.concat(orgName, " Proposal"), "Snapshot-weighted governance proposal", svg
         );
-
-        return DataURI.json(json);
     }
 
-    /// @notice On-chain JSON/SVG for a vote receipt id (ERC-6909).
+    /*//////////////////////////////////////////////////////////////
+                            VOTE RECEIPT CARD URI
+    //////////////////////////////////////////////////////////////*/
+
     function receiptURI(uint256 id) public view returns (string memory) {
         uint8 s = receiptSupport[id]; // 0 = NO, 1 = YES, 2 = ABSTAIN
-        bytes32 h = receiptProposal[id]; // proposal hash this receipt belongs to
+        bytes32 h = receiptProposal[id];
         FutarchyConfig memory F = futarchy[h];
 
         string memory stance = s == 1 ? "YES" : s == 0 ? "NO" : "ABSTAIN";
 
         string memory status;
         if (!F.enabled) {
-            status = "plain";
+            status = "SEALED";
         } else if (!F.resolved) {
-            status = "open";
+            status = "OPEN";
         } else {
-            status = (F.winner == s) ? "winner" : "loser";
+            status = (F.winner == s) ? "REDEEMABLE" : "SEALED";
         }
 
-        string memory svg = string.concat(
-            "<svg xmlns='http://www.w3.org/2000/svg' width='520' height='220'>",
-            "<rect width='100%' height='100%' fill='#111'/>",
-            "<text x='18' y='38' font-family='Courier New, monospace' font-size='18' fill='#fff'>",
+        string memory svg = _svgCardBase();
+
+        // Title
+        svg = string.concat(
+            svg,
+            "<text x='210' y='55' class='garamond-bold' font-size='18' fill='#fff' text-anchor='middle' letter-spacing='3'>",
             orgName,
-            " Vote Receipt</text>",
-            "<text x='18' y='72' font-family='Courier New, monospace' font-size='12' fill='#fff'>proposal</text>",
-            "<text x='18' y='88' font-family='Courier New, monospace' font-size='12' fill='#fff'>",
-            _toHex(h),
             "</text>",
-            "<text x='18' y='112' font-family='Courier New, monospace' font-size='12' fill='#fff'>stance: ",
+            "<text x='210' y='75' class='garamond' font-size='11' fill='#fff' text-anchor='middle' letter-spacing='2'>VOTE RECEIPT</text>",
+            "<line x1='40' y1='90' x2='380' y2='90' stroke='#fff' stroke-width='1'/>"
+        );
+
+        // ASCII symbol based on vote type
+        if (s == 1) {
+            // YES - pointing up hand
+            svg = string.concat(
+                svg,
+                "<text x='210' y='135' class='mono' font-size='9' fill='#fff' text-anchor='middle'>|</text>",
+                "<text x='210' y='146' class='mono' font-size='9' fill='#fff' text-anchor='middle'>/_\\</text>",
+                "<text x='210' y='157' class='mono' font-size='9' fill='#fff' text-anchor='middle'>/   \\</text>",
+                "<text x='210' y='168' class='mono' font-size='9' fill='#fff' text-anchor='middle'>|  *  |</text>",
+                "<text x='210' y='179' class='mono' font-size='9' fill='#fff' text-anchor='middle'>|     |</text>",
+                "<text x='210' y='190' class='mono' font-size='9' fill='#fff' text-anchor='middle'>|     |</text>",
+                "<text x='210' y='201' class='mono' font-size='9' fill='#fff' text-anchor='middle'>|_____|</text>"
+            );
+        } else if (s == 0) {
+            // NO - X symbol
+            svg = string.concat(
+                svg,
+                "<text x='210' y='145' class='mono' font-size='9' fill='#fff' text-anchor='middle'>\\       /</text>",
+                "<text x='210' y='156' class='mono' font-size='9' fill='#fff' text-anchor='middle'> \\     / </text>",
+                "<text x='210' y='167' class='mono' font-size='9' fill='#fff' text-anchor='middle'>  \\   /  </text>",
+                "<text x='210' y='178' class='mono' font-size='9' fill='#fff' text-anchor='middle'>    X    </text>",
+                "<text x='210' y='189' class='mono' font-size='9' fill='#fff' text-anchor='middle'>  /   \\  </text>",
+                "<text x='210' y='200' class='mono' font-size='9' fill='#fff' text-anchor='middle'> /     \\ </text>",
+                "<text x='210' y='211' class='mono' font-size='9' fill='#fff' text-anchor='middle'>/       \\</text>"
+            );
+        } else {
+            // ABSTAIN - circle
+            svg = string.concat(
+                svg,
+                "<text x='210' y='145' class='mono' font-size='9' fill='#fff' text-anchor='middle'>___</text>",
+                "<text x='210' y='156' class='mono' font-size='9' fill='#fff' text-anchor='middle'>/     \\</text>",
+                "<text x='210' y='167' class='mono' font-size='9' fill='#fff' text-anchor='middle'>|       |</text>",
+                "<text x='210' y='178' class='mono' font-size='9' fill='#fff' text-anchor='middle'>|       |</text>",
+                "<text x='210' y='189' class='mono' font-size='9' fill='#fff' text-anchor='middle'>|       |</text>",
+                "<text x='210' y='200' class='mono' font-size='9' fill='#fff' text-anchor='middle'>\\     /</text>",
+                "<text x='210' y='211' class='mono' font-size='9' fill='#fff' text-anchor='middle'>---</text>"
+            );
+        }
+
+        svg = string.concat(
+            svg, "<line x1='40' y1='240' x2='380' y2='240' stroke='#fff' stroke-width='1'/>"
+        );
+
+        // Data
+        svg = string.concat(
+            svg,
+            "<text x='60' y='275' class='garamond' font-size='10' fill='#aaa' letter-spacing='1'>Proposal</text>",
+            "<text x='60' y='292' class='mono' font-size='9' fill='#fff'>",
+            _shortHex(h),
+            "</text>",
+            "<text x='60' y='325' class='garamond' font-size='10' fill='#aaa' letter-spacing='1'>Stance</text>",
+            "<text x='60' y='345' class='garamond-bold' font-size='14' fill='#fff'>",
             stance,
             "</text>",
-            "<text x='18' y='132' font-family='Courier New, monospace' font-size='12' fill='#fff'>status: ",
+            "<text x='60' y='378' class='garamond' font-size='10' fill='#aaa' letter-spacing='1'>Weight</text>",
+            "<text x='60' y='395' class='mono' font-size='9' fill='#fff'>",
+            _formatNumber(totalSupply[id]),
+            " votes</text>"
+        );
+
+        // Futarchy info (only if enabled)
+        if (F.enabled) {
+            svg = string.concat(
+                svg,
+                "<text x='60' y='428' class='garamond' font-size='10' fill='#aaa' letter-spacing='1'>Futarchy</text>",
+                "<text x='60' y='445' class='mono' font-size='9' fill='#fff'>Pool ",
+                _formatNumber(F.pool),
+                F.rewardToken == address(0) ? " wei" : " units",
+                "</text>"
+            );
+
+            if (F.resolved) {
+                svg = string.concat(
+                    svg,
+                    "<text x='60' y='458' class='mono' font-size='9' fill='#fff'>Payout ",
+                    _formatNumber(F.payoutPerUnit),
+                    "/vote</text>"
+                );
+            }
+        }
+
+        // Status
+        svg = string.concat(
+            svg,
+            "<text x='210' y='510' class='garamond' font-size='12' fill='#fff' text-anchor='middle' letter-spacing='2'>",
             status,
             "</text>",
-            "<text x='18' y='152' font-family='Courier New, monospace' font-size='12' fill='#fff'>receipt supply: ",
-            _u2s(totalSupply[id]),
-            "</text>",
-            (F.enabled
-                    ? string.concat(
-                        "<text x='18' y='172' font-family='Courier New, monospace' font-size='12' fill='#fff'>pool: ",
-                        _u2s(F.pool),
-                        (F.rewardToken == address(0) ? " wei" : " units"),
-                        "</text>"
-                    )
-                    : ""),
-            (F.resolved
-                    ? string.concat(
-                        "<text x='18' y='192' font-family='Courier New, monospace' font-size='12' fill='#fff'>payout/unit: ",
-                        _u2s(F.payoutPerUnit),
-                        "</text>"
-                    )
-                    : ""),
+            "<line x1='40' y1='540' x2='380' y2='540' stroke='#fff' stroke-width='1'/>",
             "</svg>"
         );
 
-        string memory json = string.concat(
-            '{"name":"Receipt","description":"SBT-like vote receipt; burn to cash out if winning",',
-            '"image":"',
-            DataURI.svg(svg),
-            '"}'
+        return _jsonImage(
+            "Vote Receipt",
+            string.concat(stance, " vote receipt - burn to claim rewards if winner"),
+            svg
+        );
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            PERMIT CARD URI
+    //////////////////////////////////////////////////////////////*/
+
+    function _permitCardURI(bytes32 h, uint256 id) internal view returns (string memory) {
+        string memory usesStr;
+        uint256 p = permits[h];
+        if (p == type(uint256).max) {
+            usesStr = "UNLIMITED";
+        } else {
+            usesStr = _formatNumber(p);
+        }
+
+        string memory svg = _svgCardBase();
+
+        // Title
+        svg = string.concat(
+            svg,
+            "<text x='210' y='55' class='garamond-bold' font-size='18' fill='#fff' text-anchor='middle' letter-spacing='3'>",
+            orgName,
+            "</text>",
+            "<text x='210' y='75' class='garamond' font-size='11' fill='#fff' text-anchor='middle' letter-spacing='2'>PERMIT</text>",
+            "<line x1='40' y1='90' x2='380' y2='90' stroke='#fff' stroke-width='1'/>"
         );
 
-        return DataURI.json(json);
+        // ASCII Key
+        svg = string.concat(
+            svg,
+            "<text x='210' y='140' class='mono' font-size='9' fill='#fff' text-anchor='middle'>___</text>",
+            "<text x='210' y='151' class='mono' font-size='9' fill='#fff' text-anchor='middle'>( o )</text>",
+            "<text x='210' y='162' class='mono' font-size='9' fill='#fff' text-anchor='middle'>| |</text>",
+            "<text x='210' y='173' class='mono' font-size='9' fill='#fff' text-anchor='middle'>| |</text>",
+            "<text x='210' y='184' class='mono' font-size='9' fill='#fff' text-anchor='middle'>====###====</text>",
+            "<text x='210' y='195' class='mono' font-size='9' fill='#fff' text-anchor='middle'>| |</text>",
+            "<text x='210' y='206' class='mono' font-size='9' fill='#fff' text-anchor='middle'>| |</text>",
+            "<text x='210' y='217' class='mono' font-size='9' fill='#fff' text-anchor='middle'>|_|</text>",
+            "<line x1='40' y1='245' x2='380' y2='245' stroke='#fff' stroke-width='1'/>"
+        );
+
+        // Data
+        svg = string.concat(
+            svg,
+            "<text x='60' y='280' class='garamond' font-size='10' fill='#aaa' letter-spacing='1'>Intent ID</text>",
+            "<text x='60' y='297' class='mono' font-size='9' fill='#fff'>",
+            _shortHex(h),
+            "</text>",
+            "<text x='60' y='330' class='garamond' font-size='10' fill='#aaa' letter-spacing='1'>Uses</text>",
+            "<text x='60' y='350' class='garamond-bold' font-size='14' fill='#fff'>",
+            usesStr,
+            "</text>"
+        );
+
+        // Mirror supply (only if mirrored)
+        if (use6909ForPermits && totalSupply[id] > 0) {
+            svg = string.concat(
+                svg,
+                "<text x='60' y='383' class='garamond' font-size='10' fill='#aaa' letter-spacing='1'>Mirror Supply</text>",
+                "<text x='60' y='400' class='mono' font-size='9' fill='#fff'>",
+                _formatNumber(totalSupply[id]),
+                "</text>"
+            );
+        }
+
+        // Status
+        svg = string.concat(
+            svg,
+            "<text x='210' y='480' class='garamond' font-size='12' fill='#fff' text-anchor='middle' letter-spacing='2'>ACTIVE</text>",
+            "<line x1='40' y1='520' x2='380' y2='520' stroke='#fff' stroke-width='1'/>",
+            "</svg>"
+        );
+
+        return _jsonImage("Permit", "Pre-approved execution permit", svg);
+    }
+
+    /// @dev Shortened hex: 0xabcd...1234
+    function _shortHex(bytes32 data) internal pure returns (string memory) {
+        return _shortHexDisplay(_toHex(data));
     }
 
     // Cheap hex for bytes32: "0x" + 64 hex chars.
     function _toHex(bytes32 data) internal pure returns (string memory) {
-        bytes16 HEX = 0x30313233343536373839616263646566; // "0123456789abcdef"
         bytes memory str = new bytes(66);
         str[0] = "0";
         str[1] = "x";
-        for (uint256 i; i < 32; ++i) {
-            uint8 b = uint8(data[i]);
-            str[2 + 2 * i] = bytes1(HEX[b >> 4]);
-            str[3 + 2 * i] = bytes1(HEX[b & 0x0f]);
+
+        assembly {
+            let _hex := "0123456789abcdef"
+            for { let i := 0 } lt(i, 32) { i := add(i, 1) } {
+                let b := byte(i, data)
+                mstore8(add(add(str, 32), add(mul(i, 2), 2)), byte(shr(4, b), _hex))
+                mstore8(add(add(str, 32), add(mul(i, 2), 3)), byte(and(b, 0x0f), _hex))
+            }
         }
         return string(str);
     }
@@ -1074,21 +1261,13 @@ contract MolochMajeur {
         if (!(ok && (ret.length == 0 || abi.decode(ret, (bool))))) revert NotOk();
     }
 
-    function _u2s(uint256 x) internal pure returns (string memory) {
-        if (x == 0) return "0";
-        uint256 temp = x;
-        uint256 digits;
-        while (temp != 0) {
-            digits++;
-            temp /= 10;
+    function _payout(address token, address to, uint256 amount) internal {
+        if (token == address(0)) {
+            (bool ok,) = payable(to).call{value: amount}("");
+            if (!ok) revert NotOk();
+        } else {
+            _safeTransfer(token, to, amount);
         }
-        bytes memory buffer = new bytes(digits);
-        while (x != 0) {
-            digits -= 1;
-            buffer[digits] = bytes1(uint8(48 + (x % 10)));
-            x /= 10;
-        }
-        return string(buffer);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -1114,234 +1293,6 @@ contract MolochMajeur {
     }
 }
 
-error Overflow();
-
-/// @dev Casts `x` to a uint32. Reverts on overflow.
-function toUint32(uint256 x) pure returns (uint32) {
-    if (x >= 1 << 32) _revertOverflow();
-    return uint32(x);
-}
-
-/// @dev Casts `x` to a uint224. Reverts on overflow.
-function toUint224(uint256 x) pure returns (uint224) {
-    if (x >= 1 << 224) _revertOverflow();
-    return uint224(x);
-}
-
-function _revertOverflow() pure {
-    /// @solidity memory-safe-assembly
-    assembly {
-        // Store the function selector of `Overflow()`.
-        mstore(0x00, 0x35278d12)
-        // Revert with (offset, size).
-        revert(0x1c, 0x04)
-    }
-}
-
-error MulDivFailed();
-
-/// @dev Returns `floor(x * y / d)`.
-/// Reverts if `x * y` overflows, or `d` is zero.
-function mulDiv(uint256 x, uint256 y, uint256 d) pure returns (uint256 z) {
-    /// @solidity memory-safe-assembly
-    assembly {
-        z := mul(x, y)
-        // Equivalent to `require(d != 0 && (y == 0 || x <= type(uint256).max / y))`.
-        if iszero(mul(or(iszero(x), eq(div(z, x), y)), d)) {
-            mstore(0x00, 0xad251c27) // `MulDivFailed()`.
-            revert(0x1c, 0x04)
-        }
-        z := div(z, d)
-    }
-}
-
-library DataURI {
-    function json(string memory raw) internal pure returns (string memory) {
-        return string.concat("data:application/json;base64,", Base64.encode(bytes(raw)));
-    }
-
-    function svg(string memory raw) internal pure returns (string memory) {
-        return string.concat("data:image/svg+xml;base64,", Base64.encode(bytes(raw)));
-    }
-}
-
-/// @notice Library to encode strings in Base64.
-/// @author Solady (https://github.com/vectorized/solady/blob/main/src/utils/Base64.sol)
-/// @author Modified from Solmate (https://github.com/transmissions11/solmate/blob/main/src/utils/Base64.sol)
-/// @author Modified from (https://github.com/Brechtpd/base64/blob/main/base64.sol) by Brecht Devos - <brecht@loopring.org>.
-library Base64 {
-    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-    /*                    ENCODING / DECODING                     */
-    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
-
-    /// @dev Encodes `data` using the base64 encoding described in RFC 4648.
-    /// See: https://datatracker.ietf.org/doc/html/rfc4648
-    /// @param fileSafe  Whether to replace '+' with '-' and '/' with '_'.
-    /// @param noPadding Whether to strip away the padding.
-    function encode(bytes memory data, bool fileSafe, bool noPadding)
-        internal
-        pure
-        returns (string memory result)
-    {
-        /// @solidity memory-safe-assembly
-        assembly {
-            let dataLength := mload(data)
-
-            if dataLength {
-                // Multiply by 4/3 rounded up.
-                // The `shl(2, ...)` is equivalent to multiplying by 4.
-                let encodedLength := shl(2, div(add(dataLength, 2), 3))
-
-                // Set `result` to point to the start of the free memory.
-                result := mload(0x40)
-
-                // Store the table into the scratch space.
-                // Offsetted by -1 byte so that the `mload` will load the character.
-                // We will rewrite the free memory pointer at `0x40` later with
-                // the allocated size.
-                // The magic constant 0x0670 will turn "-_" into "+/".
-                mstore(0x1f, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef")
-                mstore(0x3f, xor("ghijklmnopqrstuvwxyz0123456789-_", mul(iszero(fileSafe), 0x0670)))
-
-                // Skip the first slot, which stores the length.
-                let ptr := add(result, 0x20)
-                let end := add(ptr, encodedLength)
-
-                let dataEnd := add(add(0x20, data), dataLength)
-                let dataEndValue := mload(dataEnd) // Cache the value at the `dataEnd` slot.
-                mstore(dataEnd, 0x00) // Zeroize the `dataEnd` slot to clear dirty bits.
-
-                // Run over the input, 3 bytes at a time.
-                for {} 1 {} {
-                    data := add(data, 3) // Advance 3 bytes.
-                    let input := mload(data)
-
-                    // Write 4 bytes. Optimized for fewer stack operations.
-                    mstore8(0, mload(and(shr(18, input), 0x3F)))
-                    mstore8(1, mload(and(shr(12, input), 0x3F)))
-                    mstore8(2, mload(and(shr(6, input), 0x3F)))
-                    mstore8(3, mload(and(input, 0x3F)))
-                    mstore(ptr, mload(0x00))
-
-                    ptr := add(ptr, 4) // Advance 4 bytes.
-                    if iszero(lt(ptr, end)) { break }
-                }
-                mstore(dataEnd, dataEndValue) // Restore the cached value at `dataEnd`.
-                mstore(0x40, add(end, 0x20)) // Allocate the memory.
-                // Equivalent to `o = [0, 2, 1][dataLength % 3]`.
-                let o := div(2, mod(dataLength, 3))
-                // Offset `ptr` and pad with '='. We can simply write over the end.
-                mstore(sub(ptr, o), shl(240, 0x3d3d))
-                // Set `o` to zero if there is padding.
-                o := mul(iszero(iszero(noPadding)), o)
-                mstore(sub(ptr, o), 0) // Zeroize the slot after the string.
-                mstore(result, sub(encodedLength, o)) // Store the length.
-            }
-        }
-    }
-
-    /// @dev Encodes `data` using the base64 encoding described in RFC 4648.
-    /// Equivalent to `encode(data, false, false)`.
-    function encode(bytes memory data) internal pure returns (string memory result) {
-        result = encode(data, false, false);
-    }
-
-    /// @dev Encodes `data` using the base64 encoding described in RFC 4648.
-    /// Equivalent to `encode(data, fileSafe, false)`.
-    function encode(bytes memory data, bool fileSafe) internal pure returns (string memory result) {
-        result = encode(data, fileSafe, false);
-    }
-
-    /// @dev Decodes base64 encoded `data`.
-    ///
-    /// Supports:
-    /// - RFC 4648 (both standard and file-safe mode).
-    /// - RFC 3501 (63: ',').
-    ///
-    /// Does not support:
-    /// - Line breaks.
-    ///
-    /// Note: For performance reasons,
-    /// this function will NOT revert on invalid `data` inputs.
-    /// Outputs for invalid inputs will simply be undefined behaviour.
-    /// It is the user's responsibility to ensure that the `data`
-    /// is a valid base64 encoded string.
-    function decode(string memory data) internal pure returns (bytes memory result) {
-        /// @solidity memory-safe-assembly
-        assembly {
-            let dataLength := mload(data)
-
-            if dataLength {
-                let decodedLength := mul(shr(2, dataLength), 3)
-
-                for {} 1 {} {
-                    // If padded.
-                    if iszero(and(dataLength, 3)) {
-                        let t := xor(mload(add(data, dataLength)), 0x3d3d)
-                        // forgefmt: disable-next-item
-                        decodedLength := sub(
-                            decodedLength,
-                            add(iszero(byte(30, t)), iszero(byte(31, t)))
-                        )
-                        break
-                    }
-                    // If non-padded.
-                    decodedLength := add(decodedLength, sub(and(dataLength, 3), 1))
-                    break
-                }
-                result := mload(0x40)
-
-                // Write the length of the bytes.
-                mstore(result, decodedLength)
-
-                // Skip the first slot, which stores the length.
-                let ptr := add(result, 0x20)
-                let end := add(ptr, decodedLength)
-
-                // Load the table into the scratch space.
-                // Constants are optimized for smaller bytecode with zero gas overhead.
-                // `m` also doubles as the mask of the upper 6 bits.
-                let m := 0xfc000000fc00686c7074787c8084888c9094989ca0a4a8acb0b4b8bcc0c4c8cc
-                mstore(0x5b, m)
-                mstore(0x3b, 0x04080c1014181c2024282c3034383c4044484c5054585c6064)
-                mstore(0x1a, 0xf8fcf800fcd0d4d8dce0e4e8ecf0f4)
-
-                for {} 1 {} {
-                    // Read 4 bytes.
-                    data := add(data, 4)
-                    let input := mload(data)
-
-                    // Write 3 bytes.
-                    // forgefmt: disable-next-item
-                    mstore(ptr, or(
-                        and(m, mload(byte(28, input))),
-                        shr(6, or(
-                            and(m, mload(byte(29, input))),
-                            shr(6, or(
-                                and(m, mload(byte(30, input))),
-                                shr(6, mload(byte(31, input)))
-                            ))
-                        ))
-                    ))
-                    ptr := add(ptr, 3)
-                    if iszero(lt(ptr, end)) { break }
-                }
-                mstore(0x40, add(end, 0x20)) // Allocate the memory.
-                mstore(end, 0) // Zeroize the slot after the bytes.
-                mstore(0x60, 0) // Restore the zero slot.
-            }
-        }
-    }
-}
-
-/*//////////////////////////////////////////////////////////////
-                         MINIMAL EXTERNALS
-//////////////////////////////////////////////////////////////*/
-interface IToken {
-    function transfer(address, uint256) external;
-    function transferFrom(address, address, uint256) external;
-}
-
 /*//////////////////////////////////////////////////////////////
              ERC20 SHARES WITH LIGHTWEIGHT SNAPSHOTS/DELEGATION
 //////////////////////////////////////////////////////////////*/
@@ -1349,6 +1300,8 @@ contract MolochShares {
     /* ERRORS */
     error Len();
     error Locked();
+    error BadBlock();
+    error Unauthorized();
 
     /* ERC20 */
     event Approval(address indexed from, address indexed to, uint256 amount);
@@ -1360,8 +1313,13 @@ contract MolochShares {
     mapping(address => uint256) public balanceOf;
     mapping(address => mapping(address => uint256)) public allowance;
 
-    /// @notice The parent Moloch (SAW) contract.
-    address payable public immutable saw;
+    /// @notice The parent Moloch contract.
+    address payable public immutable mol;
+
+    modifier onlyMol() {
+        require(msg.sender == mol, Unauthorized());
+        _;
+    }
 
     /* VOTES (ERC20Votes-like minimal) */
     event DelegateChanged(
@@ -1399,7 +1357,7 @@ contract MolochShares {
     //////////////////////////////////////////////////////////////*/
     constructor(address[] memory to, uint256[] memory amt, address sawAddr) payable {
         if (to.length != amt.length) revert Len();
-        saw = payable(sawAddr);
+        mol = payable(sawAddr);
 
         for (uint256 i = 0; i < to.length; ++i) {
             _mint(to[i], amt[i]); // balances + totalSupply + TS checkpoint
@@ -1412,11 +1370,11 @@ contract MolochShares {
                            METADATA (FROM SAW)
     //////////////////////////////////////////////////////////////*/
     function name() public view returns (string memory) {
-        return string.concat(MolochMajeur(saw).orgName(), " Shares");
+        return string.concat(MolochMajeur(mol).orgName(), " Shares");
     }
 
     function symbol() public view returns (string memory) {
-        return MolochMajeur(saw).orgSymbol();
+        return MolochMajeur(mol).orgSymbol();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -1429,15 +1387,13 @@ contract MolochShares {
     }
 
     function transfer(address to, uint256 amount) public returns (bool) {
-        // Global transfer lock: only SAW can be src or dst while locked.
-        if (MolochMajeur(saw).transfersLocked() && msg.sender != saw && to != saw) revert Locked();
-
+        _checkUnlocked(msg.sender, to);
         _moveTokens(msg.sender, to, amount);
         return true;
     }
 
     function transferFrom(address from, address to, uint256 amount) public returns (bool) {
-        if (MolochMajeur(saw).transfersLocked() && from != saw && to != saw) revert Locked();
+        _checkUnlocked(from, to);
 
         uint256 allowed = allowance[from][msg.sender];
         if (allowed != type(uint256).max) {
@@ -1448,19 +1404,15 @@ contract MolochShares {
         return true;
     }
 
-    /// @notice Mint new shares; callable only by the SAW (MolochMajeur).
-    function mintFromMolochMajeur(address to, uint256 amount) public payable {
-        require(msg.sender == saw, "SAW");
+    /// @notice Mint new shares; callable only by the Moloch (MolochMajeur).
+    function mintFromMolochMajeur(address to, uint256 amount) public payable onlyMol {
         _mint(to, amount);
         _autoSelfDelegate(to);
-        _applyVotingDelta(to, int256(amount));
-        MolochMajeur(saw).onSharesChanged(to);
+        _afterVotingBalanceChange(to, int256(amount));
     }
 
-    /// @notice Burn shares; callable only by the SAW (MolochMajeur).
-    function burnFromMolochMajeur(address from, uint256 amount) public payable {
-        require(msg.sender == saw, "SAW");
-
+    /// @notice Burn shares; callable only by the Moloch (MolochMajeur).
+    function burnFromMolochMajeur(address from, uint256 amount) public payable onlyMol {
         balanceOf[from] -= amount;
         unchecked {
             totalSupply -= amount;
@@ -1469,8 +1421,7 @@ contract MolochShares {
 
         _writeTotalSupplyCheckpoint();
         _autoSelfDelegate(from);
-        _applyVotingDelta(from, -int256(amount));
-        MolochMajeur(saw).onSharesChanged(from);
+        _afterVotingBalanceChange(from, -int256(amount));
     }
 
     function _mint(address to, uint256 amount) internal {
@@ -1493,11 +1444,28 @@ contract MolochShares {
         _autoSelfDelegate(from);
         _autoSelfDelegate(to);
 
-        _applyVotingDelta(from, -int256(amount));
-        _applyVotingDelta(to, int256(amount));
+        int256 signed = int256(amount);
+        _afterVotingBalanceChange(from, -signed);
+        _afterVotingBalanceChange(to, signed);
+    }
 
-        MolochMajeur(saw).onSharesChanged(from);
-        MolochMajeur(saw).onSharesChanged(to);
+    function _updateDelegateVotes(
+        address delegate_,
+        Checkpoint[] storage ckpts,
+        bool add,
+        uint256 amount
+    ) internal {
+        uint256 len = ckpts.length;
+        uint256 oldVal = len == 0 ? 0 : ckpts[len - 1].votes;
+        uint256 newVal = add ? oldVal + amount : oldVal - amount;
+
+        _writeCheckpoint(ckpts, oldVal, newVal);
+        emit DelegateVotesChanged(delegate_, oldVal, newVal);
+    }
+
+    function _checkUnlocked(address from, address to) internal view {
+        bool locked = MolochMajeur(mol).transfersLocked();
+        if (locked && from != mol && to != mol) revert Locked();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -1518,12 +1486,12 @@ contract MolochShares {
     }
 
     function getPastVotes(address account, uint32 blockNumber) public view returns (uint256) {
-        require(blockNumber < block.number, "bad block");
+        if (blockNumber >= block.number) revert BadBlock();
         return _checkpointsLookup(_checkpoints[account], blockNumber);
     }
 
     function getPastTotalSupply(uint32 blockNumber) public view returns (uint256) {
-        require(blockNumber < block.number, "bad block");
+        if (blockNumber >= block.number) revert BadBlock();
         return _checkpointsLookup(_totalSupplyCheckpoints, blockNumber);
     }
 
@@ -1541,14 +1509,19 @@ contract MolochShares {
     }
 
     function setSplitDelegation(address[] calldata delegates_, uint32[] calldata bps_) external {
+        address account = msg.sender;
         uint256 n = delegates_.length;
         require(n == bps_.length && n > 0 && n <= MAX_SPLITS, "split/len");
 
+        // Capture the current effective distribution BEFORE we mutate storage.
+        (address[] memory oldD, uint32[] memory oldB) = _currentDistribution(account);
+
         uint256 sum;
-        for (uint256 i = 0; i < n; ++i) {
+        for (uint256 i; i < n; ++i) {
             address d = delegates_[i];
             require(d != address(0), "split/zero");
-            sum += bps_[i];
+            uint32 b = bps_[i];
+            sum += b;
 
             // no duplicate delegates
             for (uint256 j = i + 1; j < n; ++j) {
@@ -1557,50 +1530,75 @@ contract MolochShares {
         }
         require(sum == BPS_DENOM, "split/sum");
 
-        (address[] memory oldD, uint32[] memory oldB) = _currentDistribution(msg.sender);
+        // Ensure the account has a primary delegate line (defaults to self once).
+        _autoSelfDelegate(account);
 
-        delete _splits[msg.sender];
-        for (uint256 i = 0; i < n; ++i) {
-            _splits[msg.sender].push(Split({delegate: delegates_[i], bps: bps_[i]}));
+        // Write the new split set.
+        delete _splits[account];
+        for (uint256 i; i < n; ++i) {
+            _splits[account].push(Split({delegate: delegates_[i], bps: bps_[i]}));
         }
 
-        _repointVotesForHolder(msg.sender, oldD, oldB);
+        // Move only the difference in voting power from the old distribution to the new one.
+        _repointVotesForHolder(account, oldD, oldB);
 
-        emit WeightedDelegationSet(msg.sender, delegates_, bps_);
+        emit WeightedDelegationSet(account, delegates_, bps_);
     }
 
     function clearSplitDelegation() external {
-        if (_splits[msg.sender].length == 0) return;
+        address account = msg.sender;
 
-        (address[] memory oldD, uint32[] memory oldB) = _currentDistribution(msg.sender);
-        delete _splits[msg.sender];
+        if (_splits[account].length == 0) {
+            // Already single-delegate mode; nothing to do.
+            return;
+        }
 
-        _repointVotesForHolder(msg.sender, oldD, oldB);
+        // Capture the current split BEFORE we mutate storage.
+        (address[] memory oldD, uint32[] memory oldB) = _currentDistribution(account);
 
-        // now just a single 100% delegate (self or custom primary)
-        address[] memory d = _singleton(delegates(msg.sender));
+        // Collapse to single 100% delegate (primary; defaults to self).
+        delete _splits[account];
+        _autoSelfDelegate(account);
+
+        // Repoint existing votes from the old split back to the single delegate.
+        _repointVotesForHolder(account, oldD, oldB);
+
+        // Emit the canonical 100% distribution for tooling/UX.
+        address[] memory d = _singleton(delegates(account));
         uint32[] memory b = _singletonBps();
-        emit WeightedDelegationSet(msg.sender, d, b);
+        emit WeightedDelegationSet(account, d, b);
     }
 
     /*//////////////////////////////////////////////////////////////
                         INTERNAL VOTING HELPERS
     //////////////////////////////////////////////////////////////*/
     function _delegate(address delegator, address delegatee) internal {
-        address current = delegates(delegator);
-        if (delegatee == address(0)) delegatee = delegator; // default to self
+        address account = delegator;
+        if (delegatee == address(0)) delegatee = account;
 
-        // If unchanged and no splits, nothing to do.
-        if (_splits[delegator].length == 0 && current == delegatee) return;
+        // Inline `delegates(account)` to avoid extra call:
+        address current = _delegates[account];
+        if (current == address(0)) current = account;
 
-        (address[] memory oldD, uint32[] memory oldB) = _currentDistribution(delegator);
+        Split[] storage sp = _splits[account];
+        uint256 splitsLen = sp.length;
 
-        delete _splits[delegator]; // switch to a single 100% delegate
-        _delegates[delegator] = delegatee;
+        // If no change and no split configured, nothing to do.
+        if (splitsLen == 0 && current == delegatee) return;
 
-        emit DelegateChanged(delegator, current, delegatee);
+        // Capture the current effective distribution BEFORE we mutate storage.
+        (address[] memory oldD, uint32[] memory oldB) = _currentDistribution(account);
 
-        _repointVotesForHolder(delegator, oldD, oldB);
+        // Collapse any existing split and set the new primary delegate.
+        if (splitsLen != 0) {
+            delete _splits[account];
+        }
+        _delegates[account] = delegatee;
+
+        emit DelegateChanged(account, current, delegatee);
+
+        // Repoint the holder’s current voting power from old distribution to the new single delegate.
+        _repointVotesForHolder(account, oldD, oldB);
     }
 
     function _autoSelfDelegate(address account) internal {
@@ -1618,19 +1616,29 @@ contract MolochShares {
         returns (address[] memory delegates_, uint32[] memory bps_)
     {
         Split[] storage sp = _splits[account];
-        if (sp.length == 0) {
-            delegates_ = _singleton(delegates(account));
-            bps_ = _singletonBps();
+        uint256 n = sp.length;
+
+        if (n == 0) {
+            // Stack allocation for single element
+            delegates_ = new address[](1);
+            delegates_[0] = delegates(account);
+            bps_ = new uint32[](1);
+            bps_[0] = BPS_DENOM;
             return (delegates_, bps_);
         }
 
-        uint256 n = sp.length;
+        // Pre-sized allocation
         delegates_ = new address[](n);
         bps_ = new uint32[](n);
-        for (uint256 i = 0; i < n; ++i) {
+        for (uint256 i; i < n; ++i) {
             delegates_[i] = sp[i].delegate;
             bps_[i] = sp[i].bps;
         }
+    }
+
+    function _afterVotingBalanceChange(address account, int256 delta) internal {
+        _applyVotingDelta(account, delta);
+        MolochMajeur(mol).onSharesChanged(account);
     }
 
     /// @dev Apply +/- voting power change for an account according to its split.
@@ -1638,21 +1646,28 @@ contract MolochShares {
         if (delta == 0) return;
 
         (address[] memory D, uint32[] memory B) = _currentDistribution(account);
+        uint256 len = D.length;
 
         uint256 abs = delta > 0 ? uint256(delta) : uint256(-delta);
         uint256 remaining = abs;
 
-        for (uint256 i = 0; i < D.length; ++i) {
+        for (uint256 i; i < len; ++i) {
             uint256 part = (abs * B[i]) / BPS_DENOM;
 
             // give any rounding remainder to the last delegate
-            if (i == D.length - 1) part = remaining;
-            else remaining -= part;
+            if (i == len - 1) {
+                part = remaining;
+            } else {
+                remaining -= part;
+            }
 
             if (part == 0) continue;
 
-            if (delta > 0) _moveVotingPower(address(0), D[i], part);
-            else _moveVotingPower(D[i], address(0), part);
+            if (delta > 0) {
+                _moveVotingPower(address(0), D[i], part);
+            } else {
+                _moveVotingPower(D[i], address(0), part);
+            }
         }
     }
 
@@ -1716,23 +1731,11 @@ contract MolochShares {
         if (src == dst || amount == 0) return;
 
         if (src != address(0)) {
-            (uint256 oldVal, uint256 newVal) = _writeDelta(_checkpoints[src], false, amount);
-            emit DelegateVotesChanged(src, oldVal, newVal);
+            _updateDelegateVotes(src, _checkpoints[src], false, amount);
         }
         if (dst != address(0)) {
-            (uint256 oldVal, uint256 newVal) = _writeDelta(_checkpoints[dst], true, amount);
-            emit DelegateVotesChanged(dst, oldVal, newVal);
+            _updateDelegateVotes(dst, _checkpoints[dst], true, amount);
         }
-    }
-
-    function _writeDelta(Checkpoint[] storage ckpts, bool add, uint256 amount)
-        internal
-        returns (uint256 oldVal, uint256 newVal)
-    {
-        uint256 pos = ckpts.length;
-        oldVal = pos == 0 ? 0 : ckpts[pos - 1].votes;
-        newVal = add ? oldVal + amount : oldVal - amount;
-        _writeCheckpoint(ckpts, oldVal, newVal);
     }
 
     function _writeCheckpoint(Checkpoint[] storage ckpts, uint256 oldVal, uint256 newVal) internal {
@@ -1758,16 +1761,13 @@ contract MolochShares {
     }
 
     function _writeTotalSupplyCheckpoint() internal {
-        uint32 blk = toUint32(block.number);
-        uint256 len = _totalSupplyCheckpoints.length;
+        Checkpoint[] storage ckpts = _totalSupplyCheckpoints;
+        uint256 len = ckpts.length;
 
-        if (len != 0 && _totalSupplyCheckpoints[len - 1].fromBlock == blk) {
-            _totalSupplyCheckpoints[len - 1].votes = toUint224(totalSupply);
-        } else {
-            _totalSupplyCheckpoints.push(
-                Checkpoint({fromBlock: blk, votes: toUint224(totalSupply)})
-            );
-        }
+        uint256 oldVal = len == 0 ? 0 : ckpts[len - 1].votes;
+        uint256 newVal = totalSupply;
+
+        _writeCheckpoint(ckpts, oldVal, newVal);
     }
 
     function _checkpointsLookup(Checkpoint[] storage ckpts, uint32 blockNumber)
@@ -1779,8 +1779,9 @@ contract MolochShares {
         if (len == 0) return 0;
 
         // Most recent
-        if (ckpts[len - 1].fromBlock <= blockNumber) {
-            return ckpts[len - 1].votes;
+        Checkpoint storage last = ckpts[len - 1];
+        if (last.fromBlock <= blockNumber) {
+            return last.votes;
         }
 
         // Before first
@@ -1820,17 +1821,25 @@ contract MolochBadge {
     /* ERC721-ish */
     event Transfer(address indexed from, address indexed to, uint256 indexed id);
 
-    // Parent Moloch (SAW)
-    address payable public immutable mol;
+    // Parent Moloch (Majeur)
+    address payable public immutable mol = payable(msg.sender);
 
     // Holder => count (0 or 1 in practice)
     mapping(address => uint256) public balanceOf;
 
-    constructor() payable {
-        mol = payable(msg.sender);
+    modifier onlyMol() {
+        require(msg.sender == mol, Unauthorized());
+        _;
     }
 
-    // dynamic metadata from SAW
+    error SBT();
+    error Minted();
+    error NotMinted();
+    error Unauthorized();
+
+    constructor() payable {}
+
+    // dynamic metadata from Moloch
     function name() public view returns (string memory) {
         return string.concat(MolochMajeur(mol).orgName(), " Badge");
     }
@@ -1841,71 +1850,111 @@ contract MolochBadge {
 
     function ownerOf(uint256 id) public view returns (address o) {
         o = address(uint160(id));
-        require(balanceOf[o] != 0, "NOT_MINTED");
+        require(balanceOf[o] != 0, NotMinted());
     }
 
+    /// Top-256 badge (seat index, not sorted by balance).
+    /// @notice Enhanced minimalist badge card
     function tokenURI(uint256 id) public view returns (string memory) {
         address holder = address(uint160(id));
         MolochShares sh = MolochMajeur(mol).shares();
 
         uint256 bal = sh.balanceOf(holder);
         uint256 ts = sh.totalSupply();
-        uint256 rk = MolochMajeur(mol).rankOf(holder); // 0 if not in top set
+        uint256 rk = MolochMajeur(mol).rankOf(holder);
 
-        string memory addr = _addrHex(holder);
+        string memory addr = _shortAddr(holder);
         string memory pct = _percent(bal, ts);
-        string memory rankStr = rk == 0 ? "-" : _u2s(rk);
+        string memory rankStr = rk == 0 ? "UNRANKED" : _u2s(rk);
 
-        // On-chain SVG card
-        string memory svg = string.concat(
-            "<svg xmlns='http://www.w3.org/2000/svg' width='420' height='220'>",
-            "<rect width='100%' height='100%' fill='#111'/>",
-            "<text x='20' y='40'  font-family='Courier New, monospace' font-size='18' fill='#fff'>",
+        string memory svg = _svgCardBase();
+
+        // Title
+        svg = string.concat(
+            svg,
+            "<text x='210' y='55' class='garamond-bold' font-size='18' fill='#fff' text-anchor='middle' letter-spacing='3'>",
             name(),
             "</text>",
-            "<text x='20' y='70'  font-family='Courier New, monospace' font-size='12' fill='#fff'>holder: ",
+            "<text x='210' y='75' class='garamond' font-size='11' fill='#fff' text-anchor='middle' letter-spacing='2'>MEMBER BADGE</text>",
+            "<line x1='40' y1='90' x2='380' y2='90' stroke='#fff' stroke-width='1'/>"
+        );
+
+        // ASCII Crown
+        svg = string.concat(
+            svg,
+            "<text x='210' y='135' class='mono' font-size='9' fill='#fff' text-anchor='middle'>*    *    *</text>",
+            "<text x='210' y='146' class='mono' font-size='9' fill='#fff' text-anchor='middle'>/|\\  /|\\  /|\\</text>",
+            "<text x='210' y='157' class='mono' font-size='9' fill='#fff' text-anchor='middle'>+---+---+---+</text>",
+            "<text x='210' y='168' class='mono' font-size='9' fill='#fff' text-anchor='middle'>|   | * |   |</text>",
+            "<text x='210' y='179' class='mono' font-size='9' fill='#fff' text-anchor='middle'>|   |   |   |</text>",
+            "<text x='210' y='190' class='mono' font-size='9' fill='#fff' text-anchor='middle'>+---+---+---+</text>",
+            "<text x='210' y='201' class='mono' font-size='9' fill='#fff' text-anchor='middle'>\\         /</text>",
+            "<text x='210' y='212' class='mono' font-size='9' fill='#fff' text-anchor='middle'>---------</text>",
+            "<line x1='40' y1='240' x2='380' y2='240' stroke='#fff' stroke-width='1'/>"
+        );
+
+        // Data
+        svg = string.concat(
+            svg,
+            "<text x='60' y='275' class='garamond' font-size='10' fill='#aaa' letter-spacing='1'>Address</text>",
+            "<text x='60' y='292' class='mono' font-size='9' fill='#fff'>",
             addr,
             "</text>",
-            "<text x='20' y='90'  font-family='Courier New, monospace' font-size='12' fill='#fff'>balance: ",
-            _u2s(bal),
-            "</text>",
-            "<text x='20' y='110' font-family='Courier New, monospace' font-size='12' fill='#fff'>supply: ",
-            _u2s(ts),
-            "</text>",
-            "<text x='20' y='130' font-family='Courier New, monospace' font-size='12' fill='#fff'>percent: ",
-            pct,
-            "</text>",
-            "<text x='20' y='150' font-family='Courier New, monospace' font-size='12' fill='#fff'>rank: ",
+            "<text x='60' y='325' class='garamond' font-size='10' fill='#aaa' letter-spacing='1'>Rank</text>",
+            "<text x='60' y='345' class='garamond-bold' font-size='16' fill='#fff'>",
             rankStr,
-            "</text>",
+            "</text>"
+        );
+
+        // Balance
+        svg = string.concat(
+            svg,
+            "<text x='60' y='378' class='garamond' font-size='10' fill='#aaa' letter-spacing='1'>Balance</text>",
+            "<text x='60' y='395' class='mono' font-size='9' fill='#fff'>",
+            _formatNumber(bal),
+            " shares</text>"
+        );
+
+        // Ownership
+        svg = string.concat(
+            svg,
+            "<text x='60' y='428' class='garamond' font-size='10' fill='#aaa' letter-spacing='1'>Ownership</text>",
+            "<text x='60' y='445' class='mono' font-size='9' fill='#fff'>",
+            pct,
+            "</text>"
+        );
+
+        // Status (only show if in top 256)
+        if (rk != 0) {
+            svg = string.concat(
+                svg,
+                "<text x='210' y='500' class='garamond' font-size='12' fill='#fff' text-anchor='middle' letter-spacing='2'>TOP 256</text>"
+            );
+        }
+
+        svg = string.concat(
+            svg,
+            "<line x1='40' y1='540' x2='380' y2='540' stroke='#fff' stroke-width='1'/>",
+            "<text x='210' y='565' class='garamond' font-size='8' fill='#444' text-anchor='middle' letter-spacing='1'>NON-TRANSFERABLE</text>",
             "</svg>"
         );
 
-        string memory json = string.concat(
-            '{"name":"Badge","description":"Top-256 holder badge (slot rank)",',
-            '"image":"',
-            DataURI.svg(svg),
-            '"}'
-        );
-
-        return DataURI.json(json);
+        return _jsonImage("Badge", "Top-256 holder badge (SBT)", svg);
     }
 
     function transferFrom(address, address, uint256) public pure {
-        revert("SBT");
+        revert SBT();
     }
 
-    function mint(address to) public {
-        require(msg.sender == mol, "SAW");
-        require(to != address(0) && balanceOf[to] == 0, "MINTED");
+    function mint(address to) public onlyMol {
+        require(to != address(0) && balanceOf[to] == 0, Minted());
 
         balanceOf[to] = 1;
         emit Transfer(address(0), to, uint256(uint160(to)));
     }
 
-    function burn(address from) public {
-        require(msg.sender == mol, "SAW");
-        require(balanceOf[from] != 0, "OWN");
+    function burn(address from) public onlyMol {
+        require(balanceOf[from] != 0, NotMinted());
 
         balanceOf[from] = 0;
         emit Transfer(from, address(0), uint256(uint160(from)));
@@ -1913,36 +1962,32 @@ contract MolochBadge {
 
     /* utils */
 
+    /// @dev Shortened address: 0xabcd...1234
+    function _shortAddr(address a) internal pure returns (string memory) {
+        return _shortHexDisplay(_addrHex(a));
+    }
+
     // 0x + 40 hex chars
     function _addrHex(address a) internal pure returns (string memory s) {
+        // 0x + 40 hex chars
         bytes20 b = bytes20(a);
         bytes16 H = 0x30313233343536373839616263646566; // "0123456789abcdef"
         bytes memory out = new bytes(42);
+
         out[0] = "0";
         out[1] = "x";
-        for (uint256 i = 0; i < 20; ++i) {
-            uint8 v = uint8(b[i]);
-            out[2 + 2 * i] = bytes1(H[v >> 4]);
-            out[3 + 2 * i] = bytes1(H[v & 0x0f]);
-        }
-        s = string(out);
-    }
 
-    function _u2s(uint256 x) internal pure returns (string memory) {
-        if (x == 0) return "0";
-        uint256 temp = x;
-        uint256 digits;
-        while (temp != 0) {
-            digits++;
-            temp /= 10;
+        for (uint256 i; i != 20; ++i) {
+            unchecked {
+                uint8 v = uint8(b[i]); // byte at position i
+
+                // high nibble, then low nibble
+                out[2 + 2 * i] = bytes1(H[v >> 4]);
+                out[3 + 2 * i] = bytes1(H[v & 0x0f]);
+            }
         }
-        bytes memory buffer = new bytes(digits);
-        while (x != 0) {
-            digits -= 1;
-            buffer[digits] = bytes1(uint8(48 + (x % 10)));
-            x /= 10;
-        }
-        return string(buffer);
+
+        s = string(out);
     }
 
     function _percent(uint256 a, uint256 b) internal pure returns (string memory) {
@@ -1952,4 +1997,227 @@ contract MolochBadge {
         uint256 d = p % 100;
         return string.concat(_u2s(i), ".", d < 10 ? "0" : "", _u2s(d), "%");
     }
+}
+
+/*//////////////////////////////////////////////////////////////
+                         MINIMAL INTERNALS
+//////////////////////////////////////////////////////////////*/
+
+function _formatNumber(uint256 n) pure returns (string memory) {
+    if (n == 0) return "0";
+
+    uint256 temp = n;
+    uint256 digits;
+    while (temp != 0) {
+        digits++;
+        temp /= 10;
+    }
+
+    uint256 commas = (digits - 1) / 3;
+    bytes memory buffer = new bytes(digits + commas);
+
+    uint256 i = digits + commas;
+    uint256 digitCount = 0;
+
+    while (n != 0) {
+        if (digitCount > 0 && digitCount % 3 == 0) {
+            unchecked {
+                --i;
+            }
+            buffer[i] = ",";
+        }
+        unchecked {
+            --i;
+        }
+        buffer[i] = bytes1(uint8(48 + (n % 10)));
+        n /= 10;
+        digitCount++;
+    }
+
+    return string(buffer);
+}
+
+function _u2s(uint256 x) pure returns (string memory) {
+    if (x == 0) return "0";
+
+    uint256 temp = x;
+    uint256 digits;
+    unchecked {
+        while (temp != 0) {
+            ++digits;
+            temp /= 10;
+        }
+    }
+
+    bytes memory buffer = new bytes(digits);
+    unchecked {
+        while (x != 0) {
+            --digits;
+            buffer[digits] = bytes1(uint8(48 + (x % 10)));
+            x /= 10;
+        }
+    }
+    return string(buffer);
+}
+
+function _shortHexDisplay(string memory fullHex) pure returns (string memory) {
+    bytes memory full = bytes(fullHex);
+    bytes memory result = new bytes(13);
+
+    // "0x" + first 4 hex chars
+    for (uint256 i = 0; i < 6; ++i) {
+        result[i] = full[i];
+    }
+
+    // "..."
+    result[6] = ".";
+    result[7] = ".";
+    result[8] = ".";
+
+    // last 4 hex chars (works for both 0x + 40 and 0x + 64)
+    uint256 len = full.length;
+    for (uint256 i = 0; i < 4; ++i) {
+        result[9 + i] = full[len - 4 + i];
+    }
+
+    return string(result);
+}
+
+function _svgCardBase() pure returns (string memory) {
+    return string.concat(
+        "<svg xmlns='http://www.w3.org/2000/svg' width='420' height='600'>",
+        "<defs>",
+        "<style>",
+        ".garamond{font-family:'EB Garamond',serif;font-weight:400;}",
+        ".garamond-bold{font-family:'EB Garamond',serif;font-weight:600;}",
+        ".mono{font-family:'Courier Prime',monospace;}",
+        "</style>",
+        "</defs>",
+        "<rect width='420' height='600' fill='#000'/>",
+        "<rect x='20' y='20' width='380' height='560' fill='none' stroke='#fff' stroke-width='1'/>"
+    );
+}
+
+function _jsonImage(string memory name_, string memory description_, string memory svg)
+    pure
+    returns (string memory)
+{
+    return DataURI.json(
+        string.concat(
+            '{"name":"',
+            name_,
+            '","description":"',
+            description_,
+            '","image":"',
+            DataURI.svg(svg),
+            '"}'
+        )
+    );
+}
+
+library DataURI {
+    function json(string memory raw) internal pure returns (string memory) {
+        return string.concat("data:application/json;base64,", Base64.encode(bytes(raw)));
+    }
+
+    function svg(string memory raw) internal pure returns (string memory) {
+        return string.concat("data:image/svg+xml;base64,", Base64.encode(bytes(raw)));
+    }
+}
+
+library Base64 {
+    function encode(bytes memory data, bool fileSafe, bool noPadding)
+        internal
+        pure
+        returns (string memory result)
+    {
+        assembly ("memory-safe") {
+            let dataLength := mload(data)
+
+            if dataLength {
+                let encodedLength := shl(2, div(add(dataLength, 2), 3))
+
+                result := mload(0x40)
+
+                mstore(0x1f, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef")
+                mstore(0x3f, xor("ghijklmnopqrstuvwxyz0123456789-_", mul(iszero(fileSafe), 0x0670)))
+
+                let ptr := add(result, 0x20)
+                let end := add(ptr, encodedLength)
+
+                let dataEnd := add(add(0x20, data), dataLength)
+                let dataEndValue := mload(dataEnd)
+                mstore(dataEnd, 0x00)
+
+                for {} 1 {} {
+                    data := add(data, 3)
+                    let input := mload(data)
+
+                    mstore8(0, mload(and(shr(18, input), 0x3F)))
+                    mstore8(1, mload(and(shr(12, input), 0x3F)))
+                    mstore8(2, mload(and(shr(6, input), 0x3F)))
+                    mstore8(3, mload(and(input, 0x3F)))
+                    mstore(ptr, mload(0x00))
+
+                    ptr := add(ptr, 4)
+                    if iszero(lt(ptr, end)) { break }
+                }
+                mstore(dataEnd, dataEndValue)
+                mstore(0x40, add(end, 0x20))
+                let o := div(2, mod(dataLength, 3))
+                mstore(sub(ptr, o), shl(240, 0x3d3d))
+                o := mul(iszero(iszero(noPadding)), o)
+                mstore(sub(ptr, o), 0)
+                mstore(result, sub(encodedLength, o))
+            }
+        }
+    }
+
+    function encode(bytes memory data) internal pure returns (string memory result) {
+        result = encode(data, false, false);
+    }
+}
+
+function _receiptId(bytes32 id, uint8 support) pure returns (uint256) {
+    return uint256(keccak256(abi.encodePacked("Moloch:receipt", id, support)));
+}
+
+error Overflow();
+
+function toUint32(uint256 x) pure returns (uint32) {
+    if (x >= 1 << 32) _revertOverflow();
+    return uint32(x);
+}
+
+function toUint224(uint256 x) pure returns (uint224) {
+    if (x >= 1 << 224) _revertOverflow();
+    return uint224(x);
+}
+
+function _revertOverflow() pure {
+    assembly ("memory-safe") {
+        mstore(0x00, 0x35278d12)
+        revert(0x1c, 0x04)
+    }
+}
+
+error MulDivFailed();
+
+function mulDiv(uint256 x, uint256 y, uint256 d) pure returns (uint256 z) {
+    assembly ("memory-safe") {
+        z := mul(x, y)
+        if iszero(mul(or(iszero(x), eq(div(z, x), y)), d)) {
+            mstore(0x00, 0xad251c27)
+            revert(0x1c, 0x04)
+        }
+        z := div(z, d)
+    }
+}
+
+/*//////////////////////////////////////////////////////////////
+                         MINIMAL EXTERNALS
+//////////////////////////////////////////////////////////////*/
+interface IToken {
+    function transfer(address, uint256) external;
+    function transferFrom(address, address, uint256) external;
 }
