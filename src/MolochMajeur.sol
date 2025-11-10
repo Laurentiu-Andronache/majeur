@@ -10,16 +10,14 @@ pragma solidity ^0.8.30;
 contract MolochMajeur {
     /* ERRORS */
     error NotOk();
-    error NotOwner();
-    error NotApprover();
-    error AlreadyExecuted();
     error LengthMismatch();
+    error AlreadyExecuted();
     error Timelocked(uint64 untilWhen);
 
     /* MAJEUR */
     address payable public immutable mol = payable(msg.sender);
     modifier onlySelf() {
-        require(msg.sender == address(this), NotOwner());
+        require(msg.sender == address(this), Unauthorized());
         _;
     }
 
@@ -253,7 +251,7 @@ contract MolochMajeur {
         if (rt == address(0)) {
             require(msg.value == amount, NotOk());
         } else if (rt == address(this)) {
-            require(msg.sender == address(this), NotOwner());
+            require(msg.sender == address(this), Unauthorized());
         } else {
             require(msg.value == 0, NotOk());
             safeTransferFrom(rt, amount);
@@ -355,7 +353,7 @@ contract MolochMajeur {
 
     /// @dev Queue a passing proposal (sets timelock countdown). If no timelock, this is a no-op:
     function queue(uint256 id) public {
-        if (state(id) != ProposalState.Succeeded) revert NotApprover();
+        if (state(id) != ProposalState.Succeeded) revert NotOk();
         if (timelockDelay == 0) return;
         if (queuedAt[id] == 0) {
             queuedAt[id] = uint64(block.timestamp);
@@ -381,7 +379,7 @@ contract MolochMajeur {
         // only Succeeded or Queued proposals are allowed through
         if (st != ProposalState.Succeeded && st != ProposalState.Queued) {
             if (st == ProposalState.Expired) revert NotOk();
-            revert NotApprover(); // also covers Unopened / Active / Defeated
+            revert NotOk(); // also covers Unopened / Active / Defeated
         }
 
         if (timelockDelay != 0) {
@@ -539,7 +537,7 @@ contract MolochMajeur {
         nonReentrant
     {
         Sale storage s = sales[payToken];
-        if (!s.active) revert NotApprover();
+        if (!s.active) revert NotOk();
 
         uint256 cap = s.cap;
         if (cap != 0 && shareAmount > cap) revert NotOk();
@@ -574,7 +572,7 @@ contract MolochMajeur {
 
     /* RAGEQUIT */
     function rageQuit(address[] calldata tokens) public nonReentrant {
-        if (!ragequittable) revert NotApprover();
+        if (!ragequittable) revert NotOk();
 
         uint256 amt = shares.balanceOf(msg.sender);
         if (amt == 0) revert NotOk();
@@ -604,7 +602,7 @@ contract MolochMajeur {
     }
 
     function chat(string calldata text) public payable {
-        if (badge.balanceOf(msg.sender) == 0) revert NotApprover();
+        if (badge.balanceOf(msg.sender) == 0) revert NotOk();
         messages.push(text);
         emit Message(msg.sender, messages.length - 1, text);
     }
@@ -664,7 +662,7 @@ contract MolochMajeur {
     }
 
     function onSharesChanged(address a) public payable {
-        require(msg.sender == address(shares), NotOwner());
+        require(msg.sender == address(shares), Unauthorized());
         _onSharesChanged(a);
     }
 
@@ -1159,7 +1157,6 @@ contract MolochShares {
     error Len();
     error Locked();
     error BadBlock();
-    error Unauthorized();
 
     error SplitLen();
     error SplitSum();
@@ -1672,7 +1669,6 @@ contract MolochBadge {
     error SBT();
     error Minted();
     error NotMinted();
-    error Unauthorized();
 
     constructor() payable {}
 
@@ -2007,6 +2003,8 @@ library Base64 {
         result = encode(data, false, false);
     }
 }
+
+error Unauthorized();
 
 error Overflow();
 

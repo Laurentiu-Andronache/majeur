@@ -2,11 +2,13 @@
 pragma solidity ^0.8.30;
 
 import {Test} from "../lib/forge-std/src/Test.sol";
-import {MolochMajeur, MolochShares, MolochBadge} from "../src/MolochMajeur.sol";
+import {Unauthorized, MolochMajeur, MolochShares, MolochBadge} from "../src/MolochMajeur.sol";
 
 import {console2} from "../lib/forge-std/src/console2.sol";
 
 contract MMTest is Test {
+    error Unauthorized();
+
     MolochMajeur internal moloch;
     MolochShares internal shares;
     MolochBadge internal badge;
@@ -141,7 +143,7 @@ contract MMTest is Test {
         assertEq(bob.balance - bobBefore, expected, "rageQuit payout");
 
         // ===== Chat gating (badge holders only)
-        vm.expectRevert(MolochMajeur.NotApprover.selector);
+        vm.expectRevert(MolochMajeur.NotOk.selector);
         vm.prank(bob);
         moloch.chat("gm");
 
@@ -230,7 +232,7 @@ contract MMTest is Test {
         assertEq(shares.balanceOf(bob), 0, "bob shares burned");
         assertEq(badge.balanceOf(bob), 0, "bob badge burned");
 
-        vm.expectRevert(MolochMajeur.NotApprover.selector);
+        vm.expectRevert(MolochMajeur.NotOk.selector);
         vm.prank(bob);
         moloch.chat("gm after quit");
     }
@@ -269,7 +271,7 @@ contract MMTest is Test {
         assertEq(badge.balanceOf(charlie), 0, "charlie badge burned");
 
         // chat now gated
-        vm.expectRevert(MolochMajeur.NotApprover.selector);
+        vm.expectRevert(MolochMajeur.NotOk.selector);
         vm.prank(charlie);
         moloch.chat("should fail");
 
@@ -448,7 +450,7 @@ contract MMTest is Test {
         _open(hCall);
         _voteYes(hCall, alice);
 
-        vm.expectRevert(MolochMajeur.NotApprover.selector);
+        vm.expectRevert(MolochMajeur.NotOk.selector);
         moloch.executeByVotes(0, address(target), 0, dataCall, keccak256("tcall"));
 
         // Lower back to 50%
@@ -652,7 +654,7 @@ contract MMTest is Test {
         assertTrue(ok, "sale set inactive");
 
         // Attempt to buy → NotApprover (inactive)
-        vm.expectRevert(MolochMajeur.NotApprover.selector);
+        vm.expectRevert(MolochMajeur.NotOk.selector);
         vm.prank(charlie);
         moloch.buyShares{value: 1 ether}(address(0), 1e18, 0);
     }
@@ -667,7 +669,7 @@ contract MMTest is Test {
         address[] memory toks = new address[](1);
         toks[0] = address(0);
 
-        vm.expectRevert(MolochMajeur.NotApprover.selector);
+        vm.expectRevert(MolochMajeur.NotOk.selector);
         vm.prank(bob);
         moloch.rageQuit(toks);
     }
@@ -917,7 +919,7 @@ contract MMTest is Test {
         _voteYes(h, alice); // Bob does NOT vote
 
         // Execution must fail under current semantics with NotOk (falls through to failed call)
-        vm.expectRevert(MolochMajeur.NotApprover.selector);
+        vm.expectRevert(MolochMajeur.NotOk.selector);
         moloch.executeByVotes(0, address(target), 0, "", keccak256("min-prop"));
     }
 
@@ -938,7 +940,7 @@ contract MMTest is Test {
         assertEq(
             uint256(moloch.state(h)), uint256(MolochMajeur.ProposalState.Active), "still Active"
         );
-        vm.expectRevert(MolochMajeur.NotApprover.selector);
+        vm.expectRevert(MolochMajeur.NotOk.selector);
         moloch.executeByVotes(0, address(target), 0, "", keccak256("qabs-prop"));
     }
 
@@ -1096,7 +1098,7 @@ contract MMTest is Test {
             0, address(target), 0, abi.encodeWithSelector(Target.store.selector, 1), bytes32("x")
         );
         // unopened -> NotApprover
-        vm.expectRevert(MolochMajeur.NotApprover.selector);
+        vm.expectRevert(MolochMajeur.NotOk.selector);
         moloch.executeByVotes(
             0, address(target), 0, abi.encodeWithSelector(Target.store.selector, 1), bytes32("x")
         );
@@ -1801,10 +1803,10 @@ contract MMTest is Test {
     function test_access_controls_onlymoloch_calls() public {
         uint256 h = _id(0, address(this), 0, "", bytes32("AC"));
         // Direct external calls should revert NotOwner
-        vm.expectRevert(MolochMajeur.NotOwner.selector);
+        vm.expectRevert(Unauthorized.selector);
         moloch.openFutarchy(h, address(0));
 
-        vm.expectRevert(MolochMajeur.NotOwner.selector);
+        vm.expectRevert(Unauthorized.selector);
         moloch.setQuorumAbsolute(123);
     }
 
@@ -2562,7 +2564,7 @@ contract MMTest is Test {
         );
 
         // Execute should fail
-        vm.expectRevert(MolochMajeur.NotApprover.selector);
+        vm.expectRevert(MolochMajeur.NotOk.selector);
         moloch.executeByVotes(0, address(this), 0, "", keccak256("tie"));
     }
 
@@ -2589,7 +2591,7 @@ contract MMTest is Test {
         _open(h);
 
         // Don't vote enough - stays Active
-        vm.expectRevert(MolochMajeur.NotApprover.selector);
+        vm.expectRevert(MolochMajeur.NotOk.selector);
         moloch.queue(h);
     }
 
@@ -2962,7 +2964,7 @@ contract MMTest is Test {
      *───────────────────────────────────────────────────────────────────*/
 
     function test_onSharesChanged_only_callable_by_shares() public {
-        vm.expectRevert(MolochMajeur.NotOwner.selector);
+        vm.expectRevert(Unauthorized.selector);
         moloch.onSharesChanged(alice);
     }
 
@@ -4292,7 +4294,7 @@ contract MMTest is Test {
         (, bool ok) = _openAndPass(0, address(moloch), 0, d, keccak256("inactive"));
         assertTrue(ok);
 
-        vm.expectRevert(MolochMajeur.NotApprover.selector);
+        vm.expectRevert(MolochMajeur.NotOk.selector);
         vm.prank(charlie);
         moloch.buyShares{value: 1 ether}(address(0), 1e18, 1 ether);
     }
@@ -4963,32 +4965,32 @@ contract MMTest is Test {
     function test_all_governance_functions_require_self() public {
         // Verify all sensitive functions are properly gated
 
-        vm.expectRevert(MolochMajeur.NotOwner.selector);
+        vm.expectRevert(Unauthorized.selector);
         moloch.setQuorumBps(1000);
 
-        vm.expectRevert(MolochMajeur.NotOwner.selector);
+        vm.expectRevert(Unauthorized.selector);
         moloch.setMinYesVotesAbsolute(100);
 
-        vm.expectRevert(MolochMajeur.NotOwner.selector);
+        vm.expectRevert(Unauthorized.selector);
         moloch.setQuorumAbsolute(100);
 
-        vm.expectRevert(MolochMajeur.NotOwner.selector);
+        vm.expectRevert(Unauthorized.selector);
         moloch.setProposalTTL(3600);
 
-        vm.expectRevert(MolochMajeur.NotOwner.selector);
+        vm.expectRevert(Unauthorized.selector);
         moloch.setTimelockDelay(3600);
 
-        vm.expectRevert(MolochMajeur.NotOwner.selector);
+        vm.expectRevert(Unauthorized.selector);
         moloch.setRagequittable(false);
 
-        vm.expectRevert(MolochMajeur.NotOwner.selector);
+        vm.expectRevert(Unauthorized.selector);
         moloch.setTransfersLocked(true);
 
-        vm.expectRevert(MolochMajeur.NotOwner.selector);
+        vm.expectRevert(Unauthorized.selector);
         moloch.bumpConfig();
 
         uint256 h = uint256(keccak256("test"));
-        vm.expectRevert(MolochMajeur.NotOwner.selector);
+        vm.expectRevert(Unauthorized.selector);
         moloch.openFutarchy{value: 0}(h, address(0));
     }
 
@@ -5832,7 +5834,7 @@ contract MMTest is Test {
         // NOW purchases should fail
         vm.deal(address(0x8888), 1);
         vm.prank(address(0x8888));
-        vm.expectRevert(MolochMajeur.NotApprover.selector);
+        vm.expectRevert(MolochMajeur.NotOk.selector);
         moloch.buyShares{value: 1}(address(0), 1, 1);
     }
 
@@ -6204,7 +6206,7 @@ contract MMTest is Test {
         assertTrue(ok);
 
         // Old hash cannot execute
-        vm.expectRevert(MolochMajeur.NotApprover.selector);
+        vm.expectRevert(MolochMajeur.NotOk.selector);
         moloch.executeByVotes(0, address(target), 0, call, keccak256("old"));
 
         // New hash with new config works
