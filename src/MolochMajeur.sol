@@ -28,7 +28,7 @@ contract MolochMajeur {
     string _orgSymbol;
 
     /**
-     *
+     * PROPOSAL STATE
      */
     /// @dev Absolute vote thresholds (0 = disabled):
     uint256 public minYesVotesAbsolute; // minimum YES (FOR) votes
@@ -62,7 +62,7 @@ contract MolochMajeur {
     mapping(uint256 id => Tally) public tallies;
 
     /// @dev hasVoted[id][voter] = 0 = not, 1 = FOR, 2 = AGAINST, 3 = ABSTAIN:
-    mapping(uint256 id => mapping(address => uint8)) public hasVoted;
+    mapping(uint256 id => mapping(address voter => uint8)) public hasVoted;
 
     enum ProposalState {
         Unopened,
@@ -80,7 +80,7 @@ contract MolochMajeur {
     event Executed(uint256 indexed id, address indexed by, uint8 op, address to, uint256 value);
 
     /**
-     *
+     * PERMIT STATE
      */
     event PermitSet(address spender, uint256 indexed hash, uint256 newCount);
     event PermitSpent(uint256 indexed id, address indexed by, uint8 op, address to, uint256 value);
@@ -88,7 +88,7 @@ contract MolochMajeur {
     mapping(address token => mapping(address spender => uint256 amount)) public allowance;
 
     /**
-     *
+     * SALE STATE
      */
     struct Sale {
         uint256 pricePerShare; // in payToken units (wei for ETH)
@@ -106,13 +106,13 @@ contract MolochMajeur {
     );
 
     /**
-     *
+     * MSG STATE
      */
     string[] public messages;
     event Message(address indexed from, uint256 indexed index, string text);
 
     /**
-     *
+     * META STATE
      */
     /// @dev ERC6909 metadata: org name/symbol (shared across ids):
     function name(
@@ -139,7 +139,7 @@ contract MolochMajeur {
     string public contractURI;
 
     /**
-     *
+     * ERC6909 STATE
      */
     event Transfer(
         address caller, address indexed from, address indexed to, uint256 indexed id, uint256 amount
@@ -149,7 +149,7 @@ contract MolochMajeur {
     mapping(uint256 id => uint256) public totalSupply;
 
     /**
-     *
+     * FUTARCHY STATE
      */
     /// @dev Decode helpers for SVGs & futarchy validation:
     mapping(uint256 id => uint8) public receiptSupport; // 0=Against, 1=For, 2=Abstain
@@ -507,6 +507,9 @@ contract MolochMajeur {
         emit PermitSpent(tokenId, msg.sender, op, to, value);
     }
 
+    /**
+     * ALLOWANCE
+     */
     function setAllowanceTo(address token, address to, uint256 amount) public payable onlySelf {
         allowance[token][to] = amount;
     }
@@ -1118,7 +1121,6 @@ contract MolochMajeur {
 
     function _payout(address token, address to, uint256 amount) internal {
         if (amount == 0) return;
-
         if (token == address(0)) {
             // ETH
             safeTransferETH(to, amount);
@@ -1132,6 +1134,7 @@ contract MolochMajeur {
     }
 
     /*──────── reentrancy ─*/
+
     error Reentrancy();
 
     uint256 constant REENTRANCY_GUARD_SLOT = 0x929eee149b4bd21268;
@@ -1199,6 +1202,7 @@ contract MolochShares {
     Checkpoint[] internal _totalSupplyCheckpoints; // total supply history
 
     /* --------- Split (sharded) delegation (non-custodial) --------- */
+
     struct Split {
         address delegate;
         uint32 bps; // parts per 10_000
