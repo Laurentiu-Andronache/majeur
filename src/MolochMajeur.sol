@@ -15,7 +15,6 @@ contract MolochMajeur {
     error Timelocked(uint64 untilWhen);
 
     /* MAJEUR */
-    address payable public immutable mol = payable(msg.sender);
     modifier onlySelf() {
         require(msg.sender == address(this), Unauthorized());
         _;
@@ -865,7 +864,9 @@ contract MolochMajeur {
 
     function _receiptURI(uint256 id) internal view returns (string memory) {
         uint8 s = receiptSupport[id]; // 0 = NO, 1 = YES, 2 = ABSTAIN
-        FutarchyConfig memory F = futarchy[id];
+
+        uint256 proposalId_ = receiptProposal[id];
+        FutarchyConfig memory F = futarchy[proposalId_];
 
         string memory stance = s == 1 ? "YES" : s == 0 ? "NO" : "ABSTAIN";
 
@@ -938,7 +939,7 @@ contract MolochMajeur {
             svg,
             "<text x='60' y='275' class='garamond' font-size='10' fill='#aaa' letter-spacing='1'>Proposal</text>",
             "<text x='60' y='292' class='mono' font-size='9' fill='#fff'>",
-            _shortHex(id),
+            _shortHex(proposalId_),
             "</text>",
             "<text x='60' y='325' class='garamond' font-size='10' fill='#aaa' letter-spacing='1'>Stance</text>",
             "<text x='60' y='345' class='garamond-bold' font-size='14' fill='#fff'>",
@@ -1527,8 +1528,10 @@ contract MolochShares {
             // find target for this delegate in newD
             uint256 tgt;
             for (uint256 j; j != newD.length; ++j) {
-                if (newD[j] == d) tgt = newA[j];
-                break;
+                if (newD[j] == d) {
+                    tgt = newA[j];
+                    break;
+                }
             }
             if (cur > tgt) _moveVotingPower(d, address(0), cur - tgt);
         }
@@ -1539,8 +1542,10 @@ contract MolochShares {
             // what did we consider as "current" for this delegate in oldA?
             uint256 cur;
             for (uint256 i; i != oldD.length; ++i) {
-                if (oldD[i] == d2) cur = oldA[i];
-                break;
+                if (oldD[i] == d2) {
+                    cur = oldA[i];
+                    break;
+                }
             }
             uint256 tgt = newA[j];
             if (tgt > cur) _moveVotingPower(address(0), d2, tgt - cur);
