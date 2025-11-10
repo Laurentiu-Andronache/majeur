@@ -554,6 +554,8 @@ contract MMTest is Test {
         assertEq(moloch.getMessageCount(), before + 2, "two messages added");
     }
 
+    error ETHTransferFailed();
+
     function test_claimAllowance_eth_insufficient_balance_reverts() public {
         // Fund moloch with only 1 ETH
         vm.deal(address(this), 1 ether);
@@ -568,7 +570,7 @@ contract MMTest is Test {
         assertTrue(ok, "allow set");
 
         // Claiming more than moloch's ETH balance should revert NotOk
-        vm.expectRevert(MolochMajeur.NotOk.selector);
+        vm.expectRevert(ETHTransferFailed.selector);
         vm.prank(alice);
         moloch.claimAllowance(address(0), 10 ether);
     }
@@ -637,27 +639,6 @@ contract MMTest is Test {
         vm.expectRevert(MolochMajeur.NotApprover.selector);
         vm.prank(charlie);
         moloch.buyShares{value: 1 ether}(address(0), 1e18, 0);
-    }
-
-    function test_pull_erc20_via_governance_only() public {
-        // Bob holds tokens and approves moloch
-        tkn.mint(bob, 50e18);
-        vm.prank(bob);
-        tkn.approve(address(moloch), 50e18);
-
-        // Direct call should revert (NotOwner)
-        vm.expectRevert(MolochMajeur.NotOwner.selector);
-        moloch.pull(address(tkn), bob, 20e18);
-
-        // Do it via governance
-        bytes memory dataPull =
-            abi.encodeWithSelector(MolochMajeur.pull.selector, address(tkn), bob, 20e18);
-
-        (, bool ok) = _openAndPass(0, address(moloch), 0, dataPull, keccak256("pull-tkn"));
-        assertTrue(ok, "pull executed by moloch");
-
-        assertEq(tkn.balanceOf(address(moloch)), 20e18, "moloch received");
-        assertEq(tkn.balanceOf(bob), 30e18, "bob debited");
     }
 
     function test_rageQuit_disabled_blocks() public {
@@ -778,18 +759,6 @@ contract MMTest is Test {
      *   (enable 6909 for permits via governance, then set a permit)
      *───────────────────────────────────────────────────────────────────*/
     function test_tokenURI_permit_card_when_use6909_enabled() public {
-        // A) enable use6909ForPermits via self-call governance
-        bytes memory dataA =
-            abi.encodeWithSelector(MolochMajeur.setUse6909ForPermits.selector, true);
-        bytes32 na = bytes32("A");
-        bytes32 hA = moloch.proposalId(0, address(moloch), 0, dataA, na);
-        _voteYes(hA);
-
-        // Do NOT expect a specific first log; setUse6909ForPermits emits before Executed.
-        (bool okA,) = moloch.executeByVotes(0, address(moloch), 0, dataA, na);
-        assertTrue(okA, "execute setUse6909ForPermits");
-        assertTrue(moloch.use6909ForPermits(), "flag should be on");
-
         // B) set a permit (count=3) and ensure tokenURI renders a Permit card
         uint8 opB = 0;
         address toB = address(0xBEEF);
@@ -956,11 +925,6 @@ contract MMTest is Test {
      * ERC6909 mirror for permits decrements on spend (finite count)
      *───────────────────────────────────────────────────────────────────*/
     function test_permit_mirror_decrements_on_spend() public {
-        // enable 6909 mirroring for permits
-        bytes memory en = abi.encodeWithSelector(MolochMajeur.setUse6909ForPermits.selector, true);
-        (, bool ok) = _openAndPass(0, address(moloch), 0, en, keccak256("perm-mirror-on"));
-        assertTrue(ok, "mirror on");
-
         // set a 2-use permit for target.store(8)
         bytes memory call = abi.encodeWithSelector(Target.store.selector, 8);
         bytes32 nz = keccak256("perm-2");
@@ -1167,11 +1131,6 @@ contract MMTest is Test {
      * 6909 PERMITS: MIRROR BEHAVIOR
      *───────────────────────────────────────────────────────────────────*/
     function test_permit_mirror_unlimited_does_not_mint_supply() public {
-        // turn on mirroring
-        bytes memory a = abi.encodeWithSelector(MolochMajeur.setUse6909ForPermits.selector, true);
-        (, bool okA) = _openAndPass(0, address(moloch), 0, a, keccak256("6909-on"));
-        assertTrue(okA && moloch.use6909ForPermits(), "6909 on");
-
         // set MAX permit (replace)
         uint8 op = 0;
         address to = address(target);
@@ -1196,23 +1155,6 @@ contract MMTest is Test {
         assertTrue(okAdd, "add ignored for mirror");
         assertEq(moloch.totalSupply(uint256(h)), 0, "still no mirror");
         assertEq(moloch.permits(h), type(uint256).max, "still MAX");
-    }
-
-    function test_permit_no_mirror_when_flag_off() public {
-        // mirroring default = off
-        uint8 op = 0;
-        address to = address(target);
-        bytes memory dataCall = abi.encodeWithSelector(Target.store.selector, 101);
-        bytes32 n = keccak256("p2");
-        bytes32 h = _id(op, to, 0, dataCall, n);
-
-        bytes memory set2 = abi.encodeWithSelector(
-            MolochMajeur.setPermit.selector, op, to, 0, dataCall, n, uint256(2), true
-        );
-        (, bool ok) = _openAndPass(0, address(moloch), 0, set2, keccak256("set2"));
-        assertTrue(ok, "setPermit ok");
-        assertEq(moloch.permits(h), 2);
-        assertEq(moloch.totalSupply(uint256(h)), 0, "no mirror when off");
     }
 
     /*───────────────────────────────────────────────────────────────────*
@@ -1690,12 +1632,6 @@ contract MMTest is Test {
      * 6909 PERMIT MIRROR — replaceCount burn + burn-on-spend
      *───────────────────────────────────────────────────────────────*/
     function test_permit_mirror_replace_burns_supply() public {
-        // Turn on mirroring
-        bytes memory dFlag =
-            abi.encodeWithSelector(MolochMajeur.setUse6909ForPermits.selector, true);
-        (, bool okF) = _openAndPass(0, address(moloch), 0, dFlag, keccak256("6909-on"));
-        assertTrue(okF);
-
         // Create a permit with count=5 (replace)
         bytes32 pHash = _id(
             0, address(target), 0, abi.encodeWithSelector(Target.store.selector, 1), bytes32("PM")
@@ -1733,12 +1669,6 @@ contract MMTest is Test {
     }
 
     function test_permit_mirror_burn_on_spend() public {
-        // Enable mirror + set count=3
-        bytes memory dFlag =
-            abi.encodeWithSelector(MolochMajeur.setUse6909ForPermits.selector, true);
-        (, bool okF) = _openAndPass(0, address(moloch), 0, dFlag, keccak256("6909-on-2"));
-        assertTrue(okF);
-
         bytes memory call = abi.encodeWithSelector(Target.store.selector, 123);
         bytes32 nonceX = keccak256("PM-SPEND");
         bytes32 pHash = _id(0, address(target), 0, call, nonceX);
@@ -1795,9 +1725,6 @@ contract MMTest is Test {
         moloch.openFutarchy(h, address(0));
 
         vm.expectRevert(MolochMajeur.NotOwner.selector);
-        moloch.setUse6909ForPermits(true);
-
-        vm.expectRevert(MolochMajeur.NotOwner.selector);
         moloch.setQuorumAbsolute(123);
     }
 
@@ -1841,6 +1768,8 @@ contract MMTest is Test {
         moloch.buyShares{value: 2 ether}(address(0), 2e18, 0);
     }
 
+    error TransferFailed();
+
     /*───────────────────────────────────────────────────────────────*
      * _safeTransfer / _safeTransferFrom hard-fails propagate (NotOk)
      *───────────────────────────────────────────────────────────────*/
@@ -1855,28 +1784,9 @@ contract MMTest is Test {
         (, bool okA) = _openAndPass(0, address(moloch), 0, d, keccak256("allow-bad"));
         assertTrue(okA);
 
-        vm.expectRevert(MolochMajeur.NotOk.selector);
+        vm.expectRevert(TransferFailed.selector);
         vm.prank(alice);
         moloch.claimAllowance(address(bad), 1e18);
-    }
-
-    function test_pull_badERC20_transferFrom_false_reverts() public {
-        BadERC20False bad = new BadERC20False();
-        bad.mint(bob, 50e18);
-        vm.prank(bob);
-        bad.approve(address(moloch), 50e18);
-
-        // Try to pull via governance -> inner call returns false -> NotOk
-        bytes memory dPull =
-            abi.encodeWithSelector(MolochMajeur.pull.selector, address(bad), bob, 10e18);
-        bytes32 h = _id(0, address(moloch), 0, dPull, keccak256("pull-bad"));
-
-        // Open & pass, but expect execute to revert NotOk
-        _open(h);
-        _voteYes(h, alice);
-        _voteYes(h, bob);
-        vm.expectRevert(MolochMajeur.NotOk.selector);
-        moloch.executeByVotes(0, address(moloch), 0, dPull, keccak256("pull-bad"));
     }
 
     /*───────────────────────────────────────────────────────────────────*
@@ -2739,11 +2649,6 @@ contract MMTest is Test {
     }
 
     function test_permit_6909_replace_to_zero_burns_all() public {
-        bytes memory dFlag =
-            abi.encodeWithSelector(MolochMajeur.setUse6909ForPermits.selector, true);
-        (, bool ok) = _openAndPass(0, address(moloch), 0, dFlag, keccak256("6909-burn"));
-        assertTrue(ok);
-
         bytes memory call = abi.encodeWithSelector(Target.store.selector, 3);
         bytes32 nonce = keccak256("burn-all");
         bytes32 h = _id(0, address(target), 0, call, nonce);
@@ -2768,11 +2673,6 @@ contract MMTest is Test {
     }
 
     function test_permit_6909_additive_when_either_side_max_no_mint() public {
-        bytes memory dFlag =
-            abi.encodeWithSelector(MolochMajeur.setUse6909ForPermits.selector, true);
-        (, bool ok) = _openAndPass(0, address(moloch), 0, dFlag, keccak256("6909-add-max"));
-        assertTrue(ok);
-
         bytes memory call = abi.encodeWithSelector(Target.store.selector, 4);
         bytes32 nonce = keccak256("add-max-check");
         bytes32 h = _id(0, address(target), 0, call, nonce);
@@ -2854,19 +2754,6 @@ contract MMTest is Test {
     /*───────────────────────────────────────────────────────────────────*
      * ALLOWANCE / PULL EDGE CASES
      *───────────────────────────────────────────────────────────────────*/
-
-    function test_pull_eth_reverts() public {
-        bytes memory d =
-            abi.encodeWithSelector(MolochMajeur.pull.selector, address(0), alice, 1 ether);
-
-        bytes32 h = _id(0, address(moloch), 0, d, keccak256("pull-eth"));
-        _open(h);
-        _voteYes(h, alice);
-        _voteYes(h, bob);
-
-        vm.expectRevert(MolochMajeur.NotOk.selector);
-        moloch.executeByVotes(0, address(moloch), 0, d, keccak256("pull-eth"));
-    }
 
     function test_claimAllowance_underflow_reverts() public {
         bytes memory d = abi.encodeWithSelector(
@@ -4090,11 +3977,6 @@ contract MMTest is Test {
      *───────────────────────────────────────────────────────────────────*/
 
     function test_permit_6909_additive_when_old_finite_new_finite() public {
-        bytes memory dFlag =
-            abi.encodeWithSelector(MolochMajeur.setUse6909ForPermits.selector, true);
-        (, bool ok) = _openAndPass(0, address(moloch), 0, dFlag, keccak256("6909-add-finite"));
-        assertTrue(ok);
-
         bytes memory call = abi.encodeWithSelector(Target.store.selector, 10);
         bytes32 nonce = keccak256("add-finite");
         bytes32 h = _id(0, address(target), 0, call, nonce);
@@ -4119,11 +4001,6 @@ contract MMTest is Test {
     }
 
     function test_permit_6909_replace_from_finite_to_max_no_mint() public {
-        bytes memory dFlag =
-            abi.encodeWithSelector(MolochMajeur.setUse6909ForPermits.selector, true);
-        (, bool ok) = _openAndPass(0, address(moloch), 0, dFlag, keccak256("6909-max-replace"));
-        assertTrue(ok);
-
         bytes memory call = abi.encodeWithSelector(Target.store.selector, 11);
         bytes32 nonce = keccak256("finite-to-max");
         bytes32 h = _id(0, address(target), 0, call, nonce);
@@ -4941,9 +4818,6 @@ contract MMTest is Test {
 
         vm.expectRevert(MolochMajeur.NotOwner.selector);
         moloch.bumpConfig();
-
-        vm.expectRevert(MolochMajeur.NotOwner.selector);
-        moloch.setUse6909ForPermits(true);
 
         bytes32 h = keccak256("test");
         vm.expectRevert(MolochMajeur.NotOwner.selector);

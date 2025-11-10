@@ -2,16 +2,10 @@
 pragma solidity ^0.8.30;
 
 /**
- * @title Moloch (Majeur) — Snapshot-Weighted Multisig/DAO (no-custody), with ERC-6909 vote receipts,
- *        futarchy (optional), timelock, permits, allowances/pull, token sales, ragequit, and SBT-gated chat.
- *
- * Design goals:
- * - Works for 2/2 multisigs, 256-seat boards, and 100k-holder DAOs.
- * - No ERC20 custody for voting. Uses block-number snapshots (like OZ Governor/Votes).
- * - Simple pass rule: majority FOR, with dynamic quorum (BPS) and optional absolute floors.
- * - Optional timelock delay between "ready" and execution.
- * - ERC6909 receipts (non-transferable) minted on vote; can be burned for futarchy payouts if enabled.
- * - Minimal external deps. All code in one file, readable and auditable.
+ * @title Moloch Majeur — Snapshot-Weighted Governance
+ * @notice ERC-20 voting shares (delegatable/split) + ERC-6909 receipts + ERC-721 top-256 badges.
+ *         Features: timelock, permits, futarchy, token sales, ragequit, SBT-gated chat.
+ * @dev Proposals pass when FOR > AGAINST and quorum met. Snapshots at block N-1.
  */
 contract MolochMajeur {
     /*//////////////////////////////////////////////////////////////
@@ -109,14 +103,10 @@ contract MolochMajeur {
         bytes32 indexed hash, address indexed by, uint8 op, address to, uint256 value
     );
 
-    /* Optional: mirror permits as ERC6909 credits for tooling */
-    bool public use6909ForPermits;
-    event Use6909ForPermitsSet(bool on);
-
     /*//////////////////////////////////////////////////////////////
                            ALLOWANCES / PULL
     //////////////////////////////////////////////////////////////*/
-    mapping(address => mapping(address => uint256)) public allowance; // token => recipient => amount
+    mapping(address token => mapping(address spender => uint256 amount)) public allowance;
 
     /*//////////////////////////////////////////////////////////////
                            TREASURY SALES (SHARES)
@@ -222,14 +212,13 @@ contract MolochMajeur {
         quorumBps = _quorumBps;
         ragequittable = _ragequittable;
 
-        // Deploy Shares + Badge; names/symbols are pulled from SAW.
-        shares = new MolochShares(initialHolders, initialAmounts, address(this));
+        shares = new MolochShares(initialHolders, initialAmounts);
         emit SharesDeployed(address(shares));
         badge = new MolochBadge();
         emit BadgeDeployed(address(badge));
 
         // Seed top-256 via hook.
-        for (uint256 i = 0; i < initialHolders.length; ++i) {
+        for (uint256 i; i != initialHolders.length; ++i) {
             _onSharesChanged(initialHolders[i]);
         }
     }
@@ -280,14 +269,15 @@ contract MolochMajeur {
     function fundFutarchy(bytes32 id, uint256 amount) public payable nonReentrant {
         FutarchyConfig storage F = futarchy[id];
         if (!F.enabled || F.resolved) revert NotOk();
+
         if (F.rewardToken == address(0)) {
             if (msg.value != amount) revert NotOk();
-            F.pool += amount;
         } else {
             if (msg.value != 0) revert NotOk();
-            _safeTransferFrom(F.rewardToken, msg.sender, address(this), amount);
-            F.pool += amount;
+            safeTransferFrom(F.rewardToken, amount);
         }
+
+        F.pool += amount;
         emit FutarchyFunded(id, msg.sender, amount);
     }
 
@@ -510,11 +500,6 @@ contract MolochMajeur {
     /*//////////////////////////////////////////////////////////////
                                   PERMITS
     //////////////////////////////////////////////////////////////*/
-    function setUse6909ForPermits(bool on) public payable onlySelf {
-        use6909ForPermits = on;
-        emit Use6909ForPermitsSet(on);
-    }
-
     function setPermit(
         uint8 op,
         address to,
@@ -527,44 +512,38 @@ contract MolochMajeur {
         bytes32 id = _intentHash(op, to, value, data, nonce);
 
         uint256 old = permits[id];
+        uint256 newCount;
 
         if (replaceCount) {
-            // Hard set (including to MAX).
-            permits[id] = count;
+            newCount = count;
         } else {
-            // Additive update with saturation and no-op if already MAX.
             if (old == type(uint256).max) {
-                // already unlimited → ignore additive updates
+                newCount = old; // stay unlimited
             } else if (count == type(uint256).max) {
-                // upgrade to MAX
-                permits[id] = type(uint256).max;
+                newCount = type(uint256).max;
             } else {
                 unchecked {
                     uint256 tmp = old + count;
-                    // saturate to MAX on wrap
                     if (tmp < old) tmp = type(uint256).max;
-                    permits[id] = tmp;
+                    newCount = tmp;
                 }
             }
         }
 
-        emit PermitSet(id, permits[id], replaceCount);
+        permits[id] = newCount;
+        emit PermitSet(id, newCount, replaceCount);
 
-        if (use6909ForPermits) {
-            uint256 tokenId = uint256(id);
-            uint256 cur = totalSupply[tokenId];
+        uint256 tokenId = uint256(id);
+        uint256 cur = totalSupply[tokenId];
 
-            if (replaceCount) {
-                // Mirror replace: burn old mirror; only mint finite counts.
-                if (cur > 0) _burn6909(address(this), tokenId, cur);
-                if (count > 0 && count != type(uint256).max) {
-                    _mint6909(address(this), tokenId, count);
-                }
-            } else {
-                // Mirror add: only when BOTH old and new are finite.
-                if (count > 0 && old != type(uint256).max && permits[id] != type(uint256).max) {
-                    _mint6909(address(this), tokenId, count);
-                }
+        if (replaceCount) {
+            if (cur > 0) _burn6909(address(this), tokenId, cur);
+            if (newCount > 0 && newCount != type(uint256).max) {
+                _mint6909(address(this), tokenId, newCount);
+            }
+        } else {
+            if (count > 0 && old != type(uint256).max && newCount != type(uint256).max) {
+                _mint6909(address(this), tokenId, count);
             }
         }
     }
@@ -586,9 +565,7 @@ contract MolochMajeur {
             unchecked {
                 permits[id] = p - 1;
             }
-            if (use6909ForPermits) {
-                _burn6909(address(this), uint256(id), 1);
-            }
+            _burn6909(address(this), uint256(id), 1);
         }
 
         (ok, retData) = _execute(op, to, value, data);
@@ -608,11 +585,6 @@ contract MolochMajeur {
     function claimAllowance(address token, uint256 amount) public nonReentrant {
         allowance[token][msg.sender] -= amount;
         _payout(token, msg.sender, amount);
-    }
-
-    function pull(address token, address from, uint256 amount) public payable onlySelf {
-        if (token == address(0)) revert NotOk(); // ERC20 only
-        _safeTransferFrom(token, from, address(this), amount);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -658,7 +630,7 @@ contract MolochMajeur {
             if (msg.value != cost || msg.value > maxPay) revert NotOk();
         } else {
             if (msg.value != 0 || (maxPay != 0 && cost > maxPay)) revert NotOk();
-            _safeTransferFrom(payToken, msg.sender, address(this), cost);
+            safeTransferFrom(payToken, cost);
         }
 
         // Issue shares
@@ -691,7 +663,7 @@ contract MolochMajeur {
             if (i != 0 && tk <= prev) revert NotOk();
             prev = tk;
 
-            uint256 pool = tk == address(0) ? address(this).balance : _erc20Balance(tk);
+            uint256 pool = tk == address(0) ? address(this).balance : balanceOfThis(tk);
             uint256 due = mulDiv(pool, amt, ts);
             if (due == 0) continue;
 
@@ -783,7 +755,7 @@ contract MolochMajeur {
                 unchecked {
                     topHolders[pos - 1] = address(0);
                 }
-                topPos[a] = 0;
+                delete topPos[a];
                 badge.burn(a);
             }
             return;
@@ -827,7 +799,7 @@ contract MolochMajeur {
             unchecked {
                 topPos[a] = minI + 1;
             }
-            topPos[evict] = 0;
+            delete topPos[evict];
 
             badge.burn(evict);
             badge.mint(a);
@@ -850,12 +822,8 @@ contract MolochMajeur {
     }
 
     /*//////////////////////////////////////////////////////////////
-                              SVG / TOKEN URIs
-    //////////////////////////////////////////////////////////////*/
-    /*//////////////////////////////////////////////////////////////
                             PROPOSAL CARD URI
     //////////////////////////////////////////////////////////////*/
-
     /// @notice On-chain JSON/SVG card for a proposal id, or routes to receiptURI for vote receipts.
     function tokenURI(uint256 id) public view returns (string memory) {
         // 1) If this id is a vote receipt, delegate to the full receipt renderer.
@@ -867,10 +835,10 @@ contract MolochMajeur {
         bool touchedTallies = (t.forVotes | t.againstVotes | t.abstainVotes) != 0;
 
         uint256 snap = snapshotBlock[h];
-        bool opened = snap != 0 || createdAt[h] != 0;
+        bool opened = snap != 0;
 
-        bool looksLikePermit = use6909ForPermits && !opened && !touchedTallies
-            && (totalSupply[id] != 0 || permits[h] != 0);
+        bool looksLikePermit =
+            !opened && !touchedTallies && (totalSupply[id] != 0 || permits[h] != 0);
 
         if (looksLikePermit) {
             return _permitCardURI(h, id);
@@ -975,7 +943,6 @@ contract MolochMajeur {
     /*//////////////////////////////////////////////////////////////
                             VOTE RECEIPT CARD URI
     //////////////////////////////////////////////////////////////*/
-
     function receiptURI(uint256 id) public view returns (string memory) {
         uint8 s = receiptSupport[id]; // 0 = NO, 1 = YES, 2 = ABSTAIN
         bytes32 h = receiptProposal[id];
@@ -1105,7 +1072,6 @@ contract MolochMajeur {
     /*//////////////////////////////////////////////////////////////
                             PERMIT CARD URI
     //////////////////////////////////////////////////////////////*/
-
     function _permitCardURI(bytes32 h, uint256 id) internal view returns (string memory) {
         string memory usesStr;
         uint256 p = permits[h];
@@ -1154,8 +1120,8 @@ contract MolochMajeur {
             "</text>"
         );
 
-        // Mirror supply (only if mirrored)
-        if (use6909ForPermits && totalSupply[id] > 0) {
+        // Mirror supply (if any finite permits are mirrored)
+        if (totalSupply[id] > 0) {
             svg = string.concat(
                 svg,
                 "<text x='60' y='383' class='garamond' font-size='10' fill='#aaa' letter-spacing='1'>Mirror Supply</text>",
@@ -1243,30 +1209,11 @@ contract MolochMajeur {
         return keccak256(abi.encode(address(this), op, to, value, keccak256(data), nonce, config));
     }
 
-    function _erc20Balance(address token) internal view returns (uint256 bal) {
-        (bool ok, bytes memory ret) =
-            token.staticcall(abi.encodeWithSignature("balanceOf(address)", address(this)));
-        if (ok && ret.length >= 32) bal = abi.decode(ret, (uint256));
-    }
-
-    function _safeTransfer(address token, address to, uint256 amount) internal {
-        (bool ok, bytes memory ret) =
-            token.call(abi.encodeWithSelector(IToken.transfer.selector, to, amount));
-        if (!(ok && (ret.length == 0 || abi.decode(ret, (bool))))) revert NotOk();
-    }
-
-    function _safeTransferFrom(address token, address from, address to, uint256 amount) internal {
-        (bool ok, bytes memory ret) =
-            token.call(abi.encodeWithSelector(IToken.transferFrom.selector, from, to, amount));
-        if (!(ok && (ret.length == 0 || abi.decode(ret, (bool))))) revert NotOk();
-    }
-
     function _payout(address token, address to, uint256 amount) internal {
         if (token == address(0)) {
-            (bool ok,) = payable(to).call{value: amount}("");
-            if (!ok) revert NotOk();
+            safeTransferETH(to, amount);
         } else {
-            _safeTransfer(token, to, amount);
+            safeTransfer(token, to, amount);
         }
     }
 
@@ -1308,13 +1255,13 @@ contract MolochShares {
     event Transfer(address indexed from, address indexed to, uint256 amount);
 
     uint8 public constant decimals = 18;
-    uint256 public totalSupply;
 
+    uint256 public totalSupply;
     mapping(address => uint256) public balanceOf;
     mapping(address => mapping(address => uint256)) public allowance;
 
-    /// @notice The parent Moloch contract.
-    address payable public immutable mol;
+    // Parent Moloch (Majeur)
+    address payable public immutable mol = payable(msg.sender);
 
     modifier onlyMol() {
         require(msg.sender == mol, Unauthorized());
@@ -1355,11 +1302,10 @@ contract MolochShares {
     /*//////////////////////////////////////////////////////////////
                                CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
-    constructor(address[] memory to, uint256[] memory amt, address sawAddr) payable {
+    constructor(address[] memory to, uint256[] memory amt) payable {
         if (to.length != amt.length) revert Len();
-        mol = payable(sawAddr);
 
-        for (uint256 i = 0; i < to.length; ++i) {
+        for (uint256 i; i != to.length; ++i) {
             _mint(to[i], amt[i]); // balances + totalSupply + TS checkpoint
             _autoSelfDelegate(to[i]); // default to self on first sight
             _applyVotingDelta(to[i], int256(amt[i])); // route initial votes via split / primary
@@ -1464,8 +1410,9 @@ contract MolochShares {
     }
 
     function _checkUnlocked(address from, address to) internal view {
-        bool locked = MolochMajeur(mol).transfersLocked();
-        if (locked && from != mol && to != mol) revert Locked();
+        if (MolochMajeur(mol).transfersLocked() && from != mol && to != mol) {
+            revert Locked();
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -1508,34 +1455,39 @@ contract MolochShares {
         return _currentDistribution(account);
     }
 
+    error SplitLen();
+    error SplitZero();
+    error SplitDupe();
+    error SplitSum();
+
     function setSplitDelegation(address[] calldata delegates_, uint32[] calldata bps_) external {
         address account = msg.sender;
         uint256 n = delegates_.length;
-        require(n == bps_.length && n > 0 && n <= MAX_SPLITS, "split/len");
+        require(n == bps_.length && n > 0 && n <= MAX_SPLITS, SplitLen());
 
         // Capture the current effective distribution BEFORE we mutate storage.
         (address[] memory oldD, uint32[] memory oldB) = _currentDistribution(account);
 
         uint256 sum;
-        for (uint256 i; i < n; ++i) {
+        for (uint256 i; i != n; ++i) {
             address d = delegates_[i];
-            require(d != address(0), "split/zero");
+            require(d != address(0), SplitZero());
             uint32 b = bps_[i];
             sum += b;
 
             // no duplicate delegates
-            for (uint256 j = i + 1; j < n; ++j) {
-                require(d != delegates_[j], "split/dupe");
+            for (uint256 j = i + 1; j != n; ++j) {
+                require(d != delegates_[j], SplitDupe());
             }
         }
-        require(sum == BPS_DENOM, "split/sum");
+        require(sum == BPS_DENOM, SplitSum());
 
         // Ensure the account has a primary delegate line (defaults to self once).
         _autoSelfDelegate(account);
 
         // Write the new split set.
         delete _splits[account];
-        for (uint256 i; i < n; ++i) {
+        for (uint256 i; i != n; ++i) {
             _splits[account].push(Split({delegate: delegates_[i], bps: bps_[i]}));
         }
 
@@ -1630,7 +1582,7 @@ contract MolochShares {
         // Pre-sized allocation
         delegates_ = new address[](n);
         bps_ = new uint32[](n);
-        for (uint256 i; i < n; ++i) {
+        for (uint256 i; i != n; ++i) {
             delegates_[i] = sp[i].delegate;
             bps_[i] = sp[i].bps;
         }
@@ -1651,8 +1603,8 @@ contract MolochShares {
         uint256 abs = delta > 0 ? uint256(delta) : uint256(-delta);
         uint256 remaining = abs;
 
-        for (uint256 i; i < len; ++i) {
-            uint256 part = (abs * B[i]) / BPS_DENOM;
+        for (uint256 i; i != len; ++i) {
+            uint256 part = mulDiv(abs, B[i], BPS_DENOM);
 
             // give any rounding remainder to the last delegate
             if (i == len - 1) {
@@ -1684,12 +1636,12 @@ contract MolochShares {
         uint256 nNew = newD.length;
 
         // 1) Adjust delegates that existed before (oldD).
-        for (uint256 i = 0; i < nOld; ++i) {
+        for (uint256 i; i != nOld; ++i) {
             address d = oldD[i];
             uint32 oldBps = oldB[i];
             uint32 newBps = 0;
 
-            for (uint256 j = 0; j < nNew; ++j) {
+            for (uint256 j; j != nNew; ++j) {
                 if (newD[j] == d) {
                     newBps = newB[j];
                     break;
@@ -1698,8 +1650,8 @@ contract MolochShares {
 
             if (oldBps == newBps) continue;
 
-            uint256 oldVotes = (bal * oldBps) / BPS_DENOM;
-            uint256 newVotes = (bal * newBps) / BPS_DENOM;
+            uint256 oldVotes = mulDiv(bal, oldBps, BPS_DENOM);
+            uint256 newVotes = mulDiv(bal, newBps, BPS_DENOM);
 
             if (oldVotes > newVotes) {
                 _moveVotingPower(d, address(0), oldVotes - newVotes);
@@ -1709,10 +1661,10 @@ contract MolochShares {
         }
 
         // 2) Add votes for delegates that are new-only (not in oldD).
-        for (uint256 j = 0; j < nNew; ++j) {
+        for (uint256 j; j != nNew; ++j) {
             address dNew = newD[j];
             bool found;
-            for (uint256 i = 0; i < nOld; ++i) {
+            for (uint256 i; i != nOld; ++i) {
                 if (oldD[i] == dNew) {
                     found = true;
                     break;
@@ -1720,7 +1672,7 @@ contract MolochShares {
             }
             if (found) continue;
 
-            uint256 newVotes = (bal * newB[j]) / BPS_DENOM;
+            uint256 newVotes = mulDiv(bal, newB[j], BPS_DENOM);
             if (newVotes != 0) _moveVotingPower(address(0), dNew, newVotes);
         }
     }
@@ -1825,7 +1777,7 @@ contract MolochBadge {
     address payable public immutable mol = payable(msg.sender);
 
     // Holder => count (0 or 1 in practice)
-    mapping(address => uint256) public balanceOf;
+    mapping(address owner => uint256) public balanceOf;
 
     modifier onlyMol() {
         require(msg.sender == mol, Unauthorized());
@@ -1956,7 +1908,7 @@ contract MolochBadge {
     function burn(address from) public onlyMol {
         require(balanceOf[from] != 0, NotMinted());
 
-        balanceOf[from] = 0;
+        delete balanceOf[from];
         emit Transfer(from, address(0), uint256(uint160(from)));
     }
 
@@ -2002,6 +1954,15 @@ contract MolochBadge {
 /*//////////////////////////////////////////////////////////////
                          MINIMAL INTERNALS
 //////////////////////////////////////////////////////////////*/
+library DataURI {
+    function json(string memory raw) internal pure returns (string memory) {
+        return string.concat("data:application/json;base64,", Base64.encode(bytes(raw)));
+    }
+
+    function svg(string memory raw) internal pure returns (string memory) {
+        return string.concat("data:image/svg+xml;base64,", Base64.encode(bytes(raw)));
+    }
+}
 
 function _formatNumber(uint256 n) pure returns (string memory) {
     if (n == 0) return "0";
@@ -2115,16 +2076,6 @@ function _jsonImage(string memory name_, string memory description_, string memo
     );
 }
 
-library DataURI {
-    function json(string memory raw) internal pure returns (string memory) {
-        return string.concat("data:application/json;base64,", Base64.encode(bytes(raw)));
-    }
-
-    function svg(string memory raw) internal pure returns (string memory) {
-        return string.concat("data:image/svg+xml;base64,", Base64.encode(bytes(raw)));
-    }
-}
-
 library Base64 {
     function encode(bytes memory data, bool fileSafe, bool noPadding)
         internal
@@ -2214,10 +2165,63 @@ function mulDiv(uint256 x, uint256 y, uint256 d) pure returns (uint256 z) {
     }
 }
 
-/*//////////////////////////////////////////////////////////////
-                         MINIMAL EXTERNALS
-//////////////////////////////////////////////////////////////*/
-interface IToken {
-    function transfer(address, uint256) external;
-    function transferFrom(address, address, uint256) external;
+function balanceOfThis(address token) view returns (uint256 amount) {
+    assembly ("memory-safe") {
+        mstore(0x14, address())
+        mstore(0x00, 0x70a08231000000000000000000000000)
+        amount := mul(
+            mload(0x20),
+            and(gt(returndatasize(), 0x1f), staticcall(gas(), token, 0x10, 0x24, 0x20, 0x20))
+        )
+    }
+}
+
+error ETHTransferFailed();
+
+function safeTransferETH(address to, uint256 amount) {
+    assembly ("memory-safe") {
+        if iszero(call(gas(), to, amount, codesize(), 0x00, codesize(), 0x00)) {
+            mstore(0x00, 0xb12d13eb)
+            revert(0x1c, 0x04)
+        }
+    }
+}
+
+error TransferFailed();
+
+function safeTransfer(address token, address to, uint256 amount) {
+    assembly ("memory-safe") {
+        mstore(0x14, to)
+        mstore(0x34, amount)
+        mstore(0x00, 0xa9059cbb000000000000000000000000)
+        let success := call(gas(), token, 0, 0x10, 0x44, 0x00, 0x20)
+        if iszero(and(eq(mload(0x00), 1), success)) {
+            if iszero(lt(or(iszero(extcodesize(token)), returndatasize()), success)) {
+                mstore(0x00, 0x90b8ec18)
+                revert(0x1c, 0x04)
+            }
+        }
+        mstore(0x34, 0)
+    }
+}
+
+error TransferFromFailed();
+
+function safeTransferFrom(address token, uint256 amount) {
+    assembly ("memory-safe") {
+        let m := mload(0x40)
+        mstore(0x60, amount)
+        mstore(0x40, address())
+        mstore(0x2c, shl(96, caller()))
+        mstore(0x0c, 0x23b872dd000000000000000000000000)
+        let success := call(gas(), token, 0, 0x1c, 0x64, 0x00, 0x20)
+        if iszero(and(eq(mload(0x00), 1), success)) {
+            if iszero(lt(or(iszero(extcodesize(token)), returndatasize()), success)) {
+                mstore(0x00, 0x7939f424)
+                revert(0x1c, 0x04)
+            }
+        }
+        mstore(0x60, 0)
+        mstore(0x40, m)
+    }
 }
