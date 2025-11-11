@@ -533,7 +533,7 @@ contract MolochTest is Test {
         // Resolve NO
         moloch.resolveFutarchyNo(h);
 
-        (bool enabled,,, bool resolved, uint8 winner,, uint256 ppu) = moloch.futarchy(h);
+        (bool enabled,,, bool resolved, uint8 winner,,) = moloch.futarchy(h);
         assertTrue(enabled && resolved);
         assertEq(winner, 0, "NO won");
 
@@ -2023,12 +2023,12 @@ contract MolochTest is Test {
         moloch.chat("no badge");
     }
 
-    function test_onERC721Received() public {
+    function test_onERC721Received() public view {
         bytes4 selector = moloch.onERC721Received(address(0), address(0), 0, "");
         assertEq(selector, moloch.onERC721Received.selector);
     }
 
-    function test_onERC1155Received() public {
+    function test_onERC1155Received() public view {
         bytes4 selector = moloch.onERC1155Received(address(0), address(0), 0, 0, "");
         assertEq(selector, moloch.onERC1155Received.selector);
     }
@@ -2088,7 +2088,7 @@ contract MolochTest is Test {
         loot.transfer(bob, 10e18);
     }
 
-    function test_badge_ownerOf() public {
+    function test_badge_ownerOf() public view {
         uint256 tokenId = uint256(uint160(alice));
         assertEq(badge.ownerOf(tokenId), alice);
     }
@@ -2198,7 +2198,7 @@ contract MolochTest is Test {
         assertTrue(bytes(uri).length > 0);
     }
 
-    function test_badge_tokenURI() public {
+    function test_badge_tokenURI() public view {
         uint256 tokenId = uint256(uint160(alice));
         string memory uri = badge.tokenURI(tokenId);
         assertTrue(bytes(uri).length > 0);

@@ -332,9 +332,10 @@ contract Moloch {
         if (support > 2) revert NotOk();
 
         // auto-open on first vote if unopened
-        if (snapshotBlock[id] == 0) {
-            if (proposalThreshold > 0) {
-                require(shares.getVotes(msg.sender) >= proposalThreshold, NotOk());
+        if (createdAt[id] == 0) {
+            if (proposalThreshold != 0) {
+                // threshold should always use CURRENT votes (not snapshot)
+                if (shares.getVotes(msg.sender) < proposalThreshold) revert NotOk();
             }
             openProposal(id);
         }
@@ -373,7 +374,7 @@ contract Moloch {
 
     function state(uint256 id) public view returns (ProposalState) {
         if (executed[id]) return ProposalState.Executed;
-        if (snapshotBlock[id] == 0) return ProposalState.Unopened;
+        if (createdAt[id] == 0) return ProposalState.Unopened;
 
         uint64 queued = queuedAt[id];
 
@@ -735,6 +736,20 @@ contract Moloch {
         for (uint256 i; i != calls.length; ++i) {
             (bool ok,) = calls[i].target.call{value: calls[i].value}(calls[i].data);
             require(ok, NotOk());
+        }
+    }
+
+    /// @dev Execute sequence of calls to this Majeur contract.
+    function multicall(bytes[] calldata data) public returns (bytes[] memory results) {
+        results = new bytes[](data.length);
+        for (uint256 i; i != data.length; ++i) {
+            (bool success, bytes memory result) = address(this).delegatecall(data[i]);
+            if (!success) {
+                assembly ("memory-safe") {
+                    revert(add(result, 0x20), mload(result))
+                }
+            }
+            results[i] = result;
         }
     }
 
