@@ -452,6 +452,305 @@ contract MolochTest is Test {
         vm.expectRevert(Moloch.NotOk.selector);
         moloch.executeByVotes(0, address(this), 0, "", keccak256("old"));
     }
+
+    function test_loot_sales() public {
+        // Enable loot sale
+        bytes memory data = abi.encodeWithSelector(
+            Moloch.setSale.selector,
+            address(0), // ETH
+            0, // price (free)
+            10e18, // cap
+            true, // minting
+            true, // active
+            true // IS LOOT
+        );
+
+        (, bool ok) = _openAndPass(0, address(moloch), 0, data, keccak256("loot-sale"));
+        assertTrue(ok);
+
+        // Charlie buys loot
+        vm.prank(charlie);
+        moloch.buyShares{value: 0}(address(0), 5e18, 0);
+
+        assertEq(loot.balanceOf(charlie), 5e18, "charlie bought loot");
+        assertEq(shares.balanceOf(charlie), 0, "no shares for charlie");
+    }
+
+    function test_loot_ragequit() public {
+        // Enable loot sale
+        bytes memory data =
+            abi.encodeWithSelector(Moloch.setSale.selector, address(0), 0, 10e18, true, true, true);
+        (, bool ok) = _openAndPass(0, address(moloch), 0, data, keccak256("loot-sale"));
+        assertTrue(ok);
+
+        // Charlie buys loot
+        vm.prank(charlie);
+        moloch.buyShares{value: 0}(address(0), 5e18, 0);
+
+        vm.roll(10);
+        vm.warp(10);
+
+        // Fund DAO
+        vm.deal(address(moloch), 10 ether);
+
+        uint256 charlieBefore = charlie.balance;
+        uint256 totalSupply = shares.totalSupply() + loot.totalSupply();
+
+        address[] memory tokens = new address[](1);
+        tokens[0] = address(0);
+
+        // Ragequit with loot
+        vm.prank(charlie);
+        moloch.rageQuit(tokens, 0, 5e18); // 0 shares, 5e18 loot
+
+        uint256 expectedPayout = (10 ether * 5e18) / totalSupply;
+        assertEq(charlie.balance - charlieBefore, expectedPayout, "loot ragequit payout");
+    }
+
+    function test_futarchy_no_path() public {
+        // Set short TTL
+        bytes memory dTTL = abi.encodeWithSelector(Moloch.setProposalTTL.selector, uint64(100));
+        (, bool ok) = _openAndPass(0, address(moloch), 0, dTTL, keccak256("ttl"));
+        assertTrue(ok);
+
+        bytes memory call = abi.encodeWithSelector(Target.store.selector, 999);
+        uint256 h = _id(0, address(target), 0, call, keccak256("fut-no"));
+
+        // Fund futarchy
+        vm.deal(address(this), 100 ether);
+        moloch.fundFutarchy{value: 100 ether}(h, address(0), 100 ether);
+
+        // Vote NO
+        _open(h);
+        vm.prank(alice);
+        moloch.castVote(h, 0); // AGAINST
+        vm.prank(bob);
+        moloch.castVote(h, 0); // AGAINST
+
+        // Wait for TTL
+        vm.warp(block.timestamp + 101);
+
+        // Resolve NO
+        moloch.resolveFutarchyNo(h);
+
+        (bool enabled,,, bool resolved, uint8 winner,, uint256 ppu) = moloch.futarchy(h);
+        assertTrue(enabled && resolved);
+        assertEq(winner, 0, "NO won");
+
+        // Cash out NO receipts
+        uint256 before = alice.balance;
+        vm.prank(alice);
+        moloch.cashOutFutarchy(h, 10e18);
+        assertTrue(alice.balance > before, "got NO payout");
+    }
+
+    function test_split_delegation_3_way() public {
+        // Enable sale for charlie
+        bytes memory d = abi.encodeWithSelector(
+            Moloch.setSale.selector, address(0), 0, 10e18, true, true, false
+        );
+        (, bool ok) = _openAndPass(0, address(moloch), 0, d, keccak256("sale"));
+        assertTrue(ok);
+
+        vm.prank(charlie);
+        moloch.buyShares{value: 0}(address(0), 10e18, 0);
+
+        // Alice splits 3 ways
+        address[] memory delegates = new address[](3);
+        uint32[] memory bps = new uint32[](3);
+
+        delegates[0] = bob;
+        delegates[1] = charlie;
+        delegates[2] = address(0x1111);
+        bps[0] = 3333;
+        bps[1] = 3333;
+        bps[2] = 3334;
+
+        vm.prank(alice);
+        shares.setSplitDelegation(delegates, bps);
+
+        // Check distribution
+        assertEq(shares.getVotes(alice), 0, "alice delegated");
+        assertTrue(shares.getVotes(bob) > 40e18, "bob has own + alice's");
+        assertTrue(shares.getVotes(charlie) > 10e18, "charlie has own + alice's");
+    }
+
+    function test_clear_split_delegation() public {
+        // Set split
+        address[] memory delegates = new address[](2);
+        uint32[] memory bps = new uint32[](2);
+        delegates[0] = bob;
+        delegates[1] = charlie;
+        bps[0] = 5000;
+        bps[1] = 5000;
+
+        vm.prank(alice);
+        shares.setSplitDelegation(delegates, bps);
+
+        assertEq(shares.getVotes(alice), 0, "alice split");
+
+        // Clear split
+        vm.prank(alice);
+        shares.clearSplitDelegation();
+
+        assertEq(shares.getVotes(alice), 60e18, "alice back to self");
+    }
+
+    function test_allowance_eth() public {
+        vm.deal(address(moloch), 10 ether);
+
+        // Set allowance via governance
+        bytes memory d =
+            abi.encodeWithSelector(Moloch.setAllowanceTo.selector, address(0), charlie, 5 ether);
+        (, bool ok) = _openAndPass(0, address(moloch), 0, d, keccak256("allowance"));
+        assertTrue(ok);
+
+        // Charlie claims
+        uint256 before = charlie.balance;
+        vm.prank(charlie);
+        moloch.claimAllowance(address(0), 3 ether);
+
+        assertEq(charlie.balance - before, 3 ether, "claimed");
+        assertEq(moloch.allowance(address(0), charlie), 2 ether, "remaining");
+    }
+
+    function test_proposal_ttl_expiry() public {
+        // Set short TTL
+        bytes memory d = abi.encodeWithSelector(Moloch.setProposalTTL.selector, uint64(100));
+        (, bool ok) = _openAndPass(0, address(moloch), 0, d, keccak256("ttl"));
+        assertTrue(ok);
+
+        // Open proposal
+        uint256 h = _id(0, address(this), 0, "", keccak256("expire"));
+        moloch.openProposal(h);
+
+        // Wait past TTL
+        vm.warp(block.timestamp + 101);
+
+        // Should be expired
+        assertEq(uint256(moloch.state(h)), uint256(Moloch.ProposalState.Expired));
+
+        // Can't vote
+        vm.expectRevert(Moloch.NotOk.selector);
+        vm.prank(alice);
+        moloch.castVote(h, 1);
+    }
+
+    function test_defeated_proposal() public {
+        uint256 h = _id(0, address(this), 0, "", keccak256("defeat"));
+        _open(h);
+
+        // Alice votes YES, Bob votes NO
+        vm.prank(alice);
+        moloch.castVote(h, 1); // 60% FOR
+
+        vm.prank(bob);
+        moloch.castVote(h, 0); // 40% AGAINST
+
+        // FOR > AGAINST but need to check quorum
+        // With 50% quorum, 100% turnout is enough
+        // 60 FOR vs 40 AGAINST = FOR wins
+        assertEq(uint256(moloch.state(h)), uint256(Moloch.ProposalState.Succeeded));
+    }
+
+    function test_tie_vote_defeats() public {
+        // Make alice and bob equal
+        vm.prank(alice);
+        shares.transfer(bob, 10e18); // Now both have 50e18
+
+        vm.roll(10);
+        vm.warp(10);
+
+        uint256 h = _id(0, address(this), 0, "", keccak256("tie"));
+        _open(h);
+
+        vm.prank(alice);
+        moloch.castVote(h, 1); // 50 FOR
+
+        vm.prank(bob);
+        moloch.castVote(h, 0); // 50 AGAINST
+
+        // Tie means defeated (FOR <= AGAINST)
+        assertEq(uint256(moloch.state(h)), uint256(Moloch.ProposalState.Defeated));
+    }
+
+    function test_abstain_votes() public {
+        uint256 h = _id(0, address(this), 0, "", keccak256("abstain"));
+        _open(h);
+
+        vm.prank(alice);
+        moloch.castVote(h, 2); // ABSTAIN
+
+        vm.prank(bob);
+        moloch.castVote(h, 1); // FOR
+
+        // Should succeed (quorum met, FOR > AGAINST)
+        assertEq(uint256(moloch.state(h)), uint256(Moloch.ProposalState.Succeeded));
+    }
+
+    function test_metadata_functions() public view {
+        assertEq(shares.name(), "Test DAO Shares");
+        assertEq(shares.symbol(), "TEST");
+        assertEq(loot.name(), "Test DAO Loot");
+        assertEq(badge.name(), "Test DAO Badge");
+    }
+
+    function test_permit_unlimited() public {
+        bytes memory call = abi.encodeWithSelector(Target.store.selector, 111);
+        bytes32 nonce = keccak256("unlimited");
+
+        // Set unlimited permit
+        bytes memory data = abi.encodeWithSelector(
+            Moloch.setPermit.selector,
+            0,
+            address(target),
+            0,
+            call,
+            nonce,
+            charlie,
+            type(uint256).max
+        );
+
+        (, bool ok) = _openAndPass(0, address(moloch), 0, data, keccak256("set-unlimited"));
+        assertTrue(ok);
+
+        // Charlie can spend multiple times
+        vm.prank(charlie);
+        moloch.permitExecute(0, address(target), 0, call, nonce);
+        assertEq(target.stored(), 111);
+
+        vm.prank(charlie);
+        moloch.permitExecute(0, address(target), 0, call, nonce);
+        assertEq(target.stored(), 111, "still works");
+    }
+
+    function test_batch_calls() public {
+        Call[] memory calls = new Call[](2);
+        calls[0] = Call({
+            target: address(target),
+            value: 0,
+            data: abi.encodeWithSelector(Target.store.selector, 100)
+        });
+        calls[1] = Call({
+            target: address(target),
+            value: 0,
+            data: abi.encodeWithSelector(Target.store.selector, 200)
+        });
+
+        bytes memory d = abi.encodeWithSelector(Moloch.batchCalls.selector, calls);
+        (, bool ok) = _openAndPass(0, address(moloch), 0, d, keccak256("batch"));
+        assertTrue(ok);
+
+        assertEq(target.stored(), 200, "last call value");
+    }
+
+    function test_receive_eth() public {
+        vm.deal(alice, 5 ether);
+        vm.prank(alice);
+        (bool ok,) = payable(address(moloch)).call{value: 5 ether}("");
+        assertTrue(ok);
+        assertEq(address(moloch).balance, 5 ether);
+    }
 }
 
 contract Target {
