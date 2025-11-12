@@ -61,6 +61,7 @@ contract MolochTest is Test {
         assertEq(badge.balanceOf(bob), 1, "bob badge");
 
         target = new Target();
+        vm.roll(block.number + 1);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -170,17 +171,20 @@ contract MolochTest is Test {
         assertEq(shares.getVotes(charlie), 60e18, "charlie has alice's votes");
         assertEq(shares.getVotes(bob), 40e18, "bob unchanged");
 
-        // Charlie can vote with delegated power
+        // Ensure the snapshot (N-1) captures the delegation done at N
+        vm.roll(block.number + 1);
+
+        // Open proposal (snapshots at block.number - 1)
         bytes memory data = abi.encodeWithSelector(Target.store.selector, 99);
         uint256 h = _id(0, address(target), 0, data, keccak256("delegate-test"));
-
         _open(h);
 
+        // Votes are measured at the snapshot block
         vm.prank(charlie);
-        moloch.castVote(h, 1); // Charlie votes YES with 60e18
+        moloch.castVote(h, 1); // YES with 60e18
 
         vm.prank(bob);
-        moloch.castVote(h, 1); // Bob votes YES with 40e18
+        moloch.castVote(h, 1); // YES with 40e18
 
         (uint256 forVotes,,) = moloch.tallies(h);
         assertEq(forVotes, 100e18, "all votes cast");
@@ -601,7 +605,7 @@ contract MolochTest is Test {
 
         // Set allowance via governance
         bytes memory d =
-            abi.encodeWithSelector(Moloch.setAllowanceTo.selector, address(0), charlie, 5 ether);
+            abi.encodeWithSelector(Moloch.setAllowance.selector, charlie, address(0), 5 ether);
         (, bool ok) = _openAndPass(0, address(moloch), 0, d, keccak256("allowance"));
         assertTrue(ok);
 
@@ -2117,7 +2121,7 @@ contract MolochTest is Test {
         token.mint(address(moloch), 1000e18);
 
         bytes memory d =
-            abi.encodeWithSelector(Moloch.setAllowanceTo.selector, address(token), charlie, 500e18);
+            abi.encodeWithSelector(Moloch.setAllowance.selector, charlie, address(token), 500e18);
         (, bool ok) = _openAndPass(0, address(moloch), 0, d, keccak256("token-allowance"));
         assertTrue(ok);
 
@@ -2698,7 +2702,7 @@ contract MolochTest is Test {
         vm.deal(address(moloch), 10 ether);
 
         bytes memory d =
-            abi.encodeWithSelector(Moloch.setAllowanceTo.selector, address(0), charlie, 5 ether);
+            abi.encodeWithSelector(Moloch.setAllowance.selector, charlie, address(0), 5 ether);
         (, bool ok) = _openAndPass(0, address(moloch), 0, d, keccak256("allowance"));
         assertTrue(ok);
 
@@ -2715,7 +2719,7 @@ contract MolochTest is Test {
         vm.deal(address(moloch), 10 ether);
 
         bytes memory d =
-            abi.encodeWithSelector(Moloch.setAllowanceTo.selector, address(0), charlie, 5 ether);
+            abi.encodeWithSelector(Moloch.setAllowance.selector, charlie, address(0), 5 ether);
         (, bool ok) = _openAndPass(0, address(moloch), 0, d, keccak256("allowance"));
         assertTrue(ok);
 
