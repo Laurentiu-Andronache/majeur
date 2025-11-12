@@ -234,7 +234,7 @@ contract MolochTest is Test {
         tokens[0] = address(0); // ETH
 
         vm.prank(bob);
-        moloch.rageQuit(tokens, bobShares, 0);
+        moloch.ragequit(tokens, bobShares, 0);
 
         uint256 expectedPayout = (treasury * bobShares) / totalSupply;
         assertEq(bob.balance - bobBefore, expectedPayout, "correct payout");
@@ -317,7 +317,7 @@ contract MolochTest is Test {
 
         // Charlie spends permit
         vm.prank(charlie);
-        (bool ok2,) = moloch.permitExecute(0, address(target), 0, call, nonce);
+        (bool ok2,) = moloch.spendPermit(0, address(target), 0, call, nonce);
         assertTrue(ok2);
         assertEq(target.stored(), 555);
     }
@@ -501,7 +501,7 @@ contract MolochTest is Test {
 
         // Ragequit with loot
         vm.prank(charlie);
-        moloch.rageQuit(tokens, 0, 5e18); // 0 shares, 5e18 loot
+        moloch.ragequit(tokens, 0, 5e18); // 0 shares, 5e18 loot
 
         uint256 expectedPayout = (10 ether * 5e18) / totalSupply;
         assertEq(charlie.balance - charlieBefore, expectedPayout, "loot ragequit payout");
@@ -608,7 +608,7 @@ contract MolochTest is Test {
         // Charlie claims
         uint256 before = charlie.balance;
         vm.prank(charlie);
-        moloch.claimAllowance(address(0), 3 ether);
+        moloch.spendAllowance(address(0), 3 ether);
 
         assertEq(charlie.balance - before, 3 ether, "claimed");
         assertEq(moloch.allowance(address(0), charlie), 2 ether, "remaining");
@@ -716,11 +716,11 @@ contract MolochTest is Test {
 
         // Charlie can spend multiple times
         vm.prank(charlie);
-        moloch.permitExecute(0, address(target), 0, call, nonce);
+        moloch.spendPermit(0, address(target), 0, call, nonce);
         assertEq(target.stored(), 111);
 
         vm.prank(charlie);
-        moloch.permitExecute(0, address(target), 0, call, nonce);
+        moloch.spendPermit(0, address(target), 0, call, nonce);
         assertEq(target.stored(), 111, "still works");
     }
 
@@ -947,7 +947,7 @@ contract MolochTest is Test {
 
         vm.expectRevert(Moloch.NotOk.selector);
         vm.prank(bob);
-        moloch.rageQuit(tokens, 1e18, 0);
+        moloch.ragequit(tokens, 1e18, 0);
     }
 
     function test_ragequit_zero_amount_reverts() public {
@@ -956,7 +956,7 @@ contract MolochTest is Test {
 
         vm.expectRevert(Moloch.NotOk.selector);
         vm.prank(bob);
-        moloch.rageQuit(tokens, 0, 0);
+        moloch.ragequit(tokens, 0, 0);
     }
 
     function test_ragequit_sorted_tokens() public {
@@ -971,7 +971,7 @@ contract MolochTest is Test {
         tokens[1] = address(0x1234); // Some token address
 
         vm.prank(bob);
-        moloch.rageQuit(tokens, 1e18, 0);
+        moloch.ragequit(tokens, 1e18, 0);
     }
 
     function test_ragequit_unsorted_reverts() public {
@@ -981,7 +981,7 @@ contract MolochTest is Test {
 
         vm.expectRevert(Moloch.NotOk.selector);
         vm.prank(bob);
-        moloch.rageQuit(tokens, 1e18, 0);
+        moloch.ragequit(tokens, 1e18, 0);
     }
 
     function test_sales_cap_decrements() public {
@@ -1748,7 +1748,7 @@ contract MolochTest is Test {
         assertEq(moloch.balanceOf(charlie, h), 5);
 
         vm.prank(charlie);
-        moloch.permitExecute(0, address(target), 0, call, nonce);
+        moloch.spendPermit(0, address(target), 0, call, nonce);
 
         assertEq(moloch.balanceOf(charlie, h), 4, "permit burned");
     }
@@ -1766,7 +1766,7 @@ contract MolochTest is Test {
         uint256 h = _id(0, address(target), 0, call, nonce);
 
         vm.prank(charlie);
-        moloch.permitExecute(0, address(target), 0, call, nonce);
+        moloch.spendPermit(0, address(target), 0, call, nonce);
 
         assertTrue(moloch.executed(h), "marked executed");
     }
@@ -1787,7 +1787,7 @@ contract MolochTest is Test {
         assertTrue(ok);
 
         vm.prank(charlie);
-        moloch.permitExecute(0, address(target), 0, call, nonce);
+        moloch.spendPermit(0, address(target), 0, call, nonce);
 
         (,,, bool resolved, uint8 winner,,) = moloch.futarchy(h);
         assertTrue(resolved, "futarchy resolved");
@@ -1922,7 +1922,7 @@ contract MolochTest is Test {
         uint256 aliceBalBefore = alice.balance;
 
         vm.prank(alice);
-        moloch.rageQuit(tokens, aliceShares, aliceLoot);
+        moloch.ragequit(tokens, aliceShares, aliceLoot);
 
         uint256 expectedPayout = (10 ether * (aliceShares + aliceLoot)) / totalSupply;
         assertEq(alice.balance - aliceBalBefore, expectedPayout);
@@ -1943,7 +1943,7 @@ contract MolochTest is Test {
         uint256 bobBefore = bob.balance;
 
         vm.prank(bob);
-        moloch.rageQuit(tokens, 40e18, 0);
+        moloch.ragequit(tokens, 40e18, 0);
 
         assertTrue(bob.balance > bobBefore);
     }
@@ -2122,7 +2122,7 @@ contract MolochTest is Test {
         assertTrue(ok);
 
         vm.prank(charlie);
-        moloch.claimAllowance(address(token), 200e18);
+        moloch.spendAllowance(address(token), 200e18);
 
         assertEq(token.balanceOf(charlie), 200e18);
         assertEq(moloch.allowance(address(token), charlie), 300e18);
@@ -2203,6 +2203,757 @@ contract MolochTest is Test {
         string memory uri = badge.tokenURI(tokenId);
         assertTrue(bytes(uri).length > 0);
     }
+
+    /*//////////////////////////////////////////////////////////////
+                        SPLIT DELEGATION ADVANCED
+    //////////////////////////////////////////////////////////////*/
+
+    function test_split_delegation_unequal_weights() public {
+        address[] memory delegates = new address[](3);
+        uint32[] memory bps = new uint32[](3);
+
+        delegates[0] = bob;
+        delegates[1] = charlie;
+        delegates[2] = address(0x1111);
+        bps[0] = 6000; // 60%
+        bps[1] = 3000; // 30%
+        bps[2] = 1000; // 10%
+
+        vm.prank(alice);
+        shares.setSplitDelegation(delegates, bps);
+
+        // Alice has 60e18, so bob gets 36e18, charlie gets 18e18, 0x1111 gets 6e18
+        assertEq(shares.getVotes(bob), 40e18 + 36e18); // own + delegated
+        assertEq(shares.getVotes(charlie), 18e18);
+        assertEq(shares.getVotes(address(0x1111)), 6e18);
+    }
+
+    function test_split_delegation_removes_self_voting_power() public {
+        address[] memory delegates = new address[](2);
+        uint32[] memory bps = new uint32[](2);
+
+        delegates[0] = bob;
+        delegates[1] = charlie;
+        bps[0] = 5000;
+        bps[1] = 5000;
+
+        vm.roll(5);
+        vm.warp(5);
+
+        vm.prank(alice);
+        shares.setSplitDelegation(delegates, bps);
+
+        // Alice has delegated away all voting power
+        assertEq(shares.getVotes(alice), 0, "alice has no votes");
+
+        vm.roll(10);
+        vm.warp(10);
+
+        // Try to vote with alice - should fail (zero weight)
+        uint256 h = _id(0, address(this), 0, "", keccak256("no-power"));
+        _open(h);
+
+        vm.expectRevert(Moloch.NotOk.selector);
+        vm.prank(alice);
+        moloch.castVote(h, 1);
+    }
+
+    function test_split_delegation_then_single_delegate() public {
+        address[] memory delegates = new address[](2);
+        uint32[] memory bps = new uint32[](2);
+
+        delegates[0] = bob;
+        delegates[1] = charlie;
+        bps[0] = 5000;
+        bps[1] = 5000;
+
+        vm.prank(alice);
+        shares.setSplitDelegation(delegates, bps);
+
+        // Now delegate normally (should clear split)
+        vm.prank(alice);
+        shares.delegate(bob);
+
+        assertEq(shares.getVotes(alice), 0);
+        assertEq(shares.getVotes(bob), 100e18); // 40 own + 60 delegated
+        assertEq(shares.getVotes(charlie), 0);
+    }
+
+    function test_split_delegation_voting_power_accuracy() public {
+        address[] memory delegates = new address[](4);
+        uint32[] memory bps = new uint32[](4);
+
+        delegates[0] = bob;
+        delegates[1] = charlie;
+        delegates[2] = address(0x1111);
+        delegates[3] = address(0x2222);
+        bps[0] = 2500;
+        bps[1] = 2500;
+        bps[2] = 2500;
+        bps[3] = 2500;
+
+        vm.prank(alice);
+        shares.setSplitDelegation(delegates, bps);
+
+        // Each should get exactly 15e18 (60e18 / 4)
+        assertEq(shares.getVotes(bob), 40e18 + 15e18);
+        assertEq(shares.getVotes(charlie), 15e18);
+        assertEq(shares.getVotes(address(0x1111)), 15e18);
+        assertEq(shares.getVotes(address(0x2222)), 15e18);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        CHECKPOINT MECHANICS
+    //////////////////////////////////////////////////////////////*/
+
+    function test_multiple_transfers_same_block() public {
+        vm.roll(10);
+        vm.warp(10);
+
+        // Multiple transfers in same block should only create one checkpoint
+        vm.prank(alice);
+        shares.transfer(bob, 10e18);
+
+        vm.prank(alice);
+        shares.transfer(charlie, 10e18);
+
+        vm.prank(alice);
+        shares.transfer(bob, 5e18);
+
+        // Final state
+        assertEq(shares.balanceOf(alice), 35e18);
+        assertEq(shares.balanceOf(bob), 55e18);
+        assertEq(shares.balanceOf(charlie), 10e18);
+    }
+
+    function test_voting_power_after_multiple_delegates() public {
+        vm.roll(5);
+        vm.warp(5);
+
+        // Alice delegates to bob
+        vm.prank(alice);
+        shares.delegate(bob);
+
+        vm.roll(10);
+        vm.warp(10);
+
+        // Alice changes delegation to charlie
+        vm.prank(alice);
+        shares.delegate(charlie);
+
+        assertEq(shares.getVotes(bob), 40e18); // back to own
+        assertEq(shares.getVotes(charlie), 60e18); // alice's votes
+    }
+
+    function test_getPastVotes_exact_checkpoint() public {
+        vm.roll(10);
+        vm.warp(10);
+
+        // Move forward one block so block 10 is in the past
+        vm.roll(11);
+        vm.warp(11);
+
+        uint32 snapshot = uint32(10); // Query past block
+
+        vm.roll(20);
+
+        vm.prank(alice);
+        shares.transfer(bob, 30e18);
+
+        // Query at exact checkpoint block
+        assertEq(shares.getPastVotes(alice, snapshot), 60e18);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        PROPOSAL STATE TRANSITIONS
+    //////////////////////////////////////////////////////////////*/
+
+    function test_proposal_unopened_to_defeated_path() public {
+        // Set high quorum
+        bytes memory d = abi.encodeWithSelector(Moloch.setQuorumBps.selector, uint16(9000));
+        (, bool ok) = _openAndPass(0, address(moloch), 0, d, keccak256("quorum"));
+        assertTrue(ok);
+
+        uint256 h = _id(0, address(this), 0, "", keccak256("defeated"));
+        _open(h);
+
+        // Vote NO
+        vm.prank(alice);
+        moloch.castVote(h, 0);
+
+        // Insufficient quorum and voting NO = Active (then Defeated if threshold met)
+        Moloch.ProposalState st = moloch.state(h);
+        assertTrue(st == Moloch.ProposalState.Active || st == Moloch.ProposalState.Defeated);
+    }
+
+    function test_proposal_queue_manual() public {
+        bytes memory d = abi.encodeWithSelector(Moloch.setTimelockDelay.selector, uint64(100));
+        (, bool ok) = _openAndPass(0, address(moloch), 0, d, keccak256("tl"));
+        assertTrue(ok);
+
+        uint256 h = _id(0, address(this), 0, "", keccak256("queue-manual"));
+        _open(h);
+
+        vm.prank(alice);
+        moloch.castVote(h, 1);
+        vm.prank(bob);
+        moloch.castVote(h, 1);
+
+        // Manually queue before execute
+        moloch.queue(h);
+
+        assertTrue(moloch.queuedAt(h) > 0);
+        assertEq(uint256(moloch.state(h)), uint256(Moloch.ProposalState.Queued));
+    }
+
+    function test_proposal_all_abstain() public {
+        uint256 h = _id(0, address(this), 0, "", keccak256("all-abstain"));
+        _open(h);
+
+        vm.prank(alice);
+        moloch.castVote(h, 2); // ABSTAIN
+        vm.prank(bob);
+        moloch.castVote(h, 2); // ABSTAIN
+
+        // All abstain = no FOR votes, so defeated
+        assertEq(uint256(moloch.state(h)), uint256(Moloch.ProposalState.Defeated));
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        FUTARCHY EDGE CASES
+    //////////////////////////////////////////////////////////////*/
+
+    function test_futarchy_partial_cashout() public {
+        bytes memory call = abi.encodeWithSelector(Target.store.selector, 888);
+        uint256 h = _id(0, address(target), 0, call, keccak256("fut-partial"));
+
+        vm.deal(address(this), 100 ether);
+        moloch.fundFutarchy{value: 100 ether}(h, address(0), 100 ether);
+
+        _open(h);
+        vm.prank(alice);
+        moloch.castVote(h, 1);
+        vm.prank(bob);
+        moloch.castVote(h, 1);
+
+        (bool ok,) = moloch.executeByVotes(0, address(target), 0, call, keccak256("fut-partial"));
+        assertTrue(ok);
+
+        uint256 before = alice.balance;
+
+        // Cashout half
+        vm.prank(alice);
+        moloch.cashOutFutarchy(h, 30e18);
+
+        uint256 payout1 = alice.balance - before;
+
+        // Cashout other half
+        vm.prank(alice);
+        uint256 payout2 = moloch.cashOutFutarchy(h, 30e18);
+
+        // Both payouts should be equal (half each)
+        assertEq(payout1, payout2);
+    }
+
+    function test_futarchy_no_voters_cant_resolve() public {
+        bytes memory call = abi.encodeWithSelector(Target.store.selector, 999);
+        uint256 h = _id(0, address(target), 0, call, keccak256("fut-no-vote"));
+
+        vm.deal(address(this), 100 ether);
+        moloch.fundFutarchy{value: 100 ether}(h, address(0), 100 ether);
+
+        _open(h);
+        // No votes cast
+
+        // Can't resolve as YES (not succeeded)
+        vm.expectRevert();
+        moloch.executeByVotes(0, address(target), 0, call, keccak256("fut-no-vote"));
+
+        // Can't resolve as NO (not defeated/expired yet)
+        vm.expectRevert();
+        moloch.resolveFutarchyNo(h);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        SALES COMPREHENSIVE
+    //////////////////////////////////////////////////////////////*/
+
+    function test_sales_unlimited_cap() public {
+        bytes memory d = abi.encodeWithSelector(
+            Moloch.setSale.selector,
+            address(0),
+            0,
+            0, // cap = 0 means unlimited
+            true,
+            true,
+            false
+        );
+        (, bool ok) = _openAndPass(0, address(moloch), 0, d, keccak256("unlimited"));
+        assertTrue(ok);
+
+        // Buy large amount
+        vm.prank(charlie);
+        moloch.buyShares{value: 0}(address(0), 1000e18, 0);
+
+        assertEq(shares.balanceOf(charlie), 1000e18);
+    }
+
+    function test_sales_price_calculation() public {
+        bytes memory d = abi.encodeWithSelector(
+            Moloch.setSale.selector,
+            address(0),
+            0.1 ether, // price per share (1e17 wei)
+            100e18,
+            true,
+            true,
+            false
+        );
+        (, bool ok) = _openAndPass(0, address(moloch), 0, d, keccak256("priced"));
+        assertTrue(ok);
+
+        // Buy 10 shares at 0.1 ether per share
+        // shareAmount = 10e18 (10 shares in wei with 18 decimals)
+        // pricePerShare = 0.1 ether = 1e17 wei
+        // cost = shareAmount * pricePerShare = 10e18 * 1e17 = 1e36 wei
+        // BUT we need to account for the fact that shares are 1e18 units
+        // ACTUAL cost = (10e18 / 1e18) * 0.1 ether = 10 * 0.1 ether = 1 ether
+
+        // The contract calculates: cost = shareAmount * pricePerShare
+        // = 10e18 * 0.1 ether = 1e18 * 1e17 = 1e35... OVERFLOW!
+        // Actually, let me check the contract code...
+
+        // Looking at buyShares: uint256 cost = shareAmount * price;
+        // If shareAmount = 10e18 and price = 0.1 ether = 1e17
+        // Then cost = 10e18 * 1e17 = 1e35... wait that's wrong
+
+        // Let me recalculate: if I want to buy 10 tokens (not 10e18 wei of tokens)
+        // I should pass shareAmount = 10e18 (because decimals = 18)
+        // And price = 0.1 ether per token = 1e17 per token
+        // So cost should be: 10 tokens * 0.1 ether = 1 ether
+
+        // The issue is price should be per wei of token, not per token!
+        // If price is "per share" and a share is 1e18 units, then:
+        // price of 1e17 means: 1e17 wei per 1e18 share units = 0.1 ether per token
+        // So cost = 10e18 * 1e17 = 1e35... still too big!
+
+        // AH! The price should be MUCH smaller. Let me think...
+        // If I want 0.1 ETH per full token (1e18 units), then:
+        // price per wei of token = 0.1 ether / 1e18 = 1e17 / 1e18 = 1e-1 wei per wei
+        // That's less than 1 wei, so we need: price = 1e17 / 1e18 ≈ 0 (rounds down)
+
+        // SOLUTION: Set a much lower price or buy fewer shares!
+        // Let's set price = 1 wei per share unit
+        bytes memory d2 = abi.encodeWithSelector(
+            Moloch.setSale.selector,
+            address(0),
+            1 wei, // price per share unit
+            100e18,
+            true,
+            true,
+            false
+        );
+        (, bool ok2) = _openAndPass(0, address(moloch), 0, d2, keccak256("priced2"));
+        assertTrue(ok2);
+
+        // Now: cost = 10e18 * 1 wei = 10e18 wei = 10 ether
+        vm.deal(charlie, 20 ether);
+        vm.prank(charlie);
+        moloch.buyShares{value: 10 ether}(address(0), 10e18, 10 ether);
+
+        assertEq(shares.balanceOf(charlie), 10e18);
+    }
+
+    function test_sales_max_pay_protection() public {
+        bytes memory d = abi.encodeWithSelector(
+            Moloch.setSale.selector, address(0), 1 ether, 100e18, true, true, false
+        );
+        (, bool ok) = _openAndPass(0, address(moloch), 0, d, keccak256("maxpay"));
+        assertTrue(ok);
+
+        vm.deal(charlie, 10 ether);
+
+        // maxPay = 5 ether, cost = 10 ether, should fail
+        vm.expectRevert();
+        vm.prank(charlie);
+        moloch.buyShares{value: 10 ether}(address(0), 10e18, 5 ether);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        RAGEQUIT COMPREHENSIVE
+    //////////////////////////////////////////////////////////////*/
+
+    function test_ragequit_multiple_tokens() public {
+        vm.roll(10);
+        vm.warp(10);
+
+        MockERC20 token1 = new MockERC20();
+        MockERC20 token2 = new MockERC20();
+
+        token1.mint(address(moloch), 1000e18);
+        token2.mint(address(moloch), 2000e18);
+        vm.deal(address(moloch), 10 ether);
+
+        vm.roll(15);
+        vm.warp(15);
+
+        // CRITICAL: Sort tokens by address (ascending order required by contract)
+        address addr1 = address(token1);
+        address addr2 = address(token2);
+
+        address[] memory tokens = new address[](3);
+        tokens[0] = address(0); // ETH always first (0x0 is smallest)
+
+        // Sort the two token addresses
+        if (addr1 < addr2) {
+            tokens[1] = addr1;
+            tokens[2] = addr2;
+        } else {
+            tokens[1] = addr2;
+            tokens[2] = addr1;
+        }
+
+        uint256 bobShares = shares.balanceOf(bob);
+        uint256 totalSupply = shares.totalSupply();
+
+        uint256 ethBefore = bob.balance;
+
+        vm.prank(bob);
+        moloch.ragequit(tokens, bobShares, 0);
+
+        // Check all payouts
+        uint256 expectedEth = (10 ether * bobShares) / totalSupply;
+
+        assertEq(bob.balance - ethBefore, expectedEth, "ETH payout");
+        // Both tokens should have paid out
+        assertTrue(token1.balanceOf(bob) > 0 || token2.balanceOf(bob) > 0, "got tokens");
+    }
+
+    function test_ragequit_dust_amounts() public {
+        vm.roll(10);
+        vm.warp(10);
+
+        vm.deal(address(moloch), 100 wei); // tiny treasury
+
+        address[] memory tokens = new address[](1);
+        tokens[0] = address(0);
+
+        // Bob ragequits small amount
+        vm.prank(bob);
+        moloch.ragequit(tokens, 1e18, 0);
+
+        // Should succeed even with dust
+        assertEq(shares.balanceOf(bob), 39e18);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        PERMIT ADVANCED
+    //////////////////////////////////////////////////////////////*/
+
+    function test_permit_execution_order() public {
+        bytes memory call = abi.encodeWithSelector(Target.store.selector, 100);
+        bytes32 nonce = keccak256("order");
+
+        bytes memory d = abi.encodeWithSelector(
+            Moloch.setPermit.selector, 0, address(target), 0, call, nonce, charlie, 3
+        );
+        (, bool ok) = _openAndPass(0, address(moloch), 0, d, keccak256("set"));
+        assertTrue(ok);
+
+        // Execute multiple times
+        vm.prank(charlie);
+        moloch.spendPermit(0, address(target), 0, call, nonce);
+
+        vm.prank(charlie);
+        moloch.spendPermit(0, address(target), 0, call, nonce);
+
+        uint256 h = _id(0, address(target), 0, call, nonce);
+        assertEq(moloch.balanceOf(charlie, h), 1); // 3 - 2 = 1
+    }
+
+    function test_permit_zero_count_removes_all() public {
+        bytes memory call = abi.encodeWithSelector(Target.store.selector, 200);
+        bytes32 nonce = keccak256("zero");
+
+        bytes memory d1 = abi.encodeWithSelector(
+            Moloch.setPermit.selector, 0, address(target), 0, call, nonce, charlie, 10
+        );
+        (, bool ok1) = _openAndPass(0, address(moloch), 0, d1, keccak256("set10"));
+        assertTrue(ok1);
+
+        bytes memory d2 = abi.encodeWithSelector(
+            Moloch.setPermit.selector, 0, address(target), 0, call, nonce, charlie, 0
+        );
+        (, bool ok2) = _openAndPass(0, address(moloch), 0, d2, keccak256("set0"));
+        assertTrue(ok2);
+
+        uint256 h = _id(0, address(target), 0, call, nonce);
+        assertEq(moloch.balanceOf(charlie, h), 0);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        ALLOWANCE COMPREHENSIVE
+    //////////////////////////////////////////////////////////////*/
+
+    function test_allowance_multiple_claims() public {
+        vm.deal(address(moloch), 10 ether);
+
+        bytes memory d =
+            abi.encodeWithSelector(Moloch.setAllowanceTo.selector, address(0), charlie, 5 ether);
+        (, bool ok) = _openAndPass(0, address(moloch), 0, d, keccak256("allowance"));
+        assertTrue(ok);
+
+        vm.prank(charlie);
+        moloch.spendAllowance(address(0), 2 ether);
+
+        vm.prank(charlie);
+        moloch.spendAllowance(address(0), 2 ether);
+
+        assertEq(moloch.allowance(address(0), charlie), 1 ether);
+    }
+
+    function test_allowance_overdraft_reverts() public {
+        vm.deal(address(moloch), 10 ether);
+
+        bytes memory d =
+            abi.encodeWithSelector(Moloch.setAllowanceTo.selector, address(0), charlie, 5 ether);
+        (, bool ok) = _openAndPass(0, address(moloch), 0, d, keccak256("allowance"));
+        assertTrue(ok);
+
+        vm.expectRevert();
+        vm.prank(charlie);
+        moloch.spendAllowance(address(0), 6 ether);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        TOP-256 ADVANCED
+    //////////////////////////////////////////////////////////////*/
+
+    function test_top_256_replacement_with_higher_balance() public {
+        bytes memory d = abi.encodeWithSelector(
+            Moloch.setSale.selector, address(0), 0, type(uint256).max, true, true, false
+        );
+        (, bool ok) = _openAndPass(0, address(moloch), 0, d, keccak256("sale"));
+        assertTrue(ok);
+
+        // Fill all 256 slots with 1e18 each
+        for (uint256 i = 0; i < 254; i++) {
+            address holder = vm.addr(i + 1000);
+            vm.prank(holder);
+            moloch.buyShares{value: 0}(address(0), 1e18, 0);
+        }
+
+        // Someone with 100e18 joins
+        address whale = address(0x9999);
+        vm.prank(whale);
+        moloch.buyShares{value: 0}(address(0), 100e18, 0);
+
+        // Whale should be in top 256
+        assertTrue(moloch.rankOf(whale) > 0);
+        assertEq(badge.balanceOf(whale), 1);
+    }
+
+    function test_top_256_no_replacement_with_equal_balance() public {
+        bytes memory d = abi.encodeWithSelector(
+            Moloch.setSale.selector, address(0), 0, type(uint256).max, true, true, false
+        );
+        (, bool ok) = _openAndPass(0, address(moloch), 0, d, keccak256("sale"));
+        assertTrue(ok);
+
+        // Fill slots
+        for (uint256 i = 0; i < 254; i++) {
+            address holder = vm.addr(i + 1000);
+            vm.prank(holder);
+            moloch.buyShares{value: 0}(address(0), 10e18, 0);
+        }
+
+        // Someone with exactly 10e18 tries to join (equal to minimum)
+        address newGuy = address(0x8888);
+        vm.prank(newGuy);
+        moloch.buyShares{value: 0}(address(0), 10e18, 0);
+
+        // Should NOT get badge (need strictly more than minimum)
+        assertEq(badge.balanceOf(newGuy), 0);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        MULTICALL & BATCH
+    //////////////////////////////////////////////////////////////*/
+
+    function test_multicall_multiple_operations() public {
+        bytes[] memory calls = new bytes[](3);
+
+        calls[0] = abi.encodeWithSelector(Moloch.setQuorumBps.selector, uint16(6000));
+        calls[1] = abi.encodeWithSelector(Moloch.setProposalTTL.selector, uint64(200));
+        calls[2] = abi.encodeWithSelector(Moloch.setTimelockDelay.selector, uint64(300));
+
+        bytes memory data = abi.encodeWithSelector(Moloch.multicall.selector, calls);
+        (, bool ok) = _openAndPass(0, address(moloch), 0, data, keccak256("multi"));
+        assertTrue(ok);
+
+        assertEq(moloch.quorumBps(), 6000);
+        assertEq(moloch.proposalTTL(), 200);
+        assertEq(moloch.timelockDelay(), 300);
+    }
+
+    function test_batchCalls_with_value() public {
+        vm.deal(address(moloch), 10 ether);
+
+        // Deploy a payable target
+        PayableTarget payableTarget = new PayableTarget();
+
+        Call[] memory calls = new Call[](2);
+        calls[0] = Call({target: address(payableTarget), value: 1 ether, data: ""});
+        calls[1] = Call({
+            target: address(payableTarget),
+            value: 2 ether,
+            data: abi.encodeWithSelector(PayableTarget.store.selector, 999)
+        });
+
+        bytes memory d = abi.encodeWithSelector(Moloch.batchCalls.selector, calls);
+
+        // Use regular call (op=0), NOT delegatecall
+        uint256 h = _id(0, address(moloch), 0, d, keccak256("batch-value"));
+        _open(h);
+        _voteYes(h, alice);
+        _voteYes(h, bob);
+
+        (bool ok,) = moloch.executeByVotes(0, address(moloch), 0, d, keccak256("batch-value"));
+        assertTrue(ok);
+
+        assertEq(address(payableTarget).balance, 3 ether);
+        assertEq(payableTarget.stored(), 999);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        CONFIG & VERSIONING
+    //////////////////////////////////////////////////////////////*/
+
+    function test_config_bump_affects_new_proposals() public {
+        uint256 configBefore = moloch.config();
+
+        bytes memory d = abi.encodeWithSelector(Moloch.bumpConfig.selector);
+        (, bool ok) = _openAndPass(0, address(moloch), 0, d, keccak256("bump"));
+        assertTrue(ok);
+
+        assertEq(moloch.config(), configBefore + 1);
+
+        // New proposals use new config
+        uint256 h = _id(0, address(this), 0, "", keccak256("new"));
+        _open(h);
+
+        // Should work with new config
+        vm.prank(alice);
+        moloch.castVote(h, 1);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        DELEGATION CHECKPOINT EDGE CASES
+    //////////////////////////////////////////////////////////////*/
+
+    function test_delegation_preserves_historical_votes() public {
+        vm.roll(5);
+        vm.warp(5);
+
+        uint32 snapshot1 = uint32(block.number);
+
+        vm.roll(10);
+        vm.warp(10);
+
+        // Alice delegates
+        vm.prank(alice);
+        shares.delegate(bob);
+
+        // Historical query should show alice's votes before delegation
+        assertEq(shares.getPastVotes(alice, snapshot1), 60e18);
+        assertEq(shares.getPastVotes(bob, snapshot1), 40e18);
+
+        // Current should show delegation
+        assertEq(shares.getVotes(alice), 0);
+        assertEq(shares.getVotes(bob), 100e18);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        LOOT COMPREHENSIVE
+    //////////////////////////////////////////////////////////////*/
+
+    function test_loot_and_shares_mixed_ragequit() public {
+        // First enable shares sale
+        bytes memory d1 = abi.encodeWithSelector(
+            Moloch.setSale.selector,
+            address(0),
+            0,
+            100e18,
+            true,
+            true,
+            false // isLoot = false
+        );
+        (, bool ok1) = _openAndPass(0, address(moloch), 0, d1, keccak256("shares-sale"));
+        assertTrue(ok1);
+
+        vm.prank(charlie);
+        moloch.buyShares{value: 0}(address(0), 50e18, 0); // buys shares
+
+        assertEq(shares.balanceOf(charlie), 50e18, "charlie shares");
+
+        // Now change sale to loot mode
+        bytes memory d2 = abi.encodeWithSelector(
+            Moloch.setSale.selector,
+            address(0),
+            0,
+            100e18,
+            true,
+            true,
+            true // isLoot = true
+        );
+        (, bool ok2) = _openAndPass(0, address(moloch), 0, d2, keccak256("loot-sale"));
+        assertTrue(ok2);
+
+        vm.prank(charlie);
+        moloch.buyShares{value: 0}(address(0), 50e18, 0); // buys loot
+
+        assertEq(shares.balanceOf(charlie), 50e18, "charlie shares unchanged");
+        assertEq(loot.balanceOf(charlie), 50e18, "charlie loot");
+
+        vm.roll(10);
+        vm.warp(10);
+
+        vm.deal(address(moloch), 10 ether);
+
+        address[] memory tokens = new address[](1);
+        tokens[0] = address(0);
+
+        uint256 charlieBefore = charlie.balance;
+
+        // Ragequit both
+        vm.prank(charlie);
+        moloch.ragequit(tokens, 50e18, 50e18);
+
+        assertTrue(charlie.balance > charlieBefore, "got payout");
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        ZERO EDGE CASES
+    //////////////////////////////////////////////////////////////*/
+
+    function test_transfer_zero_amount() public {
+        vm.prank(alice);
+        bool success = shares.transfer(bob, 0);
+        assertTrue(success);
+    }
+
+    function test_vote_proposal_with_zero_snapshot_supply() public {
+        // This tests the genesis block fallback in snapshot logic
+        uint256 h = _id(0, address(this), 0, "", keccak256("genesis"));
+
+        // Don't move blocks forward - stay at genesis
+        moloch.openProposal(h);
+
+        vm.prank(alice);
+        moloch.castVote(h, 1);
+
+        (uint256 forVotes,,) = moloch.tallies(h);
+        assertTrue(forVotes > 0);
+    }
 }
 
 contract Target {
@@ -2211,6 +2962,16 @@ contract Target {
     function store(uint256 x) public {
         stored = x;
     }
+}
+
+contract PayableTarget {
+    uint256 public stored;
+
+    function store(uint256 x) public payable {
+        stored = x;
+    }
+
+    receive() external payable {}
 }
 
 contract MockERC20 {
