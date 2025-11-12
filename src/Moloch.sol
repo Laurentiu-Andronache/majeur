@@ -40,7 +40,8 @@ contract Moloch {
     uint64 public config; // bump salt to invalidate old ids/permits
     uint16 public quorumBps; // dynamic quorum vs snapshot supply (BPS, 0 = off)
     bool public ragequittable; // `true` if owners can ragequit shares
-    bool public transfersLocked; // global Shares transfer lock
+    bool public shareTransfersLocked; // global Shares transfer lock
+    bool public lootTransfersLocked; // global Loot transfer lock
 
     address immutable SUMMONER = msg.sender;
     address immutable sharesImpl;
@@ -146,7 +147,7 @@ contract Moloch {
     }
 
     /// @dev The contract-level URI:
-    string public contractURI;
+    string _orgURI;
 
     /**
      * ERC6909 STATE
@@ -202,19 +203,19 @@ contract Moloch {
     function init(
         string calldata orgName,
         string calldata orgSymbol,
-        string calldata _contractURI,
+        string calldata orgURI,
         uint16 _quorumBps, // e.g. 5000 = 50% turnout of snapshot supply
         bool _ragequittable,
-        address[] calldata initialHolders,
-        uint256[] calldata initialAmounts,
+        address[] calldata initHolders,
+        uint256[] calldata initAmounts,
         Call[] calldata initCalls
     ) public payable {
         require(msg.sender == SUMMONER, Unauthorized());
-        require(initialHolders.length == initialAmounts.length, LengthMismatch());
+        require(initHolders.length == initAmounts.length, LengthMismatch());
 
         _orgName = orgName;
         _orgSymbol = orgSymbol;
-        if (bytes(_contractURI).length != 0) contractURI = _contractURI;
+        if (bytes(orgURI).length != 0) _orgURI = orgURI;
         if (_quorumBps != 0) quorumBps = _quorumBps;
         if (_ragequittable) ragequittable = _ragequittable;
 
@@ -224,15 +225,15 @@ contract Moloch {
         bytes32 _salt = bytes32(bytes20(address(this)));
 
         shares = Shares(_shares = _init(sharesImpl, _salt));
-        Shares(_shares).init(initialHolders, initialAmounts);
+        Shares(_shares).init(initHolders, initAmounts);
         badge = Badge(_badge = _init(badgeImpl, _salt));
         Badge(_badge).init();
         loot = Loot(_loot = _init(lootImpl, _salt));
         Loot(_loot).init();
 
         // seed top-256 via hook
-        for (uint256 i; i != initialHolders.length; ++i) {
-            _onSharesChanged(initialHolders[i]);
+        for (uint256 i; i != initHolders.length; ++i) {
+            _onSharesChanged(initHolders[i]);
         }
 
         // initialization calls
@@ -666,6 +667,7 @@ contract Moloch {
         bool active,
         bool isLoot
     ) public payable onlySelf {
+        if (active) require(pricePerShare != 0, NotOk());
         sales[payToken] = Sale({
             pricePerShare: pricePerShare, cap: cap, minting: minting, active: active, isLoot: isLoot
         });
@@ -797,8 +799,8 @@ contract Moloch {
         ragequittable = on;
     }
 
-    function setTransfersLocked(bool on) public payable onlySelf {
-        transfersLocked = on;
+    function setTransfersLocked(bool sharesLocked, bool lootLocked) public payable onlySelf {
+        (shareTransfersLocked, lootTransfersLocked) = (sharesLocked, lootLocked);
     }
 
     function setProposalThreshold(uint256 v) public payable onlySelf {
@@ -810,7 +812,7 @@ contract Moloch {
         payable
         onlySelf
     {
-        (_orgName, _orgSymbol, contractURI) = (n, s, uri);
+        (_orgName, _orgSymbol, _orgURI) = (n, s, uri);
     }
 
     /// @dev Configure automatic futarchy earmark per proposal:
@@ -961,6 +963,179 @@ contract Moloch {
     }
 
     /* URI-SVG */
+    function contractURI() public view returns (string memory) {
+        // if custom URI is set, return it
+        string memory orgURI = _orgURI;
+        if (bytes(orgURI).length != 0) return orgURI;
+
+        // cache dynamic bits
+        string memory orgName = bytes(_orgName).length != 0 ? _orgName : "UNNAMED DAO";
+        string memory orgSymbol = bytes(_orgSymbol).length != 0 ? _orgSymbol : "N/A";
+        string memory orgShort = _shortHex(uint256(uint160(address(this))));
+
+        // supplies
+        uint256 shareSupply = shares.totalSupply();
+        uint256 lootSupply = loot.totalSupply();
+
+        string memory svg = string.concat(
+            "<svg xmlns='http://www.w3.org/2000/svg' width='420' height='600' viewBox='0 0 420 600' preserveAspectRatio='xMidYMid meet' xml:space='preserve' aria-labelledby='title desc' role='img'>",
+            "<title id='title'>",
+            orgName,
+            " - DUNA Covenant</title>",
+            "<desc id='desc'>Wyoming Decentralized Unincorporated Nonprofit Association operating charter and member agreement.</desc>",
+            "<defs>",
+            "<style>",
+            ".garamond{font-family:'EB Garamond',serif;font-weight:400;}",
+            ".garamond-bold{font-family:'EB Garamond',serif;font-weight:600;}",
+            ".mono{font-family:'Courier Prime',monospace;font-variant-ligatures:none;}",
+            ".covenant{font-family:'EB Garamond',serif;font-style:italic;font-size:8px;fill:#ccc;}",
+            "text{ text-rendering:geometricPrecision; }",
+            "</style>",
+            "</defs>",
+            "<rect width='420' height='600' fill='#000'/>",
+            "<rect x='20' y='20' width='380' height='560' fill='none' stroke='#8b0000' stroke-width='2'/>"
+        );
+
+        // title section - uses org name
+        svg = string.concat(
+            svg,
+            "<text x='210' y='55' class='garamond-bold' font-size='18' fill='#fff' text-anchor='middle' letter-spacing='3px'>",
+            orgName,
+            "</text>",
+            "<text x='210' y='75' class='garamond' font-size='10' fill='#8b0000' text-anchor='middle' letter-spacing='2px'>DUNA COVENANT</text>",
+            "<line x1='40' y1='90' x2='380' y2='90' stroke='#8b0000' stroke-width='1'/>"
+        );
+
+        // ASCII sigil
+        svg = string.concat(
+            svg,
+            "<text x='210' y='115' class='mono' font-size='7' fill='#8b0000' text-anchor='middle'>___/\\___</text>",
+            "<text x='210' y='124' class='mono' font-size='7' fill='#8b0000' text-anchor='middle'>/  \\  /  \\</text>",
+            "<text x='210' y='133' class='mono' font-size='7' fill='#8b0000' text-anchor='middle'>/    \\/    \\</text>",
+            "<text x='210' y='142' class='mono' font-size='7' fill='#8b0000' text-anchor='middle'>\\  /\\  /\\  /</text>",
+            "<text x='210' y='151' class='mono' font-size='7' fill='#8b0000' text-anchor='middle'>\\/  \\/  \\/</text>",
+            "<text x='210' y='160' class='mono' font-size='7' fill='#8b0000' text-anchor='middle'>*</text>",
+            "<line x1='60' y1='175' x2='360' y2='175' stroke='#8b0000' stroke-width='0.5' opacity='0.5'/>"
+        );
+
+        // organization data
+        svg = string.concat(
+            svg,
+            "<text x='60' y='195' class='garamond' font-size='9' fill='#aaa'>Organization</text>",
+            "<text x='60' y='208' class='mono' font-size='8' fill='#fff'>",
+            orgShort,
+            "</text>",
+            "<text x='60' y='228' class='garamond' font-size='9' fill='#aaa'>Name / Symbol</text>",
+            "<text x='60' y='241' class='mono' font-size='8' fill='#fff'>",
+            orgName,
+            " / ",
+            orgSymbol,
+            "</text>"
+        );
+
+        svg = string.concat(
+            svg,
+            "<text x='60' y='261' class='garamond' font-size='9' fill='#aaa'>Share Supply</text>",
+            "<text x='60' y='274' class='mono' font-size='8' fill='#fff'>",
+            _formatNumber(shareSupply / 1e18),
+            "</text>"
+        );
+
+        if (lootSupply != 0) {
+            svg = string.concat(
+                svg,
+                "<text x='220' y='261' class='garamond' font-size='9' fill='#aaa'>Loot Supply</text>",
+                "<text x='220' y='274' class='mono' font-size='8' fill='#fff'>",
+                _formatNumber(lootSupply / 1e18),
+                "</text>"
+            );
+        }
+
+        // DUNA covenant text - centered
+        svg = string.concat(
+            svg,
+            "<line x1='60' y1='290' x2='360' y2='290' stroke='#8b0000' stroke-width='0.5' opacity='0.5'/>",
+            "<text x='210' y='310' class='garamond' font-size='10' fill='#8b0000' text-anchor='middle'>WYOMING DUNA</text>",
+            "<text x='210' y='325' class='covenant' text-anchor='middle'>W.S. 17-32-101 et seq.</text>"
+        );
+
+        // covenant terms - centered alignment
+        svg = string.concat(
+            svg,
+            "<text x='210' y='345' class='covenant' text-anchor='middle'>By transacting with address ",
+            orgShort,
+            ", you</text>",
+            "<text x='210' y='355' class='covenant' text-anchor='middle'>acknowledge this organization operates as a Decentralized</text>",
+            "<text x='210' y='365' class='covenant' text-anchor='middle'>Unincorporated Nonprofit Association under Wyoming law.</text>",
+            "<text x='210' y='385' class='covenant' text-anchor='middle'>Members agree to: (i) algorithmic governance via this smart contract,</text>",
+            "<text x='210' y='395' class='covenant' text-anchor='middle'>(ii) limited liability per W.S. 17-32-107,</text>",
+            "<text x='210' y='405' class='covenant' text-anchor='middle'>(iii) dispute resolution through code-as-law principles,</text>",
+            "<text x='210' y='415' class='covenant' text-anchor='middle'>(iv) good faith participation in DAO governance,</text>",
+            "<text x='210' y='425' class='covenant' text-anchor='middle'>(v) adherence to applicable laws and self-help.</text>"
+        );
+
+        // transfer and ragequit status
+        svg = string.concat(
+            svg,
+            "<text x='210' y='445' class='covenant' text-anchor='middle'>Share tokens represent governance rights.</text>",
+            "<text x='210' y='455' class='covenant' text-anchor='middle'>Share transfers are ",
+            shareTransfersLocked ? "DISABLED" : "ENABLED",
+            ". Ragequit rights are ",
+            ragequittable ? "ENABLED" : "DISABLED",
+            ".</text>"
+        );
+
+        // conditionally show loot transfers and adjust positioning
+        uint256 nextY = 465;
+        if (lootSupply != 0) {
+            svg = string.concat(
+                svg,
+                "<text x='210' y='",
+                _u2s(nextY),
+                "' class='covenant' text-anchor='middle'>Loot transfers are ",
+                lootTransfersLocked ? "DISABLED" : "ENABLED",
+                ".</text>"
+            );
+            unchecked {
+                nextY += 10;
+            }
+        }
+
+        svg = string.concat(
+            svg,
+            "<text x='210' y='",
+            _u2s(nextY),
+            "' class='covenant' text-anchor='middle'>This Covenant is amendable by DAO vote.</text>"
+        );
+
+        // disclaimer - positioned dynamically
+        svg = string.concat(
+            svg,
+            "<text x='210' y='",
+            _u2s(nextY + 20),
+            "' class='covenant' text-anchor='middle'>No warranty, express or implied. Members participate at</text>",
+            "<text x='210' y='",
+            _u2s(nextY + 30),
+            "' class='covenant' text-anchor='middle'>own risk. Not legal, tax, or investment advice.</text>"
+        );
+
+        // bottom seal
+        svg = string.concat(
+            svg,
+            "<line x1='60' y1='520' x2='360' y2='520' stroke='#8b0000' stroke-width='0.5' opacity='0.5'/>",
+            "<text x='210' y='540' class='mono' font-size='8' fill='#8b0000' text-anchor='middle'><![CDATA[ < THE DAO DEMANDS SACRIFICE > ]]></text>",
+            "<text x='210' y='560' class='garamond' font-size='7' fill='#444' text-anchor='middle' letter-spacing='1px'>CODE IS LAW - DUNA PROTECTED</text>",
+            "</svg>"
+        );
+
+        // final JSON with embedded image
+        return _jsonImage(
+            string.concat(bytes(_orgName).length != 0 ? _orgName : "DAO", " DUNA Covenant"),
+            "Wyoming Decentralized Unincorporated Nonprofit Association operating charter and member agreement",
+            svg
+        );
+    }
+
     /// @dev On-chain JSON/SVG card for a proposal id, or routes to receiptURI for vote receipts:
     function tokenURI(uint256 id) public view returns (string memory) {
         // 1) if this id is a vote receipt, delegate to the full receipt renderer
@@ -1523,7 +1698,7 @@ contract Shares {
     }
 
     function _checkUnlocked(address from, address to) internal view {
-        if (Moloch(DAO).transfersLocked() && from != DAO && to != DAO) {
+        if (Moloch(DAO).shareTransfersLocked() && from != DAO && to != DAO) {
             revert Locked();
         }
     }
@@ -1994,7 +2169,7 @@ contract Loot {
     }
 
     function _checkUnlocked(address from, address to) internal view {
-        if (Moloch(DAO).transfersLocked() && from != DAO && to != DAO) {
+        if (Moloch(DAO).lootTransfersLocked() && from != DAO && to != DAO) {
             revert Locked();
         }
     }
@@ -2051,7 +2226,7 @@ contract Badge {
 
         string memory addr = _shortAddr(holder);
         string memory pct = _percent(bal, ts);
-        string memory rankStr = rk == 0 ? "UNRANKED" : _u2s(rk);
+        string memory rankStr = rk == 0 ? "UNSEATED" : _u2s(rk);
 
         string memory svg = _svgCardBase();
 
@@ -2086,7 +2261,7 @@ contract Badge {
             "<text x='60' y='292' class='mono' font-size='9' fill='#fff'>",
             addr,
             "</text>",
-            "<text x='60' y='325' class='garamond' font-size='10' fill='#aaa' letter-spacing='1'>Rank</text>",
+            "<text x='60' y='325' class='garamond' font-size='10' fill='#aaa' letter-spacing='1'>Seat</text>",
             "<text x='60' y='345' class='garamond-bold' font-size='16' fill='#fff'>",
             rankStr,
             "</text>"
@@ -2473,15 +2648,15 @@ contract Summoner {
     function summon(
         string calldata orgName,
         string calldata orgSymbol,
-        string calldata _contractURI,
+        string calldata orgURI,
         uint16 _quorumBps, // e.g. 5000 = 50% turnout of snapshot supply
         bool _ragequittable,
         bytes32 salt,
-        address[] calldata initialHolders,
-        uint256[] calldata initialAmounts,
+        address[] calldata initHolders,
+        uint256[] calldata initAmounts,
         Call[] calldata initCalls
     ) public payable returns (Moloch dao) {
-        bytes32 _salt = keccak256(abi.encode(initialHolders, initialAmounts, salt));
+        bytes32 _salt = keccak256(abi.encode(initHolders, initAmounts, salt));
         Moloch _implementation = implementation;
         assembly ("memory-safe") {
             mstore(0x24, 0x5af43d5f5f3e6029573d5ffd5b3d5ff3)
@@ -2497,11 +2672,11 @@ contract Summoner {
         dao.init(
             orgName,
             orgSymbol,
-            _contractURI,
+            orgURI,
             _quorumBps,
             _ragequittable,
-            initialHolders,
-            initialAmounts,
+            initHolders,
+            initAmounts,
             initCalls
         );
         daos.push(dao);

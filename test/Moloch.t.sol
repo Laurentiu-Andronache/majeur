@@ -458,11 +458,12 @@ contract MolochTest is Test {
     }
 
     function test_loot_sales() public {
+        vm.deal(charlie, 200 ether);
         // Enable loot sale
         bytes memory data = abi.encodeWithSelector(
             Moloch.setSale.selector,
             address(0), // ETH
-            0, // price (free)
+            1, // price
             10e18, // cap
             true, // minting
             true, // active
@@ -474,22 +475,23 @@ contract MolochTest is Test {
 
         // Charlie buys loot
         vm.prank(charlie);
-        moloch.buyShares{value: 0}(address(0), 5e18, 0);
+        moloch.buyShares{value: 5 ether}(address(0), 5e18, 0);
 
         assertEq(loot.balanceOf(charlie), 5e18, "charlie bought loot");
         assertEq(shares.balanceOf(charlie), 0, "no shares for charlie");
     }
 
     function test_loot_ragequit() public {
+        vm.deal(charlie, 200 ether);
         // Enable loot sale
         bytes memory data =
-            abi.encodeWithSelector(Moloch.setSale.selector, address(0), 0, 10e18, true, true, true);
+            abi.encodeWithSelector(Moloch.setSale.selector, address(0), 1, 10e18, true, true, true);
         (, bool ok) = _openAndPass(0, address(moloch), 0, data, keccak256("loot-sale"));
         assertTrue(ok);
 
         // Charlie buys loot
         vm.prank(charlie);
-        moloch.buyShares{value: 0}(address(0), 5e18, 0);
+        moloch.buyShares{value: 5 ether}(address(0), 5e18, 0);
 
         vm.roll(10);
         vm.warp(10);
@@ -924,7 +926,7 @@ contract MolochTest is Test {
 
         // Enable sale and mint more at a later block
         bytes memory d = abi.encodeWithSelector(
-            Moloch.setSale.selector, address(0), 0, 50e18, true, true, false
+            Moloch.setSale.selector, address(0), 1, 50e18, true, true, false
         );
         (, bool ok) = _openAndPass(0, address(moloch), 0, d, keccak256("sale"));
         assertTrue(ok);
@@ -932,8 +934,10 @@ contract MolochTest is Test {
         vm.roll(20);
         vm.warp(20);
 
+        vm.deal(charlie, 200 ether);
+
         vm.prank(charlie);
-        moloch.buyShares{value: 0}(address(0), 50e18, 0);
+        moloch.buyShares{value: 50 ether}(address(0), 50e18, 0);
 
         // Past supply at snapshot (block 10)
         assertEq(shares.getPastTotalSupply(snapshot), 100e18, "past supply");
@@ -1600,16 +1604,17 @@ contract MolochTest is Test {
     }
 
     function test_futarchy_existing_shares_reward() public {
+        vm.deal(charlie, 200 ether);
         // First enable sale and mint shares to charlie
         bytes memory saleData = abi.encodeWithSelector(
-            Moloch.setSale.selector, address(0), 0, 100e18, true, true, false
+            Moloch.setSale.selector, address(0), 1, 100e18, true, true, false
         );
         (, bool ok1) = _openAndPass(0, address(moloch), 0, saleData, keccak256("sale"));
         assertTrue(ok1);
 
         // Charlie buys only 100e18 (not 200e18) to keep total supply manageable
         vm.prank(charlie);
-        moloch.buyShares{value: 0}(address(0), 100e18, 0);
+        moloch.buyShares{value: 100 ether}(address(0), 100e18, 0);
 
         // Transfer shares to moloch
         vm.prank(charlie);
@@ -2038,13 +2043,14 @@ contract MolochTest is Test {
     }
 
     function test_loot_approve() public {
+        vm.deal(alice, 200 ether);
         bytes memory d =
-            abi.encodeWithSelector(Moloch.setSale.selector, address(0), 0, 50e18, true, true, true);
+            abi.encodeWithSelector(Moloch.setSale.selector, address(0), 1, 50e18, true, true, true);
         (, bool ok) = _openAndPass(0, address(moloch), 0, d, keccak256("loot"));
         assertTrue(ok);
 
         vm.prank(alice);
-        moloch.buyShares{value: 0}(address(0), 40e18, 0);
+        moloch.buyShares{value: 40 ether}(address(0), 40e18, 0);
 
         vm.prank(alice);
         loot.approve(bob, 20e18);
@@ -2053,13 +2059,14 @@ contract MolochTest is Test {
     }
 
     function test_loot_transferFrom() public {
+        vm.deal(alice, 200 ether);
         bytes memory d =
-            abi.encodeWithSelector(Moloch.setSale.selector, address(0), 0, 50e18, true, true, true);
+            abi.encodeWithSelector(Moloch.setSale.selector, address(0), 1, 50e18, true, true, true);
         (, bool ok) = _openAndPass(0, address(moloch), 0, d, keccak256("loot"));
         assertTrue(ok);
 
         vm.prank(alice);
-        moloch.buyShares{value: 0}(address(0), 40e18, 0);
+        moloch.buyShares{value: 40 ether}(address(0), 40e18, 0);
 
         vm.prank(alice);
         loot.approve(bob, 20e18);
@@ -2881,46 +2888,51 @@ contract MolochTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function test_loot_and_shares_mixed_ragequit() public {
-        // First enable shares sale
+        // fund charlie so they can buy both lots (50e18 @ price=1 wei each = 50 ETH twice)
+        vm.deal(charlie, 200 ether);
+
+        // ---- Enable shares sale (active, price > 0) ----
         bytes memory d1 = abi.encodeWithSelector(
             Moloch.setSale.selector,
-            address(0),
-            0,
-            100e18,
-            true,
-            true,
+            address(0), // ETH
+            1, // pricePerShare > 0 to satisfy guard
+            100e18, // cap (ignored for minting==true but fine)
+            true, // minting
+            true, // active
             false // isLoot = false
         );
         (, bool ok1) = _openAndPass(0, address(moloch), 0, d1, keccak256("shares-sale"));
         assertTrue(ok1);
 
+        uint256 costShares = 50e18 * 1; // 50 ETH
         vm.prank(charlie);
-        moloch.buyShares{value: 0}(address(0), 50e18, 0); // buys shares
+        moloch.buyShares{value: costShares}(address(0), 50e18, 0); // maxPay=0 means "no cap"
 
         assertEq(shares.balanceOf(charlie), 50e18, "charlie shares");
 
-        // Now change sale to loot mode
+        // ---- Switch sale to loot (also active, price > 0) ----
         bytes memory d2 = abi.encodeWithSelector(
             Moloch.setSale.selector,
-            address(0),
-            0,
+            address(0), // ETH
+            1, // pricePerShare > 0 to satisfy guard
             100e18,
-            true,
-            true,
+            true, // minting
+            true, // active
             true // isLoot = true
         );
         (, bool ok2) = _openAndPass(0, address(moloch), 0, d2, keccak256("loot-sale"));
         assertTrue(ok2);
 
+        uint256 costLoot = 50e18 * 1; // 50 ETH
         vm.prank(charlie);
-        moloch.buyShares{value: 0}(address(0), 50e18, 0); // buys loot
+        moloch.buyShares{value: costLoot}(address(0), 50e18, 0);
 
         assertEq(shares.balanceOf(charlie), 50e18, "charlie shares unchanged");
         assertEq(loot.balanceOf(charlie), 50e18, "charlie loot");
 
+        // give the chain a little time and seed extra ETH in treasury (optional now; sales already funded it)
         vm.roll(10);
         vm.warp(10);
-
         vm.deal(address(moloch), 10 ether);
 
         address[] memory tokens = new address[](1);
