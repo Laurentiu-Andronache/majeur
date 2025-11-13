@@ -882,9 +882,11 @@ contract Moloch {
     function getSeats() public view returns (Seat[] memory out) {
         uint256 m = occupied;
         uint256 s;
-        unchecked {
-            while (m != 0) m &= (m - 1);
-            ++s;
+        while (m != 0) {
+            m &= (m - 1); // clear lowest set bit
+            unchecked {
+                ++s;
+            }
         }
 
         out = new Seat[](s);
@@ -2636,30 +2638,34 @@ library Display {
         return string(_slice(bytes(subject), start, end));
     }
 
-    /// @dev bytes slice [start,end): byte offsets:
     function _slice(bytes memory subject, uint256 start, uint256 end)
         internal
         pure
         returns (bytes memory result)
     {
         assembly ("memory-safe") {
-            let l := mload(subject)
-            if iszero(gt(l, end)) { end := l }
-            if iszero(gt(l, start)) { start := l }
+            let len := mload(subject)
+            if gt(start, len) { start := len }
+            if gt(end, len) { end := len }
             if lt(start, end) {
-                result := mload(0x40)
                 let n := sub(end, start)
-                let i := add(subject, start)
-                let w := not(0x1f)
-                for { let j := and(add(n, 0x1f), w) } 1 {} {
-                    mstore(add(result, j), mload(add(i, j)))
-                    j := add(j, w)
-                    if iszero(j) { break }
-                }
-                let o := add(add(result, 0x20), n)
-                mstore(o, 0)
-                mstore(0x40, add(o, 0x20))
+                result := mload(0x40)
+                // store length
                 mstore(result, n)
+                // src = subject.data + start
+                let src := add(add(subject, 0x20), start)
+                // dst = result.data
+                let dst := add(result, 0x20)
+
+                // copy n bytes 32-by-32
+                for { let off := 0 } lt(off, n) { off := add(off, 0x20) } {
+                    mstore(add(dst, off), mload(add(src, off)))
+                }
+
+                // zero after
+                mstore(add(add(dst, n), 0x20), 0)
+                // bump free memory
+                mstore(0x40, add(add(dst, n), 0x20))
             }
         }
     }
@@ -2890,7 +2896,7 @@ contract Summoner {
         emit NewDAO(address(this), implementation = new Moloch{salt: bytes32(0)}());
     }
 
-    /// @dev Summon new Majeur clone with initialization calls.
+    /// @dev Summon new Majeur clone with initialization calls:
     function summon(
         string calldata orgName,
         string calldata orgSymbol,

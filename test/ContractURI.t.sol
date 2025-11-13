@@ -148,7 +148,7 @@ contract ContractURITest is Test {
         console2.log("Share Supply:", shares.totalSupply() / 1e18);
         console2.log("Loot Supply:", loot.totalSupply() / 1e18);
         console2.log("");
-        console2.log("Card now displays both share and loot supplies");
+        console2.log("Card displays both share and loot supplies");
         console2.log("Plus separate transfer status for each");
         console2.log("========================================\n");
     }
