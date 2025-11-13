@@ -1258,4 +1258,250 @@ contract MolochTest is Test {
         assertTrue(address(dao2) != address(moloch));
         assertEq(summoner.getDAOCount(), 2);
     }
+
+    /*//////////////////////////////////////////////////////////////
+                            MISC TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    function test_ProposalWithoutOpeningDirectVote() public {
+        // Test that voting auto-opens a proposal
+        bytes memory data = abi.encodeWithSelector(Target.setValue.selector, 999);
+        uint256 id = moloch.proposalId(0, address(target), 0, data, bytes32(0));
+
+        // Vote without explicitly opening (should auto-open)
+        vm.prank(alice);
+        moloch.castVote(id, 1);
+
+        // Verify it was opened
+        assertTrue(moloch.snapshotBlock(id) > 0);
+        assertTrue(moloch.createdAt(id) > 0);
+    }
+
+    function test_ProposalExpiry() public {
+        // Set a short TTL
+        vm.prank(address(moloch));
+        moloch.setProposalTTL(1 hours);
+
+        bytes memory data = abi.encodeWithSelector(Target.setValue.selector, 888);
+        uint256 id = moloch.proposalId(0, address(target), 0, data, bytes32(0));
+
+        vm.prank(alice);
+        moloch.openProposal(id);
+
+        // Fast forward past TTL
+        vm.warp(block.timestamp + 2 hours);
+
+        // Should be expired
+        assertEq(uint256(moloch.state(id)), 5); // Expired
+
+        // Can't vote on expired proposal
+        vm.prank(bob);
+        vm.expectRevert(abi.encodeWithSignature("NotOk()"));
+        moloch.castVote(id, 1);
+    }
+
+    function test_AbstainVote() public {
+        bytes memory data = abi.encodeWithSelector(Target.setValue.selector, 777);
+        uint256 id = moloch.proposalId(0, address(target), 0, data, bytes32(0));
+
+        vm.prank(alice);
+        moloch.openProposal(id);
+
+        // Vote abstain
+        vm.prank(alice);
+        moloch.castVote(id, 2); // 2 = ABSTAIN
+
+        (uint256 forVotes, uint256 againstVotes, uint256 abstainVotes) = moloch.tallies(id);
+        assertEq(forVotes, 0);
+        assertEq(againstVotes, 0);
+        assertEq(abstainVotes, 60e18);
+    }
+
+    function test_VoteReceipt() public {
+        bytes memory data = abi.encodeWithSelector(Target.setValue.selector, 666);
+        uint256 id = moloch.proposalId(0, address(target), 0, data, bytes32(0));
+
+        vm.prank(alice);
+        moloch.castVote(id, 1);
+
+        // Check receipt was minted
+        uint256 receiptId = uint256(keccak256(abi.encodePacked("Moloch:receipt", id, uint8(1))));
+        assertEq(moloch.balanceOf(alice, receiptId), 60e18);
+        assertEq(moloch.totalSupply(receiptId), 60e18);
+    }
+
+    function test_MinYesVotesGate() public {
+        // Set minimum YES votes required
+        vm.prank(address(moloch));
+        moloch.setMinYesVotesAbsolute(70e18);
+
+        bytes memory data = abi.encodeWithSelector(Target.setValue.selector, 555);
+        uint256 id = moloch.proposalId(0, address(target), 0, data, bytes32(0));
+
+        vm.prank(alice);
+        moloch.castVote(id, 1); // 60e18 FOR
+
+        // Should be Defeated (not enough YES votes)
+        assertEq(uint256(moloch.state(id)), 4); // Defeated
+    }
+
+    function test_QuorumAbsolute() public {
+        // Set absolute quorum
+        vm.prank(address(moloch));
+        moloch.setQuorumAbsolute(80e18);
+
+        bytes memory data = abi.encodeWithSelector(Target.setValue.selector, 444);
+        uint256 id = moloch.proposalId(0, address(target), 0, data, bytes32(0));
+
+        vm.prank(alice);
+        moloch.castVote(id, 1); // 60e18 votes
+
+        // Should still be Active (not enough turnout)
+        assertEq(uint256(moloch.state(id)), 1); // Active
+
+        vm.prank(bob);
+        moloch.castVote(id, 0); // 40e18 more votes
+
+        // Now should be Succeeded (100e18 > 80e18 quorum, FOR > AGAINST)
+        assertEq(uint256(moloch.state(id)), 3); // Succeeded
+    }
+
+    function test_OnERC721Received() public view {
+        bytes4 selector = moloch.onERC721Received(address(0), address(0), 0, "");
+        assertEq(selector, bytes4(keccak256("onERC721Received(address,address,uint256,bytes)")));
+    }
+
+    function test_OnERC1155Received() public view {
+        bytes4 selector = moloch.onERC1155Received(address(0), address(0), 0, 0, "");
+        assertEq(
+            selector, bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)"))
+        );
+    }
+
+    function test_ContractURI() public view {
+        string memory uri = moloch.contractURI();
+        assertTrue(bytes(uri).length > 0);
+    }
+
+    function test_TokenURIForProposal() public {
+        bytes memory data = abi.encodeWithSelector(Target.setValue.selector, 222);
+        uint256 id = moloch.proposalId(0, address(target), 0, data, bytes32(0));
+
+        vm.prank(alice);
+        moloch.openProposal(id);
+
+        string memory uri = moloch.tokenURI(id);
+        assertTrue(bytes(uri).length > 0);
+    }
+
+    function test_GetProposalCount() public {
+        uint256 countBefore = moloch.getProposalCount();
+
+        bytes memory data = abi.encodeWithSelector(Target.setValue.selector, 111);
+        uint256 id = moloch.proposalId(0, address(target), 0, data, bytes32(0));
+
+        vm.prank(alice);
+        moloch.openProposal(id);
+
+        assertEq(moloch.getProposalCount(), countBefore + 1);
+    }
+
+    function test_SharesName() public view {
+        assertEq(shares.name(), "Test DAO Shares");
+    }
+
+    function test_SharesSymbol() public view {
+        assertEq(shares.symbol(), "TEST");
+    }
+
+    function test_LootName() public view {
+        assertEq(loot.name(), "Test DAO Loot");
+    }
+
+    function test_LootSymbol() public view {
+        assertEq(loot.symbol(), "TEST");
+    }
+
+    function test_BadgeName() public view {
+        assertEq(badge.name(), "Test DAO Badge");
+    }
+
+    function test_BadgeSymbol() public view {
+        assertEq(badge.symbol(), "TESTB");
+    }
+
+    function test_SharesDecimals() public view {
+        assertEq(shares.decimals(), 18);
+    }
+
+    function test_LootDecimals() public view {
+        assertEq(loot.decimals(), 18);
+    }
+
+    function test_GetSeats() public {
+        // Trigger badge minting
+        vm.prank(alice);
+        shares.transfer(bob, 1);
+        vm.prank(bob);
+        shares.transfer(alice, 1);
+
+        Moloch.Seat[] memory seats = moloch.getSeats();
+        assertTrue(seats.length > 0);
+    }
+
+    function test_RankOf() public {
+        // Trigger badge minting
+        vm.prank(alice);
+        shares.transfer(bob, 1);
+        vm.prank(bob);
+        shares.transfer(alice, 1);
+
+        uint256 aliceRank = moloch.rankOf(alice);
+        uint256 bobRank = moloch.rankOf(bob);
+
+        // Both should have ranks if they're in top 256
+        assertTrue(aliceRank > 0 || bobRank > 0);
+    }
+
+    function test_InvalidVoteSupport() public {
+        bytes memory data = abi.encodeWithSelector(Target.setValue.selector, 123);
+        uint256 id = moloch.proposalId(0, address(target), 0, data, bytes32(0));
+
+        vm.prank(alice);
+        moloch.openProposal(id);
+
+        // Try invalid support value (>2)
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSignature("NotOk()"));
+        moloch.castVote(id, 3);
+    }
+
+    function test_DoubleVote() public {
+        bytes memory data = abi.encodeWithSelector(Target.setValue.selector, 456);
+        uint256 id = moloch.proposalId(0, address(target), 0, data, bytes32(0));
+
+        vm.prank(alice);
+        moloch.castVote(id, 1);
+
+        // Try to vote again
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSignature("NotOk()"));
+        moloch.castVote(id, 0);
+    }
+
+    function test_VoteOnExecutedProposal() public {
+        bytes memory data = abi.encodeWithSelector(Target.setValue.selector, 789);
+        uint256 id = moloch.proposalId(0, address(target), 0, data, bytes32(0));
+
+        vm.prank(alice);
+        moloch.castVote(id, 1);
+
+        vm.prank(alice);
+        moloch.executeByVotes(0, address(target), 0, data, bytes32(0));
+
+        // Try to vote on executed proposal
+        vm.prank(bob);
+        vm.expectRevert(abi.encodeWithSignature("AlreadyExecuted()"));
+        moloch.castVote(id, 1);
+    }
 }

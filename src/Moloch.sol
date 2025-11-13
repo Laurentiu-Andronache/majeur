@@ -384,7 +384,7 @@ contract Moloch {
         emit VoteCancelled(id, msg.sender, support, weight);
     }
 
-    function cancelProposal(uint256 id) external {
+    function cancelProposal(uint256 id) public {
         if (proposerOf[id] != msg.sender) revert Unauthorized();
         if (state(id) != ProposalState.Active) revert NotOk();
         if (queuedAt[id] != 0) revert NotOk();
@@ -864,13 +864,13 @@ contract Moloch {
     uint256 occupied; // bit i set => seat i (0..255) used
 
     struct Seat {
-        address holder; // 32 bytes (20B + 12B)
+        address holder;
         uint96 bal;
     }
     Seat[256] seats;
 
     uint16 minSlot; // 0..255
-    uint96 minBal; // cutline (use uint128 if your totals can exceed 2^96-1)
+    uint96 minBal; // cutline
 
     mapping(address => uint16) public topPos; // 1..256 if in top set, else 0
 
@@ -988,11 +988,11 @@ contract Moloch {
         // else: newcomer didn’t beat the cutline => do nothing (sticky)
     }
 
-    // Returns (slot, ok). ok=false means no free slot.
+    /// @dev Returns (slot, ok) - ok=false means no free slot:
     function _firstFree() internal view returns (uint16 slot, bool ok) {
         uint256 z = ~occupied; // free = zero bits in occupied
         if (z == 0) return (0, false); // full
-        uint256 lsb = z & (~z + 1); // isolate lowest set bit among the FREE mask
+        uint256 lsb = z & (~z + 1);
         return (uint16(_ctz256(lsb)), true);
     }
 
@@ -1211,7 +1211,7 @@ contract Moloch {
             "<text x='210' y='355' class='covenant' text-anchor='middle'>acknowledge this organization operates as a Decentralized</text>",
             "<text x='210' y='365' class='covenant' text-anchor='middle'>Unincorporated Nonprofit Association under Wyoming law.</text>",
             "<text x='210' y='385' class='covenant' text-anchor='middle'>Members agree to: (i) algorithmic governance via this smart contract,</text>",
-            "<text x='210' y='395' class='covenant' text-anchor='middle'>(ii) limited liability per W.S. 17-32-107,</text>",
+            "<text x='210' y='395' class='covenant' text-anchor='middle'>(ii) limited liability considerations per W.S. 17-32-107,</text>",
             "<text x='210' y='405' class='covenant' text-anchor='middle'>(iii) dispute resolution through code-as-law principles,</text>",
             "<text x='210' y='415' class='covenant' text-anchor='middle'>(iv) good faith participation in DAO governance,</text>",
             "<text x='210' y='425' class='covenant' text-anchor='middle'>(v) adherence to applicable laws and self-help.</text>"
@@ -1340,7 +1340,7 @@ contract Moloch {
             svg,
             "<text x='60' y='255' class='garamond' font-size='10' fill='#aaa' letter-spacing='1'>ID</text>",
             "<text x='60' y='272' class='mono' font-size='9' fill='#fff'>",
-            Display.shortDec(id, 4, 4), // decimal "1234...5678" if long
+            Display.shortDec4(id), // decimal "1234...5678" if long
             "</text>"
         );
 
@@ -1467,7 +1467,7 @@ contract Moloch {
             svg,
             "<text x='60' y='275' class='garamond' font-size='10' fill='#aaa' letter-spacing='1'>Proposal</text>",
             "<text x='60' y='292' class='mono' font-size='9' fill='#fff'>",
-            Display.shortDec(proposalId_, 4, 4), // e.g. 1234...5678
+            Display.shortDec4(proposalId_), // e.g. 1234...5678
             "</text>",
             "<text x='60' y='325' class='garamond' font-size='10' fill='#aaa' letter-spacing='1'>Stance</text>",
             "<text x='60' y='345' class='garamond-bold' font-size='14' fill='#fff'>",
@@ -1558,7 +1558,7 @@ contract Moloch {
             svg,
             "<text x='60' y='280' class='garamond' font-size='10' fill='#aaa' letter-spacing='1'>Intent ID</text>",
             "<text x='60' y='297' class='mono' font-size='9' fill='#fff'>",
-            Display.shortDec(id, 4, 4), // e.g. 1234...5678
+            Display.shortDec4(id), // e.g. 1234...5678
             "</text>",
             "<text x='60' y='330' class='garamond' font-size='10' fill='#aaa' letter-spacing='1'>Total Supply</text>", // ← Changed label
             "<text x='60' y='350' class='garamond-bold' font-size='14' fill='#fff'>",
@@ -2332,6 +2332,12 @@ contract Badge {
         require(o != address(0), NotMinted());
     }
 
+    function supportsInterface(bytes4 interfaceId) public pure returns (bool) {
+        return interfaceId == 0x01ffc9a7 // ERC165 Interface ID for ERC165
+            || interfaceId == 0x80ac58cd // ERC165 Interface ID for ERC721
+            || interfaceId == 0x5b5e139f; // ERC165 Interface ID for ERC721Metadata
+    }
+
     /// @dev Top-256 badge (seat index; tokenId == seat, not sorted by balance):
     function tokenURI(uint256 id) public view returns (string memory) {
         // reverts if the seat token isn't minted; guarantees we're seated
@@ -2448,336 +2454,6 @@ contract Badge {
     }
 }
 
-/// @dev Display — minimal helpers for on-chain SVG / string rendering:
-library Display {
-    /*──────────────────────  DATA URIs  ─────────────────────*/
-
-    function jsonDataURI(string memory raw) internal pure returns (string memory) {
-        return string.concat("data:application/json;base64,", _b64(bytes(raw)));
-    }
-
-    function svgDataURI(string memory raw) internal pure returns (string memory) {
-        return string.concat("data:image/svg+xml;base64,", _b64(bytes(raw)));
-    }
-
-    function jsonImage(string memory name_, string memory description_, string memory svg_)
-        internal
-        pure
-        returns (string memory)
-    {
-        return jsonDataURI(
-            string.concat(
-                '{"name":"',
-                name_,
-                '","description":"',
-                description_,
-                '","image":"',
-                svgDataURI(svg_),
-                '"}'
-            )
-        );
-    }
-
-    /*──────────────────────  SVG BASE  ─────────────────────*/
-
-    function svgCardBase() internal pure returns (string memory) {
-        return string.concat(
-            "<svg xmlns='http://www.w3.org/2000/svg' width='420' height='600'>",
-            "<defs><style>",
-            ".garamond{font-family:'EB Garamond',serif;font-weight:400;}",
-            ".garamond-bold{font-family:'EB Garamond',serif;font-weight:600;}",
-            ".mono{font-family:'Courier Prime',monospace;}",
-            "</style></defs>",
-            "<rect width='420' height='600' fill='#000'/>",
-            "<rect x='20' y='20' width='380' height='560' fill='none' stroke='#fff' stroke-width='1'/>"
-        );
-    }
-
-    /*──────────────────────  DECIMAL IDs  ─────────────────────*/
-
-    /// @dev "1234...5678" from a big decimal id - if short already, returns full:
-    function shortDec(uint256 v, uint8 head, uint8 tail) internal pure returns (string memory) {
-        string memory s = toString(v);
-        uint256 n = bytes(s).length;
-        unchecked {
-            if (n <= uint256(head) + uint256(tail) + 3) return s;
-            return string.concat(slice(s, 0, head), "...", slice(s, n - tail, n));
-        }
-    }
-
-    /*──────────────────────  ADDRESSES  ─────────────────────*/
-
-    /// @dev "0xAbCd...1234" (EIP-55). `head`/`tail` are nibbles after "0x":
-    function shortAddr(address a, uint8 head, uint8 tail) internal pure returns (string memory) {
-        string memory full = _toHexStringChecksummed(a); // 42 chars
-        uint256 n = bytes(full).length;
-        unchecked {
-            if (2 + head > n) head = uint8(n > 2 ? n - 2 : 0);
-            if (tail > n) tail = uint8(n);
-            return string.concat(slice(full, 0, 2 + head), "...", slice(full, n - tail, n));
-        }
-    }
-
-    /// @dev Convenience: 0x + 4 nibbles ... 4 nibbles:
-    function shortAddr4(address a) internal pure returns (string memory) {
-        return shortAddr(a, 4, 4);
-    }
-
-    /*──────────────────────  HEX (optional)  ─────────────────────*/
-
-    /// @dev Minimal 0x-hex for uint, shortened to "0x12...34":
-    function shortHexUint(uint256 v, uint8 head, uint8 tail) internal pure returns (string memory) {
-        string memory full = _toMinimalHexString(v);
-        uint256 n = bytes(full).length;
-        if (n <= 2 + head + tail + 3) return full;
-        unchecked {
-            return string.concat(slice(full, 0, 2 + head), "...", slice(full, n - tail, n));
-        }
-    }
-
-    /*──────────────────────  NUMBERS  ─────────────────────*/
-
-    /// @dev Decimal with commas: 123_456_789 => "123,456,789":
-    function fmtComma(uint256 n) internal pure returns (string memory) {
-        if (n == 0) return "0";
-        uint256 temp = n;
-        uint256 digits;
-        while (temp != 0) {
-            unchecked {
-                ++digits;
-                temp /= 10;
-            }
-        }
-        uint256 commas = (digits - 1) / 3;
-        bytes memory buf = new bytes(digits + commas);
-
-        uint256 i = buf.length;
-        uint256 dcount;
-        while (n != 0) {
-            if (dcount != 0 && dcount % 3 == 0) {
-                unchecked {
-                    buf[--i] = ",";
-                }
-            }
-            unchecked {
-                buf[--i] = bytes1(uint8(48 + (n % 10)));
-                n /= 10;
-                ++dcount;
-            }
-        }
-        return string(buf);
-    }
-
-    /// @dev Percent with 2 decimals from a/b, e.g. 1234/10000 => "12.34%":
-    function percent2(uint256 a, uint256 b) internal pure returns (string memory) {
-        if (b == 0) return "0.00%";
-        uint256 p = (a * 10000) / b; // basis points
-        uint256 whole = p / 100;
-        uint256 frac = p % 100;
-        return string.concat(toString(whole), ".", (frac < 10) ? "0" : "", toString(frac), "%");
-    }
-
-    /*──────────────────────  ESCAPE  ─────────────────────*/
-
-    /// @dev Escape for embedding inside SVG/HTML.
-    function esc(string memory s) internal pure returns (string memory result) {
-        assembly ("memory-safe") {
-            result := mload(0x40)
-            let end := add(s, mload(s))
-            let o := add(result, 0x20)
-            // packed offsets/strides for replacements; and the replacement blob:
-            mstore(0x1f, 0x900094)
-            mstore(0x08, 0xc0000000a6ab)
-            mstore(0x00, shl(64, 0x2671756f743b26616d703b262333393b266c743b2667743b)) // "&quot;&amp;&#39;&lt;&gt;"
-            for {} iszero(eq(s, end)) {} {
-                s := add(s, 1)
-                let c := and(mload(s), 0xff)
-                // if c ∉ ["\"","'","&","<",">"], write raw
-                if iszero(and(shl(c, 1), 0x500000c400000000)) {
-                    mstore8(o, c)
-                    o := add(o, 1)
-                    continue
-                }
-                let t := shr(248, mload(c))
-                mstore(o, mload(and(t, 0x1f)))
-                o := add(o, shr(5, t))
-            }
-            mstore(o, 0)
-            mstore(result, sub(o, add(result, 0x20)))
-            mstore(0x40, add(o, 0x20))
-        }
-    }
-
-    /*──────────────────────  MINI STRING PRIMS  ─────────────────────*/
-
-    /// @dev uint256 → decimal string (Solady-style, trimmed).
-    function toString(uint256 value) internal pure returns (string memory result) {
-        assembly ("memory-safe") {
-            result := add(mload(0x40), 0x80)
-            mstore(0x40, add(result, 0x20))
-            mstore(result, 0)
-            let end := result
-            for { let temp := value } 1 {} {
-                result := add(result, not(0)) // -1
-                mstore8(result, add(48, mod(temp, 10)))
-                temp := div(temp, 10)
-                if iszero(temp) { break }
-            }
-            let n := sub(end, result)
-            result := sub(result, 0x20)
-            mstore(result, n)
-        }
-    }
-
-    /// @dev slice string [start,end). Byte offsets.
-    function slice(string memory subject, uint256 start, uint256 end)
-        internal
-        pure
-        returns (string memory)
-    {
-        return string(_slice(bytes(subject), start, end));
-    }
-
-    function _slice(bytes memory subject, uint256 start, uint256 end)
-        internal
-        pure
-        returns (bytes memory result)
-    {
-        assembly ("memory-safe") {
-            let len := mload(subject)
-            if gt(start, len) { start := len }
-            if gt(end, len) { end := len }
-            if lt(start, end) {
-                let n := sub(end, start)
-                result := mload(0x40)
-                // store length
-                mstore(result, n)
-                // src = subject.data + start
-                let src := add(add(subject, 0x20), start)
-                // dst = result.data
-                let dst := add(result, 0x20)
-
-                // copy n bytes 32-by-32
-                for { let off := 0 } lt(off, n) { off := add(off, 0x20) } {
-                    mstore(add(dst, off), mload(add(src, off)))
-                }
-
-                // zero after
-                mstore(add(add(dst, n), 0x20), 0)
-                // bump free memory
-                mstore(0x40, add(add(dst, n), 0x20))
-            }
-        }
-    }
-
-    /*──────────────────────  MINI HEX PRIMS  ─────────────────────*/
-
-    /// @dev address => "0x" + 40 hex (lowercase):
-    function _toHexString(address value) private pure returns (string memory result) {
-        assembly ("memory-safe") {
-            result := mload(0x40)
-            mstore(0x40, add(result, 0x80))
-            mstore(result, 42)
-            let o := add(result, 0x20)
-            mstore(o, 0x3078) // "0x"
-            o := add(o, 2)
-            mstore(add(o, 40), 0) // zero after
-            value := shl(96, value)
-            mstore(0x0f, 0x30313233343536373839616263646566)
-            for { let i := 0 } 1 {} {
-                let p := add(o, add(i, i))
-                let b := byte(i, value)
-                mstore8(add(p, 1), mload(and(b, 15)))
-                mstore8(p, mload(shr(4, b)))
-                i := add(i, 1)
-                if eq(i, 20) { break }
-            }
-        }
-    }
-
-    /// @dev address => EIP-55 checksummed "0x..." (conditional uppercase):
-    function _toHexStringChecksummed(address a) private pure returns (string memory result) {
-        result = _toHexString(a);
-        assembly ("memory-safe") {
-            let mask := shl(6, div(not(0), 255))
-            let o := add(result, 0x22) // skip length(32) + "0x"(2)
-            // keccak of the 40 lowercase hex chars
-            let hashed := and(keccak256(o, 40), mul(34, mask))
-            let t := shl(240, 136)
-            // build a 32-byte mask for uppercasing (Solady trick)
-            for { let i := 0 } 1 {} {
-                mstore(add(i, i), mul(t, byte(i, hashed)))
-                i := add(i, 1)
-                if eq(i, 20) { break }
-            }
-            mstore(o, xor(mload(o), shr(1, and(mload(0x00), and(mload(o), mask)))))
-            o := add(o, 0x20)
-            mstore(o, xor(mload(o), shr(1, and(mload(0x20), and(mload(o), mask)))))
-        }
-    }
-
-    /// @dev uint => minimal "0x..." (no redundant leading zero nibble):
-    function _toMinimalHexString(uint256 value) private pure returns (string memory result) {
-        assembly ("memory-safe") {
-            result := add(mload(0x40), 0x80)
-            mstore(0x40, add(result, 0x20))
-            mstore(result, 0)
-            let end := result
-            mstore(0x0f, 0x30313233343536373839616263646566)
-            for { let temp := value } 1 {} {
-                result := add(result, not(1)) // -2
-                mstore8(add(result, 1), mload(and(temp, 15)))
-                mstore8(result, mload(and(shr(4, temp), 15)))
-                temp := shr(8, temp)
-                if iszero(temp) { break }
-            }
-            // add "0x" and length (handle leading zero nibble)
-            let n := sub(end, result)
-            let leadZero := eq(byte(0, mload(add(result, 0x20))), 0x30)
-            let total := add(n, 2)
-            mstore(sub(add(result, leadZero), 2), 0x3078) // "0x"
-            result := sub(add(result, leadZero), 2)
-            mstore(result, sub(total, leadZero))
-        }
-    }
-
-    /*──────────────────────  MINI BASE64  ─────────────────────*/
-
-    function _b64(bytes memory data) private pure returns (string memory result) {
-        assembly ("memory-safe") {
-            let len := mload(data)
-            if len {
-                let encLen := shl(2, div(add(len, 2), 3))
-                result := mload(0x40)
-                mstore(0x1f, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef")
-                mstore(0x3f, "ghijklmnopqrstuvwxyz0123456789+/")
-                let ptr := add(result, 0x20)
-                let end := add(ptr, encLen)
-                let dataEnd := add(add(data, 0x20), len)
-                let tail := mload(dataEnd)
-                mstore(dataEnd, 0)
-                for {} 1 {} {
-                    data := add(data, 3)
-                    let input := mload(data)
-                    mstore8(0, mload(and(shr(18, input), 0x3F)))
-                    mstore8(1, mload(and(shr(12, input), 0x3F)))
-                    mstore8(2, mload(and(shr(6, input), 0x3F)))
-                    mstore8(3, mload(and(input, 0x3F)))
-                    mstore(ptr, mload(0x00))
-                    ptr := add(ptr, 4)
-                    if iszero(lt(ptr, end)) { break }
-                }
-                mstore(dataEnd, tail)
-                mstore(0x40, add(end, 0x20))
-                let pad := div(2, mod(len, 3))
-                mstore(sub(ptr, pad), shl(240, 0x3d3d)) // '=' padding
-                mstore(ptr, 0)
-                mstore(result, encLen)
-            }
-        }
-    }
-}
-
 // Call structure:
 struct Call {
     address target;
@@ -2879,6 +2555,281 @@ function safeTransferFrom(address token, uint256 amount) {
         }
         mstore(0x60, 0)
         mstore(0x40, m)
+    }
+}
+
+/// @dev Display — minimal helpers for on-chain SVG / string rendering:
+library Display {
+    /*──────────────────────  DATA URIs  ─────────────────────*/
+
+    function jsonDataURI(string memory raw) internal pure returns (string memory) {
+        return string.concat("data:application/json;base64,", encode(bytes(raw)));
+    }
+
+    function svgDataURI(string memory raw) internal pure returns (string memory) {
+        return string.concat("data:image/svg+xml;base64,", encode(bytes(raw)));
+    }
+
+    function jsonImage(string memory name_, string memory description_, string memory svg_)
+        internal
+        pure
+        returns (string memory)
+    {
+        return jsonDataURI(
+            string.concat(
+                '{"name":"',
+                name_,
+                '","description":"',
+                description_,
+                '","image":"',
+                svgDataURI(svg_),
+                '"}'
+            )
+        );
+    }
+
+    /*──────────────────────  SVG BASE  ─────────────────────*/
+
+    function svgCardBase() internal pure returns (string memory) {
+        return string.concat(
+            "<svg xmlns='http://www.w3.org/2000/svg' width='420' height='600'>",
+            "<defs><style>",
+            ".garamond{font-family:'EB Garamond',serif;font-weight:400;}",
+            ".garamond-bold{font-family:'EB Garamond',serif;font-weight:600;}",
+            ".mono{font-family:'Courier Prime',monospace;}",
+            "</style></defs>",
+            "<rect width='420' height='600' fill='#000'/>",
+            "<rect x='20' y='20' width='380' height='560' fill='none' stroke='#fff' stroke-width='1'/>"
+        );
+    }
+
+    /*──────────────────────  DECIMAL IDs  ─────────────────────*/
+
+    /// @dev "1234...5678" from a big decimal id:
+    function shortDec4(uint256 v) internal pure returns (string memory) {
+        string memory s = toString(v);
+        uint256 n = bytes(s).length;
+        if (n <= 11) return s;
+        unchecked {
+            return string.concat(slice(s, 0, 4), "...", slice(s, n - 4, n));
+        }
+    }
+
+    /*──────────────────────  ADDRESSES  ─────────────────────*/
+
+    /// @dev EIP-55 "0xAbCd...1234" (0x + 4 nibbles ... 4 nibbles):
+    function shortAddr4(address a) internal pure returns (string memory) {
+        string memory full = toHexStringChecksummed(a);
+        uint256 n = bytes(full).length;
+        unchecked {
+            return string.concat(slice(full, 0, 6), "...", slice(full, n - 4, n));
+        }
+    }
+
+    /*──────────────────────  NUMBERS  ─────────────────────*/
+
+    /// @dev Decimal with commas: 123_456_789 => "123,456,789":
+    function fmtComma(uint256 n) internal pure returns (string memory) {
+        if (n == 0) return "0";
+        uint256 temp = n;
+        uint256 digits;
+        while (temp != 0) {
+            unchecked {
+                ++digits;
+                temp /= 10;
+            }
+        }
+        uint256 commas = (digits - 1) / 3;
+        bytes memory buf = new bytes(digits + commas);
+        uint256 i = buf.length;
+        uint256 dcount;
+        while (n != 0) {
+            if (dcount != 0 && dcount % 3 == 0) {
+                unchecked {
+                    buf[--i] = ",";
+                }
+            }
+            unchecked {
+                buf[--i] = bytes1(uint8(48 + (n % 10)));
+                n /= 10;
+                ++dcount;
+            }
+        }
+        return string(buf);
+    }
+
+    /// @dev Percent with 2 decimals from a/b, e.g. 1234/10000 => "12.34%":
+    function percent2(uint256 a, uint256 b) internal pure returns (string memory) {
+        if (b == 0) return "0.00%";
+        uint256 p = (a * 10000) / b; // basis points
+        uint256 whole = p / 100;
+        uint256 frac = p % 100;
+        return string.concat(toString(whole), ".", (frac < 10) ? "0" : "", toString(frac), "%");
+    }
+
+    /*──────────────────────  ESCAPE  ─────────────────────*/
+
+    function esc(string memory s) internal pure returns (string memory result) {
+        assembly ("memory-safe") {
+            result := mload(0x40)
+            let end := add(s, mload(s))
+            let o := add(result, 0x20)
+            mstore(0x1f, 0x900094)
+            mstore(0x08, 0xc0000000a6ab)
+            mstore(0x00, shl(64, 0x2671756f743b26616d703b262333393b266c743b2667743b))
+            for {} iszero(eq(s, end)) {} {
+                s := add(s, 1)
+                let c := and(mload(s), 0xff)
+                if iszero(and(shl(c, 1), 0x500000c400000000)) {
+                    mstore8(o, c)
+                    o := add(o, 1)
+                    continue
+                }
+                let t := shr(248, mload(c))
+                mstore(o, mload(and(t, 0x1f)))
+                o := add(o, shr(5, t))
+            }
+            mstore(o, 0)
+            mstore(result, sub(o, add(result, 0x20)))
+            mstore(0x40, add(o, 0x20))
+        }
+    }
+
+    /*──────────────────────  MINI STRING PRIMS  ─────────────────────*/
+
+    function toString(uint256 value) internal pure returns (string memory result) {
+        assembly ("memory-safe") {
+            result := add(mload(0x40), 0x80)
+            mstore(0x40, add(result, 0x20))
+            mstore(result, 0)
+            let end := result
+            let w := not(0)
+            for { let temp := value } 1 {} {
+                result := add(result, w)
+                mstore8(result, add(48, mod(temp, 10)))
+                temp := div(temp, 10)
+                if iszero(temp) { break }
+            }
+            let n := sub(end, result)
+            result := sub(result, 0x20)
+            mstore(result, n)
+        }
+    }
+
+    function slice(string memory subject, uint256 start, uint256 end)
+        internal
+        pure
+        returns (string memory result)
+    {
+        assembly ("memory-safe") {
+            let l := mload(subject)
+            if iszero(gt(l, end)) { end := l }
+            if iszero(gt(l, start)) { start := l }
+            if lt(start, end) {
+                result := mload(0x40)
+                let n := sub(end, start)
+                let i := add(subject, start)
+                let w := not(0x1f)
+                for { let j := and(add(n, 0x1f), w) } 1 {} {
+                    mstore(add(result, j), mload(add(i, j)))
+                    j := add(j, w)
+                    if iszero(j) { break }
+                }
+                let o := add(add(result, 0x20), n)
+                mstore(o, 0)
+                mstore(0x40, add(o, 0x20))
+                mstore(result, n)
+            }
+        }
+    }
+
+    /*──────────────────────  MINI HEX PRIMS  ─────────────────────*/
+
+    function toHexStringChecksummed(address a) internal pure returns (string memory result) {
+        result = toHexString(a);
+        assembly ("memory-safe") {
+            let mask := shl(6, div(not(0), 255))
+            let o := add(result, 0x22)
+            let hashed := and(keccak256(o, 40), mul(34, mask))
+            let t := shl(240, 136)
+            for { let i := 0 } 1 {} {
+                mstore(add(i, i), mul(t, byte(i, hashed)))
+                i := add(i, 1)
+                if eq(i, 20) { break }
+            }
+            mstore(o, xor(mload(o), shr(1, and(mload(0x00), and(mload(o), mask)))))
+            o := add(o, 0x20)
+            mstore(o, xor(mload(o), shr(1, and(mload(0x20), and(mload(o), mask)))))
+        }
+    }
+
+    function toHexString(address value) internal pure returns (string memory result) {
+        result = toHexStringNoPrefix(value);
+        assembly ("memory-safe") {
+            let n := add(mload(result), 2)
+            mstore(result, 0x3078)
+            result := sub(result, 2)
+            mstore(result, n)
+        }
+    }
+
+    function toHexStringNoPrefix(address value) internal pure returns (string memory result) {
+        assembly ("memory-safe") {
+            result := mload(0x40)
+            mstore(0x40, add(result, 0x80))
+            mstore(0x0f, 0x30313233343536373839616263646566)
+            result := add(result, 2)
+            mstore(result, 40)
+            let o := add(result, 0x20)
+            mstore(add(o, 40), 0)
+            value := shl(96, value)
+            for { let i := 0 } 1 {} {
+                let p := add(o, add(i, i))
+                let temp := byte(i, value)
+                mstore8(add(p, 1), mload(and(temp, 15)))
+                mstore8(p, mload(shr(4, temp)))
+                i := add(i, 1)
+                if eq(i, 20) { break }
+            }
+        }
+    }
+
+    /*──────────────────────  MINI BASE64  ─────────────────────*/
+
+    function encode(bytes memory data) internal pure returns (string memory result) {
+        assembly ("memory-safe") {
+            let dataLength := mload(data)
+            if dataLength {
+                let encodedLength := shl(2, div(add(dataLength, 2), 3))
+                result := mload(0x40)
+                mstore(0x1f, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef")
+                mstore(0x3f, "ghijklmnopqrstuvwxyz0123456789+/")
+                let ptr := add(result, 0x20)
+                let end := add(ptr, encodedLength)
+                let dataEnd := add(add(0x20, data), dataLength)
+                let dataEndValue := mload(dataEnd)
+                mstore(dataEnd, 0x00)
+                for {} 1 {} {
+                    data := add(data, 3)
+                    let input := mload(data)
+
+                    mstore8(0, mload(and(shr(18, input), 0x3F)))
+                    mstore8(1, mload(and(shr(12, input), 0x3F)))
+                    mstore8(2, mload(and(shr(6, input), 0x3F)))
+                    mstore8(3, mload(and(input, 0x3F)))
+                    mstore(ptr, mload(0x00))
+
+                    ptr := add(ptr, 4)
+                    if iszero(lt(ptr, end)) { break }
+                }
+                mstore(dataEnd, dataEndValue)
+                mstore(0x40, add(end, 0x20))
+                let o := div(2, mod(dataLength, 3))
+                mstore(sub(ptr, o), shl(240, 0x3d3d))
+                mstore(ptr, 0)
+                mstore(result, encodedLength)
+            }
+        }
     }
 }
 
