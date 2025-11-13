@@ -15,7 +15,7 @@ contract Moloch {
     error Timelocked(uint64 untilWhen);
 
     /* MAJEUR */
-    modifier onlySelf() {
+    modifier onlyDAO() {
         require(msg.sender == address(this), Unauthorized());
         _;
     }
@@ -40,13 +40,11 @@ contract Moloch {
     uint64 public config; // bump salt to invalidate old ids/permits
     uint16 public quorumBps; // dynamic quorum vs snapshot supply (BPS, 0 = off)
     bool public ragequittable; // `true` if owners can ragequit shares
-    bool public shareTransfersLocked; // global Shares transfer lock
-    bool public lootTransfersLocked; // global Loot transfer lock
 
     address immutable SUMMONER = msg.sender;
     address immutable sharesImpl;
-    address immutable lootImpl;
     address immutable badgeImpl;
+    address immutable lootImpl;
 
     Shares public shares;
     Badge public badge;
@@ -604,7 +602,7 @@ contract Moloch {
         bytes32 nonce,
         address spender,
         uint256 count
-    ) public payable onlySelf {
+    ) public payable onlyDAO {
         uint256 tokenId = _intentHashId(op, to, value, data, nonce);
         uint256 bal = balanceOf[spender][tokenId];
         uint256 diff;
@@ -644,7 +642,7 @@ contract Moloch {
     /**
      * ALLOWANCE
      */
-    function setAllowance(address spender, address token, uint256 amount) public payable onlySelf {
+    function setAllowance(address spender, address token, uint256 amount) public payable onlyDAO {
         allowance[token][spender] = amount;
     }
 
@@ -661,7 +659,7 @@ contract Moloch {
         bool minting,
         bool active,
         bool isLoot
-    ) public payable onlySelf {
+    ) public payable onlyDAO {
         if (active) require(pricePerShare != 0, NotOk());
         sales[payToken] = Sale({
             pricePerShare: pricePerShare, cap: cap, minting: minting, active: active, isLoot: isLoot
@@ -771,43 +769,44 @@ contract Moloch {
     }
 
     /* SETTINGS */
-    function setQuorumBps(uint16 bps) public payable onlySelf {
+    function setQuorumBps(uint16 bps) public payable onlyDAO {
         if (bps > 10_000) revert NotOk();
         quorumBps = bps;
     }
 
-    function setMinYesVotesAbsolute(uint256 v) public payable onlySelf {
+    function setMinYesVotesAbsolute(uint256 v) public payable onlyDAO {
         minYesVotesAbsolute = v;
     }
 
-    function setQuorumAbsolute(uint256 v) public payable onlySelf {
+    function setQuorumAbsolute(uint256 v) public payable onlyDAO {
         quorumAbsolute = v;
     }
 
-    function setProposalTTL(uint64 s) public payable onlySelf {
+    function setProposalTTL(uint64 s) public payable onlyDAO {
         proposalTTL = s;
     }
 
-    function setTimelockDelay(uint64 s) public payable onlySelf {
+    function setTimelockDelay(uint64 s) public payable onlyDAO {
         timelockDelay = s;
     }
 
-    function setRagequittable(bool on) public payable onlySelf {
+    function setRagequittable(bool on) public payable onlyDAO {
         ragequittable = on;
     }
 
-    function setTransfersLocked(bool sharesLocked, bool lootLocked) public payable onlySelf {
-        (shareTransfersLocked, lootTransfersLocked) = (sharesLocked, lootLocked);
+    function setTransfersLocked(bool sharesLocked, bool lootLocked) public payable onlyDAO {
+        shares.setTransfersLocked(sharesLocked);
+        loot.setTransfersLocked(lootLocked);
     }
 
-    function setProposalThreshold(uint256 v) public payable onlySelf {
+    function setProposalThreshold(uint256 v) public payable onlyDAO {
         proposalThreshold = v;
     }
 
     function setMetadata(string calldata n, string calldata s, string calldata uri)
         public
         payable
-        onlySelf
+        onlyDAO
     {
         (_orgName, _orgSymbol, _orgURI) = (n, s, uri);
     }
@@ -815,7 +814,7 @@ contract Moloch {
     /// @dev Configure automatic futarchy earmark per proposal:
     /// @dev param: 0=off; 1..10_000=BPS of snapshot supply; >10_000=absolute (18 dp),
     ///      cap: hard per-proposal maximum after param calculation (0 = no cap):
-    function setAutoFutarchy(uint256 param, uint256 cap) public payable onlySelf {
+    function setAutoFutarchy(uint256 param, uint256 cap) public payable onlyDAO {
         autoFutarchyParam = param;
         autoFutarchyCap = cap;
     }
@@ -823,7 +822,7 @@ contract Moloch {
     /// @dev Default reward token for futarchy pools:
     /// rewardToken: 0 = ETH, address(this) = minted shares, address(shares) = treasury shares,
     /// auto-earmark always uses minted shares if rewardToken is ETH; manual fundFutarchy can still use ETH:
-    function setFutarchyRewardToken(address _rewardToken) public payable onlySelf {
+    function setFutarchyRewardToken(address _rewardToken) public payable onlyDAO {
         if (
             _rewardToken != address(0) && _rewardToken != address(this)
                 && _rewardToken != address(shares)
@@ -832,14 +831,14 @@ contract Moloch {
     }
 
     /// @dev Governance "bump" to invalidate pre-bump proposal hashes:
-    function bumpConfig() public payable onlySelf {
+    function bumpConfig() public payable onlyDAO {
         unchecked {
             ++config;
         }
     }
 
     /// @dev Governance batch external call helper:
-    function batchCalls(Call[] calldata calls) public payable onlySelf {
+    function batchCalls(Call[] calldata calls) public payable onlyDAO {
         for (uint256 i; i != calls.length; ++i) {
             (bool ok,) = calls[i].target.call{value: calls[i].value}(calls[i].data);
             require(ok, NotOk());
@@ -1224,7 +1223,7 @@ contract Moloch {
             svg,
             "<text x='210' y='445' class='covenant' text-anchor='middle'>Share tokens represent governance rights.</text>",
             "<text x='210' y='455' class='covenant' text-anchor='middle'>Share transfers are ",
-            shareTransfersLocked ? "DISABLED" : "ENABLED",
+            shares.transfersLocked() ? "DISABLED" : "ENABLED",
             ". Ragequit rights are ",
             ragequittable ? "ENABLED" : "DISABLED",
             ".</text>"
@@ -1238,7 +1237,7 @@ contract Moloch {
                 "<text x='210' y='",
                 Display.toString(nextY),
                 "' class='covenant' text-anchor='middle'>Loot transfers are ",
-                lootTransfersLocked ? "DISABLED" : "ENABLED",
+                loot.transfersLocked() ? "DISABLED" : "ENABLED",
                 ".</text>"
             );
             unchecked {
@@ -1673,6 +1672,7 @@ contract Shares {
 
     uint8 public constant decimals = 18;
 
+    bool public transfersLocked;
     uint256 public totalSupply;
     mapping(address => uint256) public balanceOf;
     mapping(address => mapping(address => uint256)) public allowance;
@@ -1761,6 +1761,10 @@ contract Shares {
         return true;
     }
 
+    function setTransfersLocked(bool locked) public payable onlyDAO {
+        transfersLocked = locked;
+    }
+
     function mintFromMoloch(address to, uint256 amount) public payable onlyDAO {
         _mint(to, amount);
         _autoSelfDelegate(to);
@@ -1820,7 +1824,7 @@ contract Shares {
     }
 
     function _checkUnlocked(address from, address to) internal view {
-        if (Moloch(DAO).shareTransfersLocked() && from != DAO && to != DAO) {
+        if (transfersLocked && from != DAO && to != DAO) {
             revert Locked();
         }
     }
@@ -2213,6 +2217,7 @@ contract Loot {
 
     uint8 public constant decimals = 18;
 
+    bool public transfersLocked;
     uint256 public totalSupply;
     mapping(address => uint256) public balanceOf;
     mapping(address => mapping(address => uint256)) public allowance;
@@ -2262,6 +2267,10 @@ contract Loot {
         return true;
     }
 
+    function setTransfersLocked(bool locked) public payable onlyDAO {
+        transfersLocked = locked;
+    }
+
     function mintFromMoloch(address to, uint256 amount) public payable onlyDAO {
         _mint(to, amount);
     }
@@ -2291,7 +2300,7 @@ contract Loot {
     }
 
     function _checkUnlocked(address from, address to) internal view {
-        if (Moloch(DAO).lootTransfersLocked() && from != DAO && to != DAO) {
+        if (transfersLocked && from != DAO && to != DAO) {
             revert Locked();
         }
     }

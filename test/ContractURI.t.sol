@@ -65,8 +65,8 @@ contract ContractURITest is Test {
         console2.log("");
         console2.log("Share Supply:", shares.totalSupply() / 1e18);
         console2.log("Loot Supply:", loot.totalSupply() / 1e18);
-        console2.log("Share Transfers Locked:", moloch.shareTransfersLocked());
-        console2.log("Loot Transfers Locked:", moloch.lootTransfersLocked());
+        console2.log("Share Transfers Locked:", shares.transfersLocked());
+        console2.log("Loot Transfers Locked:", loot.transfersLocked());
         console2.log("Ragequit Enabled:", moloch.ragequittable());
         console2.log("");
         console2.log("--- COVENANT INCLUDES ---");
