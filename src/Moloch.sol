@@ -871,7 +871,7 @@ contract Moloch {
         uint256 m = occupied;
         uint256 s;
         while (m != 0) {
-            m &= (m - 1); // clear lowest set bit
+            m &= (m - 1);
             unchecked {
                 ++s;
             }
@@ -881,8 +881,7 @@ contract Moloch {
         m = occupied;
         uint256 n;
         while (m != 0) {
-            uint256 lsb = m & (~m + 1);
-            uint16 i = _ctz256(lsb);
+            uint16 i = uint16(ffs(m)); // 0..255, because m != 0
             out[n++] = seats[i];
             m &= (m - 1);
         }
@@ -978,77 +977,11 @@ contract Moloch {
 
     /// @dev Returns (slot, ok) - ok=false means no free slot:
     function _firstFree() internal view returns (uint16 slot, bool ok) {
-        uint256 z = ~occupied; // free = zero bits in occupied
+        uint256 z = ~occupied;
         if (z == 0) return (0, false); // full
-        uint256 lsb = z & (~z + 1);
-        return (uint16(_ctz256(lsb)), true);
-    }
 
-    function _ctz256(uint256 x) internal pure returns (uint16 n) {
-        // x != 0 is expected by callers
-        unchecked {
-            n = 0;
-
-            uint256 t = x & type(uint128).max;
-            if (t == 0) {
-                n += 128;
-                x >>= 128;
-            } else {
-                x = t;
-            }
-
-            t = x & type(uint64).max;
-            if (t == 0) {
-                n += 64;
-                x >>= 64;
-            } else {
-                x = t;
-            }
-
-            t = x & 0xFFFFFFFF; // 32 bits
-            if (t == 0) {
-                n += 32;
-                x >>= 32;
-            } else {
-                x = t;
-            }
-
-            t = x & 0xFFFF; // 16 bits
-            if (t == 0) {
-                n += 16;
-                x >>= 16;
-            } else {
-                x = t;
-            }
-
-            t = x & 0xFF; // 8 bits
-            if (t == 0) {
-                n += 8;
-                x >>= 8;
-            } else {
-                x = t;
-            }
-
-            t = x & 0xF; // 4 bits
-            if (t == 0) {
-                n += 4;
-                x >>= 4;
-            } else {
-                x = t;
-            }
-
-            t = x & 0x3; // 2 bits
-            if (t == 0) {
-                n += 2;
-                x >>= 2;
-            } else {
-                x = t;
-            }
-
-            if ((x & 0x1) == 0) {
-                n += 1;
-            }
-        }
+        // z != 0 => ffs(z) in [0, 255] for 256-bit mask.
+        return (uint16(ffs(z)), true);
     }
 
     function _setUsed(uint16 slot) internal {
@@ -1064,8 +997,7 @@ contract Moloch {
         uint96 mb = type(uint96).max;
 
         for (uint256 m = occupied; m != 0; m &= (m - 1)) {
-            uint256 lsb = m & (~m + 1);
-            uint16 i = _ctz256(lsb);
+            uint16 i = uint16(ffs(m));
             uint96 b = seats[i].bal;
             if (b != 0 && b < mb) {
                 mb = b;
@@ -1075,6 +1007,38 @@ contract Moloch {
 
         minSlot = ms;
         minBal = (mb == type(uint96).max) ? 0 : mb;
+    }
+
+    function ffs(uint256 x) internal pure returns (uint256 r) {
+        assembly ("memory-safe") {
+            x := and(x, add(not(x), 1))
+            r := shl(
+                5,
+                shr(
+                    252,
+                    shl(
+                        shl(
+                            2,
+                            shr(
+                                250,
+                                mul(
+                                    x,
+                                    0xb6db6db6ddddddddd34d34d349249249210842108c6318c639ce739cffffffff
+                                )
+                            )
+                        ),
+                        0x8040405543005266443200005020610674053026020000107506200176117077
+                    )
+                )
+            )
+            r := or(
+                r,
+                byte(
+                    and(div(0xd76453e0, shr(r, x)), 0x1f),
+                    0x001f0d1e100c1d070f090b19131c1706010e11080a1a141802121b1503160405
+                )
+            )
+        }
     }
 
     function _mint6909(address to, uint256 id, uint256 amount) internal {
