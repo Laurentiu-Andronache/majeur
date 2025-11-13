@@ -1449,15 +1449,15 @@ contract MolochTest is Test {
         assertTrue(seats.length > 0);
     }
 
-    function test_RankOf() public {
+    function test_SeatOf() public {
         // Trigger badge minting
         vm.prank(alice);
         shares.transfer(bob, 1);
         vm.prank(bob);
         shares.transfer(alice, 1);
 
-        uint256 aliceRank = moloch.rankOf(alice);
-        uint256 bobRank = moloch.rankOf(bob);
+        uint256 aliceRank = moloch.seatOf(alice);
+        uint256 bobRank = moloch.seatOf(bob);
 
         // Both should have ranks if they're in top 256
         assertTrue(aliceRank > 0 || bobRank > 0);

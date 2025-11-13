@@ -11,6 +11,7 @@ contract Moloch {
     /* ERRORS */
     error NotOk();
     error TooEarly();
+    error LengthMismatch();
     error AlreadyExecuted();
     error Timelocked(uint64 untilWhen);
 
@@ -315,8 +316,8 @@ contract Moloch {
     }
 
     /// @dev Cast a vote for a proposal:
-    /// always uses past checkpoints at the proposal’s snapshot block (no current-state fallback):
-    ///      auto-opens the proposal on first vote (threshold uses current votes by design).
+    /// always uses past checkpoints at the proposal’s snapshot block (no current-state fallback),
+    /// auto-opens the proposal on first vote (threshold uses current votes by design):
     function castVote(uint256 id, uint8 support) public {
         if (executed[id]) revert AlreadyExecuted();
         if (support > 2) revert NotOk();
@@ -660,7 +661,7 @@ contract Moloch {
         bool active,
         bool isLoot
     ) public payable onlyDAO {
-        if (active) require(pricePerShare != 0, NotOk());
+        require(pricePerShare != 0, NotOk());
         sales[payToken] = Sale({
             pricePerShare: pricePerShare, cap: cap, minting: minting, active: active, isLoot: isLoot
         });
@@ -720,7 +721,6 @@ contract Moloch {
     }
 
     /* RAGEQUIT */
-    /* @todo - check if we need to move share delegation stuff on burn */
     function ragequit(address[] calldata tokens, uint256 sharesToBurn, uint256 lootToBurn)
         public
         nonReentrant
@@ -871,12 +871,7 @@ contract Moloch {
     uint16 minSlot; // 0..255
     uint96 minBal; // cutline
 
-    mapping(address => uint16) public topPos; // 1..256 if in top set, else 0
-
-    /// @dev Slot index 1..256 if in top set, else 0 (not strictly sorted by balance):
-    function rankOf(address a) public view returns (uint256) {
-        return topPos[a];
-    }
+    mapping(address => uint16) public seatOf; // 1..256 if in top set, else 0
 
     function getSeats() public view returns (Seat[] memory out) {
         uint256 m = occupied;
@@ -917,7 +912,7 @@ contract Moloch {
         require(bal256 <= type(uint96).max, Overflow());
         uint96 bal = uint96(bal256);
 
-        uint16 pos = topPos[a]; // 0 => not seated; else seat = pos-1
+        uint16 pos = seatOf[a]; // 0 => not seated; else seat = pos-1
 
         // 1) zero balance => drop seat if seated
         if (bal == 0) {
@@ -926,7 +921,7 @@ contract Moloch {
 
                 seats[slot] = Seat({holder: address(0), bal: 0});
                 _setFree(slot);
-                delete topPos[a];
+                delete seatOf[a];
 
                 badge.burnSeat(slot + 1);
 
@@ -956,7 +951,7 @@ contract Moloch {
             seats[freeSlot] = Seat({holder: a, bal: bal});
             _setUsed(freeSlot);
             unchecked {
-                topPos[a] = freeSlot + 1;
+                seatOf[a] = freeSlot + 1;
             }
             badge.mintSeat(a, freeSlot + 1);
 
@@ -972,12 +967,12 @@ contract Moloch {
             uint16 slot = minSlot;
             address evict = seats[slot].holder;
 
-            delete topPos[evict];
+            delete seatOf[evict];
             badge.burnSeat(slot + 1);
 
             seats[slot] = Seat({holder: a, bal: bal});
             unchecked {
-                topPos[a] = slot + 1;
+                seatOf[a] = slot + 1;
             }
 
             badge.mintSeat(a, slot + 1);
@@ -1722,12 +1717,10 @@ contract Shares {
         require(DAO == address(0), Unauthorized());
         DAO = payable(msg.sender);
 
-        require(to.length == amt.length, LengthMismatch());
-
         for (uint256 i; i != to.length; ++i) {
             _mint(to[i], amt[i]); // balances + totalSupply + TS checkpoint
             _autoSelfDelegate(to[i]); // default to self on first sight
-            _applyVotingDelta(to[i], int256(amt[i])); // route initial votes via split / primary
+            _applyVotingDelta(to[i], int256(amt[i])); // route initial
         }
     }
 
@@ -2313,8 +2306,7 @@ contract Badge {
     /* MAJEUR */
     address payable public DAO;
 
-    // tokenId (seat 1..256) => owner
-    mapping(uint256 => address) _ownerOf;
+    mapping(uint256 id => address) _ownerOf;
     mapping(address => uint256) public seatOf;
     mapping(address => uint256) public balanceOf;
 
@@ -2364,7 +2356,7 @@ contract Badge {
         uint256 balInTokens = bal / 1e18;
         uint256 ts = sh.totalSupply();
 
-        // seat string comes straight from tokenId; no rankOf() needed
+        // seat string comes straight from tokenId
         string memory addr = Display.shortAddr4(holder);
         string memory pct = Display.percent2(bal, ts);
         string memory seatStr = Display.toString(id);
@@ -2447,7 +2439,7 @@ contract Badge {
         revert SBT();
     }
 
-    // seat: 1..256
+    /// @dev seat: 1..256:
     function mintSeat(address to, uint16 seat) public payable onlyDAO {
         uint256 id = uint256(seat);
         require(seat >= 1 && seat <= 256, NotMinted());
@@ -2480,7 +2472,6 @@ struct Call {
 error Locked();
 error Overflow();
 error Unauthorized();
-error LengthMismatch();
 error TransferFailed();
 error ETHTransferFailed();
 error TransferFromFailed();
@@ -2887,7 +2878,7 @@ contract Summoner {
         emit NewDAO(msg.sender, dao);
     }
 
-    /// @dev Get dao array push count.
+    /// @dev Get dao array push count:
     function getDAOCount() public view returns (uint256) {
         return daos.length;
     }
