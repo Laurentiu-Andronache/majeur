@@ -1112,8 +1112,10 @@ contract Moloch {
         if (bytes(orgURI).length != 0) return orgURI;
 
         // cache dynamic bits
-        string memory orgName = bytes(_orgName).length != 0 ? _orgName : "UNNAMED DAO";
-        string memory orgSymbol = bytes(_orgSymbol).length != 0 ? _orgSymbol : "N/A";
+        string memory rawOrgName = _orgName;
+        string memory orgName =
+            bytes(rawOrgName).length != 0 ? Display.esc(rawOrgName) : "UNNAMED DAO";
+        string memory orgSymbol = bytes(_orgSymbol).length != 0 ? Display.esc(_orgSymbol) : "N/A";
         string memory orgShort = Display.shortAddr4(address(this)); // "0xAbCd...1234"
 
         // supplies
@@ -1273,7 +1275,9 @@ contract Moloch {
 
         // final JSON with embedded image
         return Display.jsonImage(
-            string.concat(bytes(_orgName).length != 0 ? _orgName : "DAO", " DUNA Covenant"),
+            string.concat(
+                bytes(rawOrgName).length != 0 ? rawOrgName : "UNNAMED DAO", " DUNA Covenant"
+            ),
             "Wyoming Decentralized Unincorporated Nonprofit Association operating charter and member agreement",
             svg
         );
@@ -1291,7 +1295,6 @@ contract Moloch {
         bool opened = snap != 0 || createdAt[id] != 0;
 
         bool looksLikePermit = !opened && !touchedTallies && totalSupply[id] != 0;
-
         if (looksLikePermit) return _permitCardURI(id);
 
         // ----- Proposal Card -----
@@ -1314,13 +1317,15 @@ contract Moloch {
             stateStr = "EXECUTED";
         }
 
+        string memory rawOrgName = _orgName;
         string memory svg = Display.svgCardBase();
+        string memory orgName = Display.esc(rawOrgName);
 
         // title
         svg = string.concat(
             svg,
             "<text x='210' y='55' class='garamond-bold' font-size='18' fill='#fff' text-anchor='middle' letter-spacing='3'>",
-            _orgName,
+            orgName,
             "</text>",
             "<text x='210' y='75' class='garamond' font-size='11' fill='#fff' text-anchor='middle' letter-spacing='2'>PROPOSAL</text>",
             "<line x1='40' y1='90' x2='380' y2='90' stroke='#fff' stroke-width='1'/>"
@@ -1386,7 +1391,7 @@ contract Moloch {
         );
 
         return Display.jsonImage(
-            string.concat(_orgName, " Proposal"), "Snapshot-weighted governance proposal", svg
+            string.concat(rawOrgName, " Proposal"), "Snapshot-weighted governance proposal", svg
         );
     }
 
@@ -1408,12 +1413,13 @@ contract Moloch {
         }
 
         string memory svg = Display.svgCardBase();
+        string memory orgName = Display.esc(_orgName);
 
         // title
         svg = string.concat(
             svg,
             "<text x='210' y='55' class='garamond-bold' font-size='18' fill='#fff' text-anchor='middle' letter-spacing='3'>",
-            _orgName,
+            orgName,
             "</text>",
             "<text x='210' y='75' class='garamond' font-size='11' fill='#fff' text-anchor='middle' letter-spacing='2'>VOTE RECEIPT</text>",
             "<line x1='40' y1='90' x2='380' y2='90' stroke='#fff' stroke-width='1'/>"
@@ -1528,12 +1534,13 @@ contract Moloch {
         usesStr = (supply == 0) ? "NONE" : Display.fmtComma(supply);
 
         string memory svg = Display.svgCardBase();
+        string memory orgName = Display.esc(_orgName);
 
         // title
         svg = string.concat(
             svg,
             "<text x='210' y='55' class='garamond-bold' font-size='18' fill='#fff' text-anchor='middle' letter-spacing='3'>",
-            _orgName,
+            orgName,
             "</text>",
             "<text x='210' y='75' class='garamond' font-size='11' fill='#fff' text-anchor='middle' letter-spacing='2'>PERMIT</text>",
             "<line x1='40' y1='90' x2='380' y2='90' stroke='#fff' stroke-width='1'/>"
@@ -2352,14 +2359,13 @@ contract Badge {
         string memory addr = Display.shortAddr4(holder);
         string memory pct = Display.percent2(bal, ts);
         string memory seatStr = Display.toString(id);
-
         string memory svg = Display.svgCardBase();
 
         // title
         svg = string.concat(
             svg,
             "<text x='210' y='55' class='garamond-bold' font-size='18' fill='#fff' text-anchor='middle' letter-spacing='3'>",
-            name(),
+            Display.esc(name()),
             "</text>",
             "<text x='210' y='75' class='garamond' font-size='11' fill='#fff' text-anchor='middle' letter-spacing='2'>MEMBER BADGE</text>",
             "<line x1='40' y1='90' x2='380' y2='90' stroke='#fff' stroke-width='1'/>"
@@ -2745,35 +2751,7 @@ library Display {
 
     /*──────────────────────  MINI HEX PRIMS  ─────────────────────*/
 
-    function toHexStringChecksummed(address a) internal pure returns (string memory result) {
-        result = toHexString(a);
-        assembly ("memory-safe") {
-            let mask := shl(6, div(not(0), 255))
-            let o := add(result, 0x22)
-            let hashed := and(keccak256(o, 40), mul(34, mask))
-            let t := shl(240, 136)
-            for { let i := 0 } 1 {} {
-                mstore(add(i, i), mul(t, byte(i, hashed)))
-                i := add(i, 1)
-                if eq(i, 20) { break }
-            }
-            mstore(o, xor(mload(o), shr(1, and(mload(0x00), and(mload(o), mask)))))
-            o := add(o, 0x20)
-            mstore(o, xor(mload(o), shr(1, and(mload(0x20), and(mload(o), mask)))))
-        }
-    }
-
-    function toHexString(address value) internal pure returns (string memory result) {
-        result = toHexStringNoPrefix(value);
-        assembly ("memory-safe") {
-            let n := add(mload(result), 2)
-            mstore(result, 0x3078)
-            result := sub(result, 2)
-            mstore(result, n)
-        }
-    }
-
-    function toHexStringNoPrefix(address value) internal pure returns (string memory result) {
+    function toHexStringChecksummed(address value) internal pure returns (string memory result) {
         assembly ("memory-safe") {
             result := mload(0x40)
             mstore(0x40, add(result, 0x80))
@@ -2791,6 +2769,21 @@ library Display {
                 i := add(i, 1)
                 if eq(i, 20) { break }
             }
+            mstore(result, 0x3078)
+            result := sub(result, 2)
+            mstore(result, 42)
+            let mask := shl(6, div(not(0), 255))
+            o := add(result, 0x22)
+            let hashed := and(keccak256(o, 40), mul(34, mask))
+            let t := shl(240, 136)
+            for { let i := 0 } 1 {} {
+                mstore(add(i, i), mul(t, byte(i, hashed)))
+                i := add(i, 1)
+                if eq(i, 20) { break }
+            }
+            mstore(o, xor(mload(o), shr(1, and(mload(0x00), and(mload(o), mask)))))
+            o := add(o, 0x20)
+            mstore(o, xor(mload(o), shr(1, and(mload(0x20), and(mload(o), mask)))))
         }
     }
 
@@ -2838,7 +2831,6 @@ contract Summoner {
     event NewDAO(address indexed summoner, Moloch indexed dao);
 
     Moloch[] public daos;
-
     Moloch immutable implementation;
 
     error DeploymentFailed();
