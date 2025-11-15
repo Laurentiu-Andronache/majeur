@@ -276,15 +276,18 @@ contract Moloch {
     function openProposal(uint256 id) public {
         if (snapshotBlock[id] != 0) return;
 
-        if (proposalThreshold != 0) {
-            require(shares.getVotes(msg.sender) >= proposalThreshold, Unauthorized());
+        Shares _shares = shares;
+
+        uint256 threshold = proposalThreshold;
+        if (threshold != 0) {
+            require(_shares.getVotes(msg.sender) >= threshold, Unauthorized());
         }
 
         uint48 snap = toUint48(block.number - 1);
         snapshotBlock[id] = snap;
         if (createdAt[id] == 0) createdAt[id] = uint64(block.timestamp);
 
-        uint256 supply = shares.getPastTotalSupply(snap);
+        uint256 supply = _shares.getPastTotalSupply(snap);
         if (supply == 0) revert TooEarly();
         supplySnapshot[id] = supply;
 
@@ -298,7 +301,8 @@ contract Moloch {
         {
             uint256 p = autoFutarchyParam;
             if (p != 0) {
-                address rt = (rewardToken == address(0)) ? address(1007) : rewardToken;
+                address rt = rewardToken;
+                rt = (rt == address(0) ? address(1007) : rt);
                 FutarchyConfig storage F = futarchy[id];
                 if (!F.enabled) {
                     F.enabled = true;
@@ -306,20 +310,21 @@ contract Moloch {
                     emit FutarchyOpened(id, rt);
                 }
                 if (F.rewardToken == rt) {
+                    Loot _loot = loot;
                     uint256 basis = supply;
-                    if (rt == address(1007) || rt == address(loot)) {
+                    if (rt == address(1007) || rt == address(_loot)) {
                         unchecked {
-                            basis += loot.totalSupply();
+                            basis += _loot.totalSupply();
                         }
                     }
                     uint256 amt = (p <= 10_000) ? mulDiv(basis, p, 10_000) : p;
                     uint256 cap = autoFutarchyCap;
                     if (cap != 0 && amt > cap) amt = cap;
-                    if (rt == address(shares)) {
-                        uint256 bal = shares.balanceOf(address(this));
+                    if (rt == address(_shares)) {
+                        uint256 bal = _shares.balanceOf(address(this));
                         if (amt > bal) amt = bal;
-                    } else if (rt == address(loot)) {
-                        uint256 bal = loot.balanceOf(address(this));
+                    } else if (rt == address(_loot)) {
+                        uint256 bal = _loot.balanceOf(address(this));
                         if (amt > bal) amt = bal;
                     }
                     if (amt != 0) {
@@ -355,10 +360,11 @@ contract Moloch {
         if (weight == 0) revert Unauthorized();
 
         // tally
+        Tally storage t = tallies[id];
         unchecked {
-            if (support == 1) tallies[id].forVotes += weight;
-            else if (support == 0) tallies[id].againstVotes += weight;
-            else tallies[id].abstainVotes += weight;
+            if (support == 1) t.forVotes += weight;
+            else if (support == 0) t.againstVotes += weight;
+            else t.abstainVotes += weight;
             hasVoted[id][msg.sender] = support + 1;
             voteWeight[id][msg.sender] = weight;
         }
@@ -375,28 +381,28 @@ contract Moloch {
     }
 
     function cancelVote(uint256 id) public {
-        if (state(id) != ProposalState.Active) revert NotOk();
-
-        uint8 hv = hasVoted[id][msg.sender];
-        if (hv == 0) revert NotOk(); // nothing to cancel
-        uint8 support = hv - 1;
-
-        uint96 weight = voteWeight[id][msg.sender];
-        if (weight == 0) revert Unauthorized();
-        uint256 rid = _receiptId(id, support);
-        _burn6909(msg.sender, rid, weight);
-
         unchecked {
+            if (state(id) != ProposalState.Active) revert NotOk();
+
+            uint8 hv = hasVoted[id][msg.sender];
+            if (hv == 0) revert NotOk(); // nothing to cancel
+            uint8 support = hv - 1;
+
+            uint96 weight = voteWeight[id][msg.sender];
+            if (weight == 0) revert Unauthorized();
+            uint256 rid = _receiptId(id, support);
+            _burn6909(msg.sender, rid, weight);
+
             Tally storage t = tallies[id];
             if (support == 1) t.forVotes -= weight;
             else if (support == 0) t.againstVotes -= weight;
             else t.abstainVotes -= weight;
+
+            delete hasVoted[id][msg.sender];
+            delete voteWeight[id][msg.sender];
+
+            emit VoteCancelled(id, msg.sender, support, weight);
         }
-
-        delete hasVoted[id][msg.sender];
-        delete voteWeight[id][msg.sender];
-
-        emit VoteCancelled(id, msg.sender, support, weight);
     }
 
     function cancelProposal(uint256 id) public {
@@ -415,8 +421,9 @@ contract Moloch {
 
     function state(uint256 id) public view returns (ProposalState) {
         if (executed[id]) return ProposalState.Executed;
-        if (createdAt[id] == 0) return ProposalState.Unopened;
 
+        uint64 t0 = createdAt[id];
+        if (t0 == 0) return ProposalState.Unopened;
         uint64 queued = queuedAt[id];
 
         // if already queued, TTL no longer applies
@@ -426,10 +433,7 @@ contract Moloch {
             if (delay != 0 && block.timestamp < queued + delay) return ProposalState.Queued;
         } else {
             uint64 ttl = proposalTTL;
-            if (ttl != 0) {
-                uint64 t0 = createdAt[id];
-                if (t0 != 0 && block.timestamp >= t0 + ttl) return ProposalState.Expired;
-            }
+            if (ttl != 0 && block.timestamp >= t0 + ttl) return ProposalState.Expired;
         }
 
         // evaluate gates
@@ -441,16 +445,18 @@ contract Moloch {
         uint256 againstVotes = t.againstVotes;
         uint256 abstainVotes = t.abstainVotes;
 
-        uint256 totalCast = forVotes + againstVotes + abstainVotes;
+        unchecked {
+            uint256 totalCast = forVotes + againstVotes + abstainVotes;
 
-        // absolute quorum
-        uint256 absQuorum = quorumAbsolute;
-        if (absQuorum != 0 && totalCast < absQuorum) return ProposalState.Active;
+            // absolute quorum
+            uint256 absQuorum = quorumAbsolute;
+            if (absQuorum != 0 && totalCast < absQuorum) return ProposalState.Active;
 
-        // dynamic quorum (BPS)
-        uint16 bps = quorumBps;
-        if (bps != 0 && totalCast < mulDiv(uint256(bps), ts, 10000)) {
-            return ProposalState.Active;
+            // dynamic quorum (BPS)
+            uint16 bps = quorumBps;
+            if (bps != 0 && totalCast < mulDiv(uint256(bps), ts, 10000)) {
+                return ProposalState.Active;
+            }
         }
 
         // absolute YES floor
@@ -593,21 +599,23 @@ contract Moloch {
     }
 
     function _finalizeFutarchy(uint256 id, FutarchyConfig storage F, uint8 winner) internal {
-        uint256 rid = _receiptId(id, winner);
-        uint256 winSupply = totalSupply[rid];
-        uint256 pool = F.pool;
-        uint256 ppu;
+        unchecked {
+            uint256 rid = _receiptId(id, winner);
+            uint256 winSupply = totalSupply[rid];
+            uint256 pool = F.pool;
+            uint256 ppu;
 
-        if (winSupply != 0 && pool != 0) {
-            F.finalWinningSupply = winSupply;
-            ppu = pool / winSupply;
-            F.payoutPerUnit = ppu;
+            if (winSupply != 0 && pool != 0) {
+                F.finalWinningSupply = winSupply;
+                ppu = pool / winSupply;
+                F.payoutPerUnit = ppu;
+            }
+
+            F.resolved = true;
+            F.winner = winner;
+
+            emit FutarchyResolved(id, winner, pool, winSupply, ppu);
         }
-
-        F.resolved = true;
-        F.winner = winner;
-
-        emit FutarchyResolved(id, winner, pool, winSupply, ppu);
     }
 
     /* PERMIT */
@@ -740,38 +748,40 @@ contract Moloch {
         public
         nonReentrant
     {
-        if (!ragequittable) revert NotOk();
-        require(tokens.length != 0, LengthMismatch());
-        if (sharesToBurn == 0 && lootToBurn == 0) revert NotOk();
+        unchecked {
+            if (!ragequittable) revert NotOk();
+            require(tokens.length != 0, LengthMismatch());
+            if (sharesToBurn == 0 && lootToBurn == 0) revert NotOk();
 
-        Shares _shares = shares;
-        Loot _loot = loot;
+            Shares _shares = shares;
+            Loot _loot = loot;
 
-        uint256 total = _shares.totalSupply() + _loot.totalSupply();
-        uint256 amt = sharesToBurn + lootToBurn;
+            uint256 total = _shares.totalSupply() + _loot.totalSupply();
+            uint256 amt = sharesToBurn + lootToBurn;
 
-        if (sharesToBurn != 0) _shares.burnFromMoloch(msg.sender, sharesToBurn);
-        if (lootToBurn != 0) _loot.burnFromMoloch(msg.sender, lootToBurn);
+            if (sharesToBurn != 0) _shares.burnFromMoloch(msg.sender, sharesToBurn);
+            if (lootToBurn != 0) _loot.burnFromMoloch(msg.sender, lootToBurn);
 
-        address prev;
-        address tk;
-        uint256 pool;
-        uint256 due;
-        for (uint256 i; i != tokens.length; ++i) {
-            tk = tokens[i];
-            require(tk != address(this), Unauthorized());
-            require(tk != address(1007), Unauthorized());
-            require(tk != address(shares), Unauthorized());
-            require(tk != address(loot), Unauthorized());
+            address prev;
+            address tk;
+            uint256 pool;
+            uint256 due;
+            for (uint256 i; i != tokens.length; ++i) {
+                tk = tokens[i];
+                require(tk != address(shares), Unauthorized());
+                require(tk != address(loot), Unauthorized());
+                require(tk != address(this), Unauthorized());
+                require(tk != address(1007), Unauthorized());
 
-            if (i != 0 && tk <= prev) revert NotOk();
-            prev = tk;
+                if (i != 0 && tk <= prev) revert NotOk();
+                prev = tk;
 
-            pool = tk == address(0) ? address(this).balance : balanceOfThis(tk);
-            due = mulDiv(pool, amt, total);
-            if (due == 0) continue;
+                pool = tk == address(0) ? address(this).balance : balanceOfThis(tk);
+                due = mulDiv(pool, amt, total);
+                if (due == 0) continue;
 
-            _payout(tk, msg.sender, due);
+                _payout(tk, msg.sender, due);
+            }
         }
     }
 
@@ -992,10 +1002,8 @@ contract Moloch {
 
     /* URI */
     function contractURI() public view returns (string memory) {
-        // if DAO set a custom URI, use that
         string memory orgURI = _orgURI;
         if (bytes(orgURI).length != 0) return orgURI;
-
         address _r = renderer;
         if (_r == address(0)) return "";
         return IMajeurRenderer(_r).daoContractURI(this);
