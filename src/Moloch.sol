@@ -283,19 +283,22 @@ contract Moloch {
             require(_shares.getVotes(msg.sender) >= threshold, Unauthorized());
         }
 
-        uint48 snap = toUint48(block.number - 1);
-        snapshotBlock[id] = snap;
-        if (createdAt[id] == 0) createdAt[id] = uint64(block.timestamp);
+        uint256 supply;
+        unchecked {
+            uint48 snap = toUint48(block.number - 1);
+            snapshotBlock[id] = snap;
+            if (createdAt[id] == 0) createdAt[id] = uint64(block.timestamp);
 
-        uint256 supply = _shares.getPastTotalSupply(snap);
-        if (supply == 0) revert TooEarly();
-        supplySnapshot[id] = supply;
+            supply = _shares.getPastTotalSupply(snap);
+            if (supply == 0) revert TooEarly();
+            supplySnapshot[id] = supply;
 
-        // ---- registry push ----
-        proposalIds.push(id);
-        proposerOf[id] = msg.sender;
+            // ---- registry push ----
+            proposalIds.push(id);
+            proposerOf[id] = msg.sender;
 
-        emit Opened(id, snap, supply);
+            emit Opened(id, snap, supply);
+        }
 
         // auto-futarchy earmark
         {
@@ -748,6 +751,7 @@ contract Moloch {
         public
         nonReentrant
     {
+        uint256 amt = sharesToBurn + lootToBurn;
         unchecked {
             if (!ragequittable) revert NotOk();
             require(tokens.length != 0, LengthMismatch());
@@ -757,8 +761,6 @@ contract Moloch {
             Loot _loot = loot;
 
             uint256 total = _shares.totalSupply() + _loot.totalSupply();
-            uint256 amt = sharesToBurn + lootToBurn;
-
             if (sharesToBurn != 0) _shares.burnFromMoloch(msg.sender, sharesToBurn);
             if (lootToBurn != 0) _loot.burnFromMoloch(msg.sender, lootToBurn);
 
@@ -1189,13 +1191,15 @@ contract Shares {
         bool add,
         uint256 amount
     ) internal {
-        uint256 len = ckpts.length;
-        uint256 oldVal = len == 0 ? 0 : ckpts[len - 1].votes;
-        uint256 newVal = add ? oldVal + amount : oldVal - amount;
-        if (oldVal == newVal) return;
+        unchecked {
+            uint256 len = ckpts.length;
+            uint256 oldVal = len == 0 ? 0 : ckpts[len - 1].votes;
+            uint256 newVal = add ? oldVal + amount : oldVal - amount;
+            if (oldVal == newVal) return;
 
-        _writeCheckpoint(ckpts, oldVal, newVal);
-        emit DelegateVotesChanged(delegate_, oldVal, newVal);
+            _writeCheckpoint(ckpts, oldVal, newVal);
+            emit DelegateVotesChanged(delegate_, oldVal, newVal);
+        }
     }
 
     function _checkUnlocked(address from, address to) internal view {
@@ -1214,8 +1218,10 @@ contract Shares {
     }
 
     function getVotes(address account) public view returns (uint256) {
-        uint256 n = _checkpoints[account].length;
-        return n == 0 ? 0 : _checkpoints[account][n - 1].votes;
+        unchecked {
+            uint256 n = _checkpoints[account].length;
+            return n == 0 ? 0 : _checkpoints[account][n - 1].votes;
+        }
     }
 
     function getPastVotes(address account, uint48 blockNumber) public view returns (uint256) {
@@ -1428,7 +1434,9 @@ contract Shares {
         // insert old delegates
         for (uint256 i; i != oldLen; ++i) {
             address d = oldD[i];
-            allD[allLen++] = d;
+            unchecked {
+                allD[allLen++] = d;
+            }
         }
 
         // insert new delegates if not already present
@@ -1442,7 +1450,9 @@ contract Shares {
                 }
             }
             if (!found) {
-                allD[allLen++] = d;
+                unchecked {
+                    allD[allLen++] = d;
+                }
             }
         }
 
@@ -1509,35 +1519,39 @@ contract Shares {
     }
 
     function _writeCheckpoint(Checkpoint[] storage ckpts, uint256 oldVal, uint256 newVal) internal {
-        if (oldVal == newVal) return;
+        unchecked {
+            if (oldVal == newVal) return;
 
-        uint48 blk = toUint48(block.number);
-        uint256 len = ckpts.length;
+            uint48 blk = toUint48(block.number);
+            uint256 len = ckpts.length;
 
-        if (len != 0) {
-            Checkpoint storage last = ckpts[len - 1];
+            if (len != 0) {
+                Checkpoint storage last = ckpts[len - 1];
 
-            // if we've already written this block, just update it
-            if (last.fromBlock == blk) {
-                last.votes = toUint96(newVal);
-                return;
+                // if we've already written this block, just update it
+                if (last.fromBlock == blk) {
+                    last.votes = toUint96(newVal);
+                    return;
+                }
+
+                // if the last checkpoint already has this value, skip pushing duplicate
+                if (last.votes == newVal) return;
             }
 
-            // if the last checkpoint already has this value, skip pushing duplicate
-            if (last.votes == newVal) return;
+            ckpts.push(Checkpoint({fromBlock: blk, votes: toUint96(newVal)}));
         }
-
-        ckpts.push(Checkpoint({fromBlock: blk, votes: toUint96(newVal)}));
     }
 
     function _writeTotalSupplyCheckpoint() internal {
-        Checkpoint[] storage ckpts = _totalSupplyCheckpoints;
-        uint256 len = ckpts.length;
+        unchecked {
+            Checkpoint[] storage ckpts = _totalSupplyCheckpoints;
+            uint256 len = ckpts.length;
 
-        uint256 oldVal = len == 0 ? 0 : ckpts[len - 1].votes;
-        uint256 newVal = totalSupply;
+            uint256 oldVal = len == 0 ? 0 : ckpts[len - 1].votes;
+            uint256 newVal = totalSupply;
 
-        _writeCheckpoint(ckpts, oldVal, newVal);
+            _writeCheckpoint(ckpts, oldVal, newVal);
+        }
     }
 
     function _checkpointsLookup(Checkpoint[] storage ckpts, uint48 blockNumber)
@@ -1545,31 +1559,33 @@ contract Shares {
         view
         returns (uint256)
     {
-        uint256 len = ckpts.length;
-        if (len == 0) return 0;
+        unchecked {
+            uint256 len = ckpts.length;
+            if (len == 0) return 0;
 
-        // most recent
-        Checkpoint storage last = ckpts[len - 1];
-        if (last.fromBlock <= blockNumber) {
-            return last.votes;
-        }
-
-        // before first
-        if (ckpts[0].fromBlock > blockNumber) {
-            return 0;
-        }
-
-        uint256 low = 0;
-        uint256 high = len - 1;
-        while (high > low) {
-            uint256 mid = (high + low + 1) / 2;
-            if (ckpts[mid].fromBlock <= blockNumber) {
-                low = mid;
-            } else {
-                high = mid - 1;
+            // most recent
+            Checkpoint storage last = ckpts[len - 1];
+            if (last.fromBlock <= blockNumber) {
+                return last.votes;
             }
+
+            // before first
+            if (ckpts[0].fromBlock > blockNumber) {
+                return 0;
+            }
+
+            uint256 low;
+            uint256 high = len - 1;
+            while (high > low) {
+                uint256 mid = (high + low + 1) / 2;
+                if (ckpts[mid].fromBlock <= blockNumber) {
+                    low = mid;
+                } else {
+                    high = mid - 1;
+                }
+            }
+            return ckpts[low].votes;
         }
-        return ckpts[low].votes;
     }
 
     /* ---------- tiny array helpers ---------- */
@@ -1774,110 +1790,111 @@ contract Badges {
     uint96 minBal; // cutline
 
     function getSeats() public view returns (Seat[] memory out) {
-        uint256 m = occupied;
-        uint256 s;
-        while (m != 0) {
-            m &= (m - 1);
-            unchecked {
+        unchecked {
+            uint256 m = occupied;
+            uint256 s;
+            while (m != 0) {
+                m &= (m - 1);
+
                 ++s;
             }
-        }
-
-        out = new Seat[](s);
-        m = occupied;
-        uint256 n;
-        while (m != 0) {
-            uint16 i = uint16(_ffs(m)); // 0..255, because m != 0
-            out[n++] = seats[i];
-            m &= (m - 1);
+            out = new Seat[](s);
+            m = occupied;
+            uint256 n;
+            while (m != 0) {
+                uint16 i = uint16(_ffs(m)); // 0..255, because m != 0
+                out[n++] = seats[i];
+                m &= (m - 1);
+            }
         }
     }
 
     /// @dev Called by DAO (Moloch) whenever a holder's share balance changes;
     /// Maintains a sticky top-256 of share holders and keeps badges in sync:
-    function onSharesChanged(address a) external payable onlyDAO {
-        Shares _shares = Moloch(DAO).shares();
+    function onSharesChanged(address a) public payable onlyDAO {
+        unchecked {
+            Shares _shares = Moloch(DAO).shares();
 
-        uint256 bal256 = _shares.balanceOf(a);
-        require(bal256 <= type(uint96).max, Overflow());
-        uint96 bal = uint96(bal256);
+            uint256 bal256 = _shares.balanceOf(a);
+            require(bal256 <= type(uint96).max, Overflow());
+            uint96 bal = uint96(bal256);
 
-        // seatOf maps holder -> tokenId (1..256), 0 if not seated
-        uint16 pos = uint16(seatOf[a]); // tokenId
+            // seatOf maps holder -> tokenId (1..256), 0 if not seated
+            uint16 pos = uint16(seatOf[a]); // tokenId
 
-        // 1) zero balance => drop seat if seated
-        if (bal == 0) {
+            // 1) zero balance => drop seat if seated
+            if (bal == 0) {
+                if (pos != 0) {
+                    uint16 slot = pos - 1;
+
+                    seats[slot] = Seat({holder: address(0), bal: 0});
+                    _setFree(slot);
+
+                    // burnSeat will clear seatOf[holder] and balanceOf[holder]
+                    burnSeat(pos); // pos == slot + 1
+
+                    if (slot == minSlot) _recomputeMin();
+                }
+                return;
+            }
+
+            // 2) already seated => update cached balance, keep seat (sticky)
             if (pos != 0) {
                 uint16 slot = pos - 1;
+                seats[slot].bal = bal;
 
-                seats[slot] = Seat({holder: address(0), bal: 0});
-                _setFree(slot);
-
-                // burnSeat will clear seatOf[holder] and balanceOf[holder]
-                burnSeat(pos); // pos == slot + 1
-
-                if (slot == minSlot) _recomputeMin();
-            }
-            return;
-        }
-
-        // 2) already seated => update cached balance, keep seat (sticky)
-        if (pos != 0) {
-            uint16 slot = pos - 1;
-            seats[slot].bal = bal;
-
-            if (slot == minSlot) {
-                if (bal > minBal) {
-                    _recomputeMin(); // old min grew; find new min
-                } else {
-                    minBal = bal; // still the min
+                if (slot == minSlot) {
+                    if (bal > minBal) {
+                        _recomputeMin(); // old min grew; find new min
+                    } else {
+                        minBal = bal; // still the min
+                    }
+                } else if (minBal == 0 || bal < minBal) {
+                    minSlot = slot; // new cutline
+                    minBal = bal;
                 }
-            } else if (minBal == 0 || bal < minBal) {
-                minSlot = slot; // new cutline
-                minBal = bal;
+                return;
             }
-            return;
-        }
 
-        // 3) not seated, non-zero balance => insert into free slot if any
-        (uint16 freeSlot, bool ok) = _firstFree();
-        if (ok) {
-            seats[freeSlot] = Seat({holder: a, bal: bal});
-            _setUsed(freeSlot);
+            // 3) not seated, non-zero balance => insert into free slot if any
+            (uint16 freeSlot, bool ok) = _firstFree();
+            if (ok) {
+                seats[freeSlot] = Seat({holder: a, bal: bal});
+                _setUsed(freeSlot);
 
-            // mintSeat sets seatOf[a] and balanceOf[a]
-            mintSeat(a, freeSlot + 1);
+                // mintSeat sets seatOf[a] and balanceOf[a]
+                mintSeat(a, freeSlot + 1);
 
-            if (minBal == 0 || bal < minBal) {
-                minSlot = freeSlot;
-                minBal = bal;
+                if (minBal == 0 || bal < minBal) {
+                    minSlot = freeSlot;
+                    minBal = bal;
+                }
+                return;
             }
-            return;
+
+            // 4) full => compare to cutline; evict min if strictly larger
+            if (bal > minBal) {
+                uint16 slot = minSlot;
+
+                // burn old holder's badge (clears seatOf[old] + balanceOf[old])
+                burnSeat(slot + 1);
+
+                // overwrite seat with newcomer
+                seats[slot] = Seat({holder: a, bal: bal});
+
+                // mint badge for newcomer at same seat index
+                mintSeat(a, slot + 1);
+
+                _recomputeMin(); // rare
+            }
+            // else: newcomer didn’t beat the cutline => do nothing (sticky)
         }
-
-        // 4) full => compare to cutline; evict min if strictly larger
-        if (bal > minBal) {
-            uint16 slot = minSlot;
-
-            // burn old holder's badge (clears seatOf[old] + balanceOf[old])
-            burnSeat(slot + 1);
-
-            // overwrite seat with newcomer
-            seats[slot] = Seat({holder: a, bal: bal});
-
-            // mint badge for newcomer at same seat index
-            mintSeat(a, slot + 1);
-
-            _recomputeMin(); // rare
-        }
-        // else: newcomer didn’t beat the cutline => do nothing (sticky)
     }
 
     /// @dev Returns (slot, ok) - ok=false means no free slot:
     function _firstFree() internal view returns (uint16 slot, bool ok) {
         uint256 z = ~occupied;
         if (z == 0) return (0, false); // full
-
         // z != 0 => _ffs(z) in [0, 255] for 256-bit mask
         return (uint16(_ffs(z)), true);
     }
@@ -1891,20 +1908,22 @@ contract Badges {
     }
 
     function _recomputeMin() internal {
-        uint16 ms = 0;
-        uint96 mb = type(uint96).max;
+        unchecked {
+            uint16 ms;
+            uint96 mb = type(uint96).max;
 
-        for (uint256 m = occupied; m != 0; m &= (m - 1)) {
-            uint16 i = uint16(_ffs(m));
-            uint96 b = seats[i].bal;
-            if (b != 0 && b < mb) {
-                mb = b;
-                ms = i;
+            for (uint256 m = occupied; m != 0; m &= (m - 1)) {
+                uint16 i = uint16(_ffs(m));
+                uint96 b = seats[i].bal;
+                if (b != 0 && b < mb) {
+                    mb = b;
+                    ms = i;
+                }
             }
-        }
 
-        minSlot = ms;
-        minBal = (mb == type(uint96).max) ? 0 : mb;
+            minSlot = ms;
+            minBal = (mb == type(uint96).max) ? 0 : mb;
+        }
     }
 
     function _ffs(uint256 x) internal pure returns (uint256 r) {
