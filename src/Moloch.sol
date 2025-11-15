@@ -74,6 +74,7 @@ contract Moloch {
 
     /// @dev hasVoted[id][voter] = 0 = not, 1 = FOR, 2 = AGAINST, 3 = ABSTAIN:
     mapping(uint256 id => mapping(address voter => uint8)) public hasVoted;
+    mapping(uint256 => mapping(address => uint96)) public voteWeight;
 
     enum ProposalState {
         Unopened,
@@ -359,6 +360,7 @@ contract Moloch {
             else if (support == 0) tallies[id].againstVotes += weight;
             else tallies[id].abstainVotes += weight;
             hasVoted[id][msg.sender] = support + 1;
+            voteWeight[id][msg.sender] = weight;
         }
 
         // mint ERC6909 receipt and tag
@@ -379,10 +381,9 @@ contract Moloch {
         if (hv == 0) revert NotOk(); // nothing to cancel
         uint8 support = hv - 1;
 
-        uint256 rid = _receiptId(id, support);
-        uint96 weight = uint96(balanceOf[msg.sender][rid]);
+        uint96 weight = voteWeight[id][msg.sender];
         if (weight == 0) revert Unauthorized();
-
+        uint256 rid = _receiptId(id, support);
         _burn6909(msg.sender, rid, weight);
 
         unchecked {
@@ -393,6 +394,7 @@ contract Moloch {
         }
 
         delete hasVoted[id][msg.sender];
+        delete voteWeight[id][msg.sender];
 
         emit VoteCancelled(id, msg.sender, support, weight);
     }

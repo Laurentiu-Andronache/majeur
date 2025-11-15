@@ -1,5 +1,5 @@
 # Moloch
-[Git Source](https://github.com/z0r0z/SAW/blob/58989be3b007e6ed4d89f25206c3132a7dc08ab6/src/Moloch.sol)
+[Git Source](https://github.com/z0r0z/SAW/blob/3aaae2221be0d7a4885d076dae92959c31b136eb/src/Moloch.sol)
 
 ERC-20 shares (delegatable/split) & Loot + ERC-6909 receipts + ERC-721 badges.
 Features: timelock, permits, futarchy, token sales, ragequit, SBT-gated chat.
@@ -206,6 +206,13 @@ hasVoted[id][voter] = 0 = not, 1 = FOR, 2 = AGAINST, 3 = ABSTAIN:
 
 ```solidity
 mapping(uint256 id => mapping(address voter => uint8)) public hasVoted
+```
+
+
+### voteWeight
+
+```solidity
+mapping(uint256 => mapping(address => uint96)) public voteWeight
 ```
 
 
