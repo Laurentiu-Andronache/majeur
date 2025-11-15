@@ -56,8 +56,9 @@ interface IMoloch {
     }
 }
 
+/// @title Renderer
+/// @notice Moloch (Majeur) URI SVG renderer singleton.
 contract Renderer {
-    /* URI-SVG */
     function daoContractURI(IMoloch dao) public view returns (string memory) {
         string memory rawOrgName = dao.name(0);
         string memory rawOrgSymbol = dao.symbol(0);
@@ -160,14 +161,12 @@ contract Renderer {
             svg,
             "<text x='210' y='345' class='c' text-anchor='middle'>By transacting with address ",
             orgShort,
-            ", you</text>",
-            "<text x='210' y='355' class='c' text-anchor='middle'>acknowledge this organization operates as a Decentralized</text>",
-            "<text x='210' y='365' class='c' text-anchor='middle'>Unincorporated Nonprofit Association under Wyoming law.</text>",
-            "<text x='210' y='385' class='c' text-anchor='middle'>Members agree to: (i) algorithmic governance via this smart contract,</text>",
-            "<text x='210' y='395' class='c' text-anchor='middle'>(ii) limited liability considerations per W.S. 17-32-107,</text>",
-            "<text x='210' y='405' class='c' text-anchor='middle'>(iii) dispute resolution through code-as-law principles,</text>",
-            "<text x='210' y='415' class='c' text-anchor='middle'>(iv) good faith participation in DAO governance,</text>",
-            "<text x='210' y='425' class='c' text-anchor='middle'>(v) adherence to applicable laws and self-help.</text>"
+            " you acknowledge this organization operates</text>",
+            "<text x='210' y='355' class='c' text-anchor='middle'>as a Wyoming Decentralized Unincorporated Nonprofit Association</text>",
+            "<text x='210' y='365' class='c' text-anchor='middle'>(W.S. 17-32-101 et seq.). Holding members covenant to:</text>",
+            "<text x='210' y='385' class='c' text-anchor='middle'>(i) defer to this smart contract for internal governance;</text>",
+            "<text x='210' y='395' class='c' text-anchor='middle'>(ii) use DAO procedures and designated arbitrators for disputes; (iii) help maintain or wind up this organization;</text>",
+            "<text x='210' y='405' class='c' text-anchor='middle'>(iv) participate in good faith; and (v) manage their own legal compliance and self-help.</text>"
         );
 
         // transfer and ragequit status
@@ -209,10 +208,7 @@ contract Renderer {
             svg,
             "<text x='210' y='",
             Display.toString(nextY + 20),
-            "' class='c' text-anchor='middle'>No warranty, express or implied. Members participate at</text>",
-            "<text x='210' y='",
-            Display.toString(nextY + 30),
-            "' class='c' text-anchor='middle'>own risk. Not legal, tax, or investment advice.</text>"
+            "' class='c' text-anchor='middle'>No warranty (express or implied); members participate at own risk; not legal, tax or investment advice.</text>"
         );
 
         // bottom seal
@@ -269,18 +265,10 @@ contract Renderer {
         }
 
         string memory rawOrgName = dao.name(0);
-        string memory svg = Display.svgCardBase();
         string memory orgName = Display.esc(rawOrgName);
 
         // title
-        svg = string.concat(
-            svg,
-            "<text x='210' y='55' class='gb' font-size='18' fill='#fff' text-anchor='middle' letter-spacing='3'>",
-            orgName,
-            "</text>",
-            "<text x='210' y='75' class='g' font-size='11' fill='#fff' text-anchor='middle' letter-spacing='2'>PROPOSAL</text>",
-            "<line x1='40' y1='90' x2='380' y2='90' stroke='#fff' stroke-width='1'/>"
-        );
+        string memory svg = _svgHeader(orgName, "PROPOSAL");
 
         // ASCII eye (minimalist)
         svg = string.concat(
@@ -363,18 +351,10 @@ contract Renderer {
             status = (F.winner == s) ? "REDEEMABLE" : "SEALED";
         }
 
-        string memory svg = Display.svgCardBase();
         string memory orgName = Display.esc(dao.name(0));
 
         // title
-        svg = string.concat(
-            svg,
-            "<text x='210' y='55' class='gb' font-size='18' fill='#fff' text-anchor='middle' letter-spacing='3'>",
-            orgName,
-            "</text>",
-            "<text x='210' y='75' class='g' font-size='11' fill='#fff' text-anchor='middle' letter-spacing='2'>VOTE RECEIPT</text>",
-            "<line x1='40' y1='90' x2='380' y2='90' stroke='#fff' stroke-width='1'/>"
-        );
+        string memory svg = _svgHeader(orgName, "VOTE RECEIPT");
 
         // ASCII symbol based on vote type
         if (s == 1) {
@@ -438,12 +418,22 @@ contract Renderer {
 
         // futarchy info (only if enabled)
         if (F.enabled) {
+            address rt = F.rewardToken;
+            address sharesToken = dao.shares();
+            string memory unit = " LOOT"; // default
+
+            if (rt == address(0)) {
+                unit = " ETH";
+            } else if (rt == sharesToken || rt == address(dao)) {
+                unit = " SHARES";
+            }
+
             svg = string.concat(
                 svg,
                 "<text x='60' y='428' class='g' font-size='10' fill='#aaa' letter-spacing='1'>Futarchy</text>",
                 "<text x='60' y='445' class='m' font-size='9' fill='#fff'>Pool ",
                 Display.fmtComma(F.pool / 1e18),
-                F.rewardToken == address(0) ? " ETH" : " shares",
+                unit,
                 "</text>"
             );
 
@@ -452,6 +442,7 @@ contract Renderer {
                     svg,
                     "<text x='60' y='458' class='m' font-size='9' fill='#fff'>Payout ",
                     Display.fmtComma(F.payoutPerUnit / 1e18),
+                    unit,
                     "/vote</text>"
                 );
             }
@@ -475,23 +466,13 @@ contract Renderer {
     }
 
     function _permitCardURI(IMoloch dao, uint256 id) internal view returns (string memory) {
-        string memory usesStr;
         uint256 supply = dao.totalSupply(id);
+        string memory usesStr = supply == 0 ? "NONE" : Display.fmtComma(supply);
 
-        usesStr = (supply == 0) ? "NONE" : Display.fmtComma(supply);
-
-        string memory svg = Display.svgCardBase();
         string memory orgName = Display.esc(dao.name(0));
 
         // title
-        svg = string.concat(
-            svg,
-            "<text x='210' y='55' class='gb' font-size='18' fill='#fff' text-anchor='middle' letter-spacing='3'>",
-            orgName,
-            "</text>",
-            "<text x='210' y='75' class='g' font-size='11' fill='#fff' text-anchor='middle' letter-spacing='2'>PERMIT</text>",
-            "<line x1='40' y1='90' x2='380' y2='90' stroke='#fff' stroke-width='1'/>"
-        );
+        string memory svg = _svgHeader(orgName, "PERMIT");
 
         // ASCII key
         svg = string.concat(
@@ -546,17 +527,9 @@ contract Renderer {
         string memory addr = Display.shortAddr4(holder);
         string memory pct = Display.percent2(bal, ts);
         string memory seatStr = Display.toString(seatId);
-        string memory svg = Display.svgCardBase();
 
         // title
-        svg = string.concat(
-            svg,
-            "<text x='210' y='55' class='gb' font-size='18' fill='#fff' text-anchor='middle' letter-spacing='3'>",
-            Display.esc(dao.name(0)),
-            "</text>",
-            "<text x='210' y='75' class='g' font-size='11' fill='#fff' text-anchor='middle' letter-spacing='2'>MEMBER BADGE</text>",
-            "<line x1='40' y1='90' x2='380' y2='90' stroke='#fff' stroke-width='1'/>"
-        );
+        string memory svg = _svgHeader(Display.esc(dao.name(0)), "MEMBER BADGE");
 
         // ASCII crown
         svg = string.concat(
@@ -619,6 +592,23 @@ contract Renderer {
         );
 
         return Display.jsonImage("Badges", "Top-256 holder badge (SBT)", svg);
+    }
+
+    function _svgHeader(string memory orgNameEsc, string memory subtitle)
+        internal
+        pure
+        returns (string memory svg)
+    {
+        svg = string.concat(
+            Display.svgCardBase(),
+            "<text x='210' y='55' class='gb' font-size='18' fill='#fff' text-anchor='middle' letter-spacing='3'>",
+            orgNameEsc,
+            "</text>",
+            "<text x='210' y='75' class='g' font-size='11' fill='#fff' text-anchor='middle' letter-spacing='2'>",
+            subtitle,
+            "</text>",
+            "<line x1='40' y1='90' x2='380' y2='90' stroke='#fff' stroke-width='1'/>"
+        );
     }
 }
 

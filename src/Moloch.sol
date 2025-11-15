@@ -170,7 +170,7 @@ contract Moloch {
 
     struct FutarchyConfig {
         bool enabled; // futarchy pot exists for this proposal
-        address rewardToken; // 0 = ETH, this = minted shares, shares = existing share tokens
+        address rewardToken; // 0 = ETH, this = minted shares, 1007 = minted loot, shares/loot = local
         uint256 pool; // funded amount (ETH or share units)
         bool resolved; // set on resolution
         uint8 winner; // 1=YES (For), 0=NO (Against)
@@ -296,7 +296,7 @@ contract Moloch {
         {
             uint256 p = autoFutarchyParam;
             if (p != 0) {
-                address rt = (rewardToken == address(0)) ? address(this) : rewardToken;
+                address rt = (rewardToken == address(0)) ? address(1007) : rewardToken;
                 FutarchyConfig storage F = futarchy[id];
                 if (!F.enabled) {
                     F.enabled = true;
@@ -304,11 +304,20 @@ contract Moloch {
                     emit FutarchyOpened(id, rt);
                 }
                 if (F.rewardToken == rt) {
-                    uint256 amt = (p <= 10_000) ? mulDiv(supply, p, 10_000) : p;
+                    uint256 basis = supply;
+                    if (rt == address(1007) || rt == address(loot)) {
+                        unchecked {
+                            basis += loot.totalSupply();
+                        }
+                    }
+                    uint256 amt = (p <= 10_000) ? mulDiv(basis, p, 10_000) : p;
                     uint256 cap = autoFutarchyCap;
                     if (cap != 0 && amt > cap) amt = cap;
                     if (rt == address(shares)) {
                         uint256 bal = shares.balanceOf(address(this));
+                        if (amt > bal) amt = bal;
+                    } else if (rt == address(loot)) {
+                        uint256 bal = loot.balanceOf(address(this));
                         if (amt > bal) amt = bal;
                     }
                     if (amt != 0) {
@@ -500,7 +509,10 @@ contract Moloch {
      */
     function fundFutarchy(uint256 id, address token, uint256 amount) public payable nonReentrant {
         if (amount == 0) revert NotOk();
-        if (token != address(0) && token != address(this) && token != address(shares)) {
+        if (
+            token != address(0) && token != address(this) && token != address(1007)
+                && token != address(shares) && token != address(loot)
+        ) {
             revert Unauthorized();
         }
 
@@ -526,7 +538,7 @@ contract Moloch {
         // pull funds according to the authoritative rt
         if (rt == address(0)) {
             if (msg.value != amount) revert NotOk();
-        } else if (rt == address(this)) {
+        } else if (rt == address(this) || rt == address(1007)) {
             if (msg.value != 0) revert NotOk();
             if (msg.sender != address(this)) revert Unauthorized();
         } else {
@@ -745,7 +757,10 @@ contract Moloch {
         for (uint256 i; i != tokens.length; ++i) {
             tk = tokens[i];
             require(tk != address(this), Unauthorized());
+            require(tk != address(1007), Unauthorized());
             require(tk != address(shares), Unauthorized());
+            require(tk != address(loot), Unauthorized());
+
             if (i != 0 && tk <= prev) revert NotOk();
             prev = tk;
 
@@ -825,12 +840,11 @@ contract Moloch {
     }
 
     /// @dev Default reward token for futarchy pools:
-    /// rewardToken: 0 = ETH, address(this) = minted shares, address(shares) = treasury shares,
-    /// auto-earmark always uses minted shares if rewardToken is ETH; manual fundFutarchy can still use ETH:
     function setFutarchyRewardToken(address _rewardToken) public payable onlyDAO {
         if (
             _rewardToken != address(0) && _rewardToken != address(this)
-                && _rewardToken != address(shares)
+                && _rewardToken != address(1007) && _rewardToken != address(shares)
+                && _rewardToken != address(loot)
         ) revert NotOk();
         rewardToken = _rewardToken;
     }
@@ -955,6 +969,8 @@ contract Moloch {
             safeTransferETH(to, amount);
         } else if (token == address(this)) {
             shares.mintFromMoloch(to, amount);
+        } else if (token == address(1007)) {
+            loot.mintFromMoloch(to, amount);
         } else {
             safeTransfer(token, to, amount);
         }

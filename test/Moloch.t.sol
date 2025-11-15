@@ -825,7 +825,7 @@ contract MolochTest is Test {
 
         (bool enabled, address rewardToken, uint256 pool,,,,) = moloch.futarchy(id);
         assertTrue(enabled);
-        assertEq(rewardToken, address(moloch)); // Uses address(this) which is moloch when default is ETH
+        assertEq(rewardToken, address(1007)); // Uses address(1007) which is loot when default is ETH
         assertEq(pool, 10e18); // 10% of 100e18 supply
     }
 
