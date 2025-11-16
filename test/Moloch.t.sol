@@ -704,51 +704,101 @@ contract MolochTest is Test {
 
     function test_FutarchyBasic() public {
         bytes memory data = abi.encodeWithSelector(Target.setValue.selector, 333);
+
         uint256 id = moloch.proposalId(0, address(target), 0, data, bytes32(0));
 
-        // Fund futarchy pool with ETH
+        // -------------------------
+        // FUND FUTARCHY POOL
+        // -------------------------
+
         vm.prank(alice);
         moloch.fundFutarchy{value: 5 ether}(id, address(0), 5 ether);
 
-        (bool enabled, address rewardToken, uint256 pool, bool resolved, uint8 winner,,) =
-            moloch.futarchy(id);
+        (
+            bool enabled,
+            address rewardToken,
+            uint256 pool,
+            bool resolved,
+            uint8 winner,
+            uint256 finalWinningSupply,
+            uint256 payoutPerUnit
+        ) = moloch.futarchy(id);
+
         assertTrue(enabled);
-        assertEq(rewardToken, address(0)); // ETH
+        assertEq(rewardToken, address(0));
         assertEq(pool, 5 ether);
         assertFalse(resolved);
 
-        // Vote YES and NO
+        // -------------------------
+        // VOTING
+        // -------------------------
+
         vm.prank(alice);
         moloch.castVote(id, 1); // YES
 
         vm.prank(bob);
         moloch.castVote(id, 0); // NO
 
-        // Execute (YES wins)
+        // -------------------------
+        // EXECUTE (YES WINS)
+        // -------------------------
+
         vm.prank(alice);
         moloch.executeByVotes(0, address(target), 0, data, bytes32(0));
 
-        // Check futarchy resolved
-        (enabled, rewardToken, pool, resolved, winner,,) = moloch.futarchy(id);
+        (enabled, rewardToken, pool, resolved, winner, finalWinningSupply, payoutPerUnit) =
+            moloch.futarchy(id);
+
         assertTrue(resolved);
-        assertEq(winner, 1); // YES won
+        assertEq(winner, 1);
 
-        // The payout is 0 because of integer division in the contract
-        // 5 ether / 60e18 shares = 0 (since 5e18 / 60e18 = 0 in integer math)
-        // This is actually correct behavior - the contract uses integer division
+        // -------------------------
+        // RECEIPT ID + BALANCE
+        // -------------------------
 
-        uint256 receiptId = uint256(keccak256(abi.encodePacked("Moloch:receipt", id, uint8(1))));
+        uint8 yesSupport = 1;
+        uint256 receiptId = uint256(keccak256(abi.encodePacked("Moloch:receipt", id, yesSupport)));
+
         uint256 aliceReceiptBalance = moloch.balanceOf(alice, receiptId);
 
+        // Must match total winning supply
+        assertEq(finalWinningSupply, moloch.totalSupply(receiptId));
+
         uint256 aliceBalanceBefore = alice.balance;
+
+        // -------------------------
+        // CASH OUT
+        // -------------------------
 
         vm.prank(alice);
         uint256 payout = moloch.cashOutFutarchy(id, aliceReceiptBalance);
 
+        //
+        // IMPORTANT:
+        // receiptBalance and payoutPerUnit are both 18-decimals.
+        //
+        // payout = (amount * ppu) / 1e18
+        //
+        // This exactly matches the contract’s scaling.
+        //
+        uint256 expectedPayout = (aliceReceiptBalance * payoutPerUnit) / 1e18;
+
+        // -------------------------
+        // ASSERTIONS
+        // -------------------------
+
+        assertEq(payout, expectedPayout);
         assertEq(alice.balance, aliceBalanceBefore + payout);
+
+        // Receipt must be burned
         assertEq(moloch.balanceOf(alice, receiptId), 0);
-        // Payout is 0 due to integer division (5e18 / 60e18 = 0)
-        assertEq(payout, 0);
+
+        // Safety invariants
+        assertLe(expectedPayout, pool);
+        if (finalWinningSupply > 0) {
+            // leftover dust must be < 1 "unit"
+            assertLt(pool - expectedPayout, finalWinningSupply);
+        }
     }
 
     function test_FutarchyNo() public {

@@ -349,11 +349,13 @@ contract Moloch {
         // auto-open on first vote if unopened
         if (createdAt[id] == 0) openProposal(id);
 
+        uint64 t0 = createdAt[id];
+        uint64 ttl = proposalTTL;
+
         // expiry gating
-        if (proposalTTL != 0) {
-            uint64 t0 = createdAt[id];
+        if (ttl != 0) {
             if (t0 == 0) revert NotOk();
-            if (block.timestamp >= t0 + proposalTTL) revert Expired();
+            if (block.timestamp >= t0 + ttl) revert Expired();
         }
 
         if (hasVoted[id][msg.sender] != 0) revert AlreadyVoted();
@@ -361,7 +363,7 @@ contract Moloch {
         FutarchyConfig storage F = futarchy[id];
         if (F.enabled && F.resolved) revert Unauthorized();
 
-        uint48 snap = snapshotBlock[id];
+        uint48 snap = snapshotBlock[id]; // cache snapshot
         uint96 weight = uint96(shares.getPastVotes(msg.sender, snap));
         if (weight == 0) revert Unauthorized();
 
@@ -371,6 +373,7 @@ contract Moloch {
             if (support == 1) t.forVotes += weight;
             else if (support == 0) t.againstVotes += weight;
             else t.abstainVotes += weight;
+
             hasVoted[id][msg.sender] = support + 1;
             voteWeight[id][msg.sender] = weight;
         }
@@ -420,8 +423,8 @@ contract Moloch {
         if ((t.forVotes | t.againstVotes | t.abstainVotes) != 0) revert NotOk();
 
         FutarchyConfig memory F = futarchy[id];
-        if (F.enabled && F.pool != 0) revert NotOk(); // don’t strand pot
-        executed[id] = true; // tombstone the intent id
+        if (F.enabled && F.pool != 0) revert NotOk();
+        executed[id] = true; // tombstone intent id
         emit ProposalCancelled(id, msg.sender);
     }
 
@@ -588,7 +591,7 @@ contract Moloch {
 
         _burn6909(msg.sender, rid, amount);
 
-        payout = amount * F.payoutPerUnit;
+        payout = mulDiv(amount, F.payoutPerUnit, 1e18);
         if (payout == 0) {
             emit FutarchyClaimed(id, msg.sender, amount, 0);
             return 0;
@@ -610,10 +613,9 @@ contract Moloch {
             uint256 winSupply = totalSupply[rid];
             uint256 pool = F.pool;
             uint256 ppu;
-
             if (winSupply != 0 && pool != 0) {
                 F.finalWinningSupply = winSupply;
-                ppu = pool / winSupply;
+                ppu = mulDiv(pool, 1e18, winSupply); // scaled by 1e18
                 F.payoutPerUnit = ppu;
             }
 
@@ -1222,8 +1224,9 @@ contract Shares {
 
     function getVotes(address account) public view returns (uint256) {
         unchecked {
-            uint256 n = _checkpoints[account].length;
-            return n == 0 ? 0 : _checkpoints[account][n - 1].votes;
+            Checkpoint[] storage ckpts = _checkpoints[account];
+            uint256 n = ckpts.length;
+            return n == 0 ? 0 : ckpts[n - 1].votes;
         }
     }
 
@@ -1426,61 +1429,38 @@ contract Shares {
         // new distribution after the caller updated _splits / _delegates
         (address[] memory newD, uint32[] memory newB) = _currentDistribution(holder);
 
-        // build a union of delegates that appear in either old or new
         uint256 oldLen = oldD.length;
         uint256 newLen = newD.length;
 
-        // worst case union size = oldLen + newLen
-        address[] memory allD = new address[](oldLen + newLen);
-        uint256 allLen;
-
-        // insert old delegates
-        for (uint256 i; i != oldLen; ++i) {
-            address d = oldD[i];
-            unchecked {
-                allD[allLen++] = d;
-            }
-        }
-
-        // insert new delegates if not already present
-        for (uint256 j; j != newLen; ++j) {
-            address d = newD[j];
-            bool found;
-            for (uint256 k; k != allLen; ++k) {
-                if (allD[k] == d) {
-                    found = true;
+        // if distributions are identical (same delegates + weights), nothing to do
+        if (oldLen == newLen) {
+            bool same = true;
+            for (uint256 i; i < oldLen; ++i) {
+                if (oldD[i] != newD[i] || oldB[i] != newB[i]) {
+                    same = false;
                     break;
                 }
             }
-            if (!found) {
-                unchecked {
-                    allD[allLen++] = d;
-                }
-            }
+            if (same) return;
         }
 
         // compute old & new target allocations for this holder
         uint256[] memory oldA = _targetAlloc(bal, oldD, oldB);
         uint256[] memory newA = _targetAlloc(bal, newD, newB);
 
-        // for each delegate in the union, compute oldAmt/newAmt
-        for (uint256 i; i != allLen; ++i) {
-            address d = allD[i];
-            uint256 oldAmt;
+        // 1) handle all delegates that existed in the old distribution:
+        //    - if also in new, move delta
+        //    - if not in new, move full oldAmt -> 0
+        for (uint256 i; i < oldLen; ++i) {
+            address d = oldD[i];
+            uint256 oldAmt = oldA[i];
             uint256 newAmt;
 
-            // find in oldD
-            for (uint256 u; u != oldLen; ++u) {
-                if (oldD[u] == d) {
-                    oldAmt = oldA[u];
-                    break;
-                }
-            }
-
-            // find in newD
-            for (uint256 v; v != newLen; ++v) {
-                if (newD[v] == d) {
-                    newAmt = newA[v];
+            // find matching delegate in newD (if any)
+            for (uint256 j; j < newLen; ++j) {
+                if (newD[j] == d) {
+                    newAmt = newA[j];
+                    newD[j] = address(0);
                     break;
                 }
             }
@@ -1489,6 +1469,18 @@ contract Shares {
                 _moveVotingPower(address(0), d, newAmt - oldAmt);
             } else if (oldAmt > newAmt) {
                 _moveVotingPower(d, address(0), oldAmt - newAmt);
+            }
+        }
+
+        // 2) any delegates still left in newD (non-zero) are new-only;
+        //    they had oldAmt = 0, so just add their newAmt
+        for (uint256 j; j < newLen; ++j) {
+            address d = newD[j];
+            if (d == address(0)) continue; // already handled above
+
+            uint256 newAmt = newA[j];
+            if (newAmt != 0) {
+                _moveVotingPower(address(0), d, newAmt);
             }
         }
     }
