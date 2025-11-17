@@ -59,6 +59,8 @@ interface IMoloch {
 /// @title Renderer
 /// @notice Moloch (Majeur) URI SVG renderer singleton.
 contract Renderer {
+    constructor() payable {}
+
     function daoContractURI(IMoloch dao) public view returns (string memory) {
         string memory rawOrgName = dao.name(0);
         string memory rawOrgSymbol = dao.symbol(0);

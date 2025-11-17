@@ -8,6 +8,12 @@
 
 **A minimally maximalized DAO governance framework** — Wyoming DUNA-shielded, futarchy-enabled, lightweight membership orgs with weighted delegation and soulbound shareholder council badges.
 
+## Deployments
+
+Summoner: [`0x0000000000330B8df9E3bc5E553074DA58eE9138`](https://contractscan.xyz/contract/0x0000000000330B8df9E3bc5E553074DA58eE9138)
+
+Renderer: [`0x00000000005556244d291c4C7187cDF3702A0019`](https://contractscan.xyz/contract/0x00000000005556244d291c4C7187cDF3702A0019)
+
 ## TL;DR
 
 Moloch (Majeur) is a DAO framework where:
@@ -29,7 +35,58 @@ Moloch (Majeur) is a comprehensive DAO framework that combines:
 
 ## Architecture
 
-<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPSc3MDAnIGhlaWdodD0nNDAwJyB2aWV3Qm94PScwIDAgNzAwIDQwMCc+CiAgPHJlY3Qgd2lkdGg9JzcwMCcgaGVpZ2h0PSc0MDAnIGZpbGw9JyMwMDAnLz4KICA8c3R5bGU+CiAgICAubXtmb250LWZhbWlseTptb25vc3BhY2U7Zm9udC1zaXplOjEycHg7ZmlsbDojZmZmO30KICAgIC5sYWJlbHtmb250LWZhbWlseTptb25vc3BhY2U7Zm9udC1zaXplOjEwcHg7ZmlsbDojODg4O30KICA8L3N0eWxlPgogIAogIDwhLS0gVGl0bGUgLS0+CiAgPHRleHQgeD0nMzUwJyB5PSczMCcgY2xhc3M9J20nIHRleHQtYW5jaG9yPSdtaWRkbGUnPk1BSkVVUiBBUkNISVRFQ1RVUkU8L3RleHQ+CiAgCiAgPCEtLSBNb2xvY2ggKE1haW4pIC0tPgogIDxyZWN0IHg9JzI1MCcgeT0nNjAnIHdpZHRoPScyMDAnIGhlaWdodD0nODAnIGZpbGw9J25vbmUnIHN0cm9rZT0nI2ZmZicgc3Ryb2tlLXdpZHRoPScyJy8+CiAgPHRleHQgeD0nMzUwJyB5PSc5MCcgY2xhc3M9J20nIHRleHQtYW5jaG9yPSdtaWRkbGUnPi0tLS0tLS0tLS0tLS0tLS0tLS0tPC90ZXh0PgogIDx0ZXh0IHg9JzM1MCcgeT0nMTA1JyBjbGFzcz0nbScgdGV4dC1hbmNob3I9J21pZGRsZSc+fCAgICAgTU9MT0NIICAgICB8PC90ZXh0PgogIDx0ZXh0IHg9JzM1MCcgeT0nMTIwJyBjbGFzcz0nbScgdGV4dC1hbmNob3I9J21pZGRsZSc+fCAgKE1haW4gREFPKSAgIHw8L3RleHQ+CiAgPHRleHQgeD0nMzUwJyB5PScxMzUnIGNsYXNzPSdtJyB0ZXh0LWFuY2hvcj0nbWlkZGxlJz4tLS0tLS0tLS0tLS0tLS0tLS0tLTwvdGV4dD4KICAKICA8IS0tIENvbm5lY3Rpb24gbGluZXMgLS0+CiAgPGxpbmUgeDE9JzM1MCcgeTE9JzE0MCcgeDI9JzM1MCcgeTI9JzE4MCcgc3Ryb2tlPScjZmZmJyBzdHJva2Utd2lkdGg9JzEnLz4KICA8bGluZSB4MT0nMzUwJyB5MT0nMTgwJyB4Mj0nMTUwJyB5Mj0nMTgwJyBzdHJva2U9JyNmZmYnIHN0cm9rZS13aWR0aD0nMScvPgogIDxsaW5lIHgxPSczNTAnIHkxPScxODAnIHgyPSc1NTAnIHkyPScxODAnIHN0cm9rZT0nI2ZmZicgc3Ryb2tlLXdpZHRoPScxJy8+CiAgPGxpbmUgeDE9JzE1MCcgeTE9JzE4MCcgeDI9JzE1MCcgeTI9JzIxMCcgc3Ryb2tlPScjZmZmJyBzdHJva2Utd2lkdGg9JzEnLz4KICA8bGluZSB4MT0nMzUwJyB5MT0nMTgwJyB4Mj0nMzUwJyB5Mj0nMjEwJyBzdHJva2U9JyNmZmYnIHN0cm9rZS13aWR0aD0nMScvPgogIDxsaW5lIHgxPSc1NTAnIHkxPScxODAnIHgyPSc1NTAnIHkyPScyMTAnIHN0cm9rZT0nI2ZmZicgc3Ryb2tlLXdpZHRoPScxJy8+CiAgCiAgPCEtLSBTaGFyZXMgLS0+CiAgPHJlY3QgeD0nNTAnIHk9JzIxMCcgd2lkdGg9JzIwMCcgaGVpZ2h0PSc2MCcgZmlsbD0nbm9uZScgc3Ryb2tlPScjZmZmJyBzdHJva2Utd2lkdGg9JzEnLz4KICA8dGV4dCB4PScxNTAnIHk9JzIzNScgY2xhc3M9J20nIHRleHQtYW5jaG9yPSdtaWRkbGUnPnwgU0hBUkVTIHw8L3RleHQ+CiAgPHRleHQgeD0nMTUwJyB5PScyNTAnIGNsYXNzPSdsYWJlbCcgdGV4dC1hbmNob3I9J21pZGRsZSc+RVJDMjAgKyBWb3RlczwvdGV4dD4KICAKICA8IS0tIExvb3QgLS0+CiAgPHJlY3QgeD0nMjUwJyB5PScyMTAnIHdpZHRoPScyMDAnIGhlaWdodD0nNjAnIGZpbGw9J25vbmUnIHN0cm9rZT0nI2ZmZicgc3Ryb2tlLXdpZHRoPScxJy8+CiAgPHRleHQgeD0nMzUwJyB5PScyMzUnIGNsYXNzPSdtJyB0ZXh0LWFuY2hvcj0nbWlkZGxlJz58ICBMT09UICB8PC90ZXh0PgogIDx0ZXh0IHg9JzM1MCcgeT0nMjUwJyBjbGFzcz0nbGFiZWwnIHRleHQtYW5jaG9yPSdtaWRkbGUnPkVSQzIwIE9ubHk8L3RleHQ+CiAgCiAgPCEtLSBCYWRnZXMgLS0+CiAgPHJlY3QgeD0nNDUwJyB5PScyMTAnIHdpZHRoPScyMDAnIGhlaWdodD0nNjAnIGZpbGw9J25vbmUnIHN0cm9rZT0nI2ZmZicgc3Ryb2tlLXdpZHRoPScxJy8+CiAgPHRleHQgeD0nNTUwJyB5PScyMzUnIGNsYXNzPSdtJyB0ZXh0LWFuY2hvcj0nbWlkZGxlJz58IEJBR0VTIHw8L3RleHQ+CiAgPHRleHQgeD0nNTUwJyB5PScyNTAnIGNsYXNzPSdsYWJlbCcgdGV4dC1hbmNob3I9J21pZGRsZSc+RVJDNzIxIFNCVDwvdGV4dD4KICAKICA8IS0tIEJvdHRvbSBsYXllciAtLT4KICA8bGluZSB4MT0nMzUwJyB5MT0nMTQwJyB4Mj0nMTAwJyB5Mj0nMzIwJyBzdHJva2U9JyM0NDQnIHN0cm9rZS13aWR0aD0nMScgc3Ryb2tlLWRhc2hhcnJheT0nMiwzJy8+CiAgPGxpbmUgeDE9JzM1MCcgeTE9JzE0MCcgeDI9JzYwMCcgeTI9JzMyMCcgc3Ryb2tlPScjNDQ0JyBzdHJva2Utd2lkdGg9JzEnIHN0cm9rZS1kYXNoYXJyYXk9JzIsMycvPgogIAogIDwhLS0gU3VtbW9uZXIgLS0+CiAgPHJlY3QgeD0nNTAnIHk9JzMyMCcgd2lkdGg9JzEwMCcgaGVpZ2h0PSc0MCcgZmlsbD0nbm9uZScgc3Ryb2tlPScjNDQ0JyBzdHJva2Utd2lkdGg9JzEnLz4KICA8dGV4dCB4PScxMDAnIHk9JzM0NScgY2xhc3M9J2xhYmVsJyB0ZXh0LWFuY2hvcj0nbWlkZGxlJz5TVU1NT05FUjwvdGV4dD4KICAKICA8IS0tIFJlbmRlcmVyIC0tPgogIDxyZWN0IHg9JzU1MCcgeT0nMzIwJyB3aWR0aD0nMTAwJyBoZWlnaHQ9JzQwJyBmaWxsPSdub25lJyBzdHJva2U9JyM0NDQnIHN0cm9rZS13aWR0aD0nMScvPgogIDx0ZXh0IHg9JzYwMCcgeT0nMzQ1JyBjbGFzcz0nbGFiZWwnIHRleHQtYW5jaG9yPSdtaWRkbGUnPlJFTkRFUkVSPC90ZXh0Pgo8L3N2Zz4=" />
+<img src="<svg xmlns='http://www.w3.org/2000/svg' width='700' height='400' viewBox='0 0 700 400'>
+  <rect width='700' height='400' fill='#000'/>
+  <style>
+    .m{font-family:monospace;font-size:12px;fill:#fff;}
+    .label{font-family:monospace;font-size:10px;fill:#888;}
+  </style>
+  
+  <!-- Title -->
+  <text x='350' y='30' class='m' text-anchor='middle'>MAJEUR ARCHITECTURE</text>
+  
+  <!-- Moloch (Main) -->
+  <rect x='250' y='60' width='200' height='80' fill='none' stroke='#fff' stroke-width='2'/>
+  <text x='350' y='90' class='m' text-anchor='middle'>--------------------</text>
+  <text x='350' y='105' class='m' text-anchor='middle'>|     MOLOCH     |</text>
+  <text x='350' y='120' class='m' text-anchor='middle'>|  (Main DAO)   |</text>
+  <text x='350' y='135' class='m' text-anchor='middle'>--------------------</text>
+  
+  <!-- Connection lines -->
+  <line x1='350' y1='140' x2='350' y2='180' stroke='#fff' stroke-width='1'/>
+  <line x1='350' y1='180' x2='150' y2='180' stroke='#fff' stroke-width='1'/>
+  <line x1='350' y1='180' x2='550' y2='180' stroke='#fff' stroke-width='1'/>
+  <line x1='150' y1='180' x2='150' y2='210' stroke='#fff' stroke-width='1'/>
+  <line x1='350' y1='180' x2='350' y2='210' stroke='#fff' stroke-width='1'/>
+  <line x1='550' y1='180' x2='550' y2='210' stroke='#fff' stroke-width='1'/>
+  
+  <!-- Shares -->
+  <rect x='50' y='210' width='200' height='60' fill='none' stroke='#fff' stroke-width='1'/>
+  <text x='150' y='235' class='m' text-anchor='middle'>| SHARES |</text>
+  <text x='150' y='250' class='label' text-anchor='middle'>ERC20 + Votes</text>
+  
+  <!-- Loot -->
+  <rect x='250' y='210' width='200' height='60' fill='none' stroke='#fff' stroke-width='1'/>
+  <text x='350' y='235' class='m' text-anchor='middle'>|  LOOT  |</text>
+  <text x='350' y='250' class='label' text-anchor='middle'>ERC20 Only</text>
+  
+  <!-- Badges -->
+  <rect x='450' y='210' width='200' height='60' fill='none' stroke='#fff' stroke-width='1'/>
+  <text x='550' y='235' class='m' text-anchor='middle'>| BAGES |</text>
+  <text x='550' y='250' class='label' text-anchor='middle'>ERC721 SBT</text>
+  
+  <!-- Bottom layer -->
+  <line x1='350' y1='140' x2='100' y2='320' stroke='#444' stroke-width='1' stroke-dasharray='2,3'/>
+  <line x1='350' y1='140' x2='600' y2='320' stroke='#444' stroke-width='1' stroke-dasharray='2,3'/>
+  
+  <!-- Summoner -->
+  <rect x='50' y='320' width='100' height='40' fill='none' stroke='#444' stroke-width='1'/>
+  <text x='100' y='345' class='label' text-anchor='middle'>SUMMONER</text>
+  
+  <!-- Renderer -->
+  <rect x='550' y='320' width='100' height='40' fill='none' stroke='#444' stroke-width='1'/>
+  <text x='600' y='345' class='label' text-anchor='middle'>RENDERER</text>
+</svg>" />
 
 ## Core Concepts (Simplified)
 
@@ -80,7 +137,60 @@ receipts // Vote receipts (ERC-6909 for futarchy)
 
 ### 2. Proposal Lifecycle
 
-<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPSc3MDAnIGhlaWdodD0nMzAwJyB2aWV3Qm94PScwIDAgNzAwIDMwMCc+CiAgPHJlY3Qgd2lkdGg9JzcwMCcgaGVpZ2h0PSczMDAnIGZpbGw9JyMwMDAnLz4KICA8c3R5bGU+CiAgICAudHh0e2ZvbnQtZmFtaWx5Om1vbm9zcGFjZTtmb250LXNpemU6MTBweDtmaWxsOiNmZmY7fQogICAgLmxhYmVse2ZvbnQtZmFtaWx5Om1vbm9zcGFjZTtmb250LXNpemU6OHB4O2ZpbGw6Izg4ODt9CiAgPC9zdHlsZT4KICAKICA8dGV4dCB4PSczNTAnIHk9JzMwJyBjbGFzcz0ndHh0JyB0ZXh0LWFuY2hvcj0nbWlkZGxlJz5QUk9QT1NBTCBMSUZFQ1lDTEU8L3RleHQ+CiAgCiAgPCEtLSBVbm9wZW5lZCAtLT4KICA8cmVjdCB4PSc1MCcgeT0nNjAnIHdpZHRoPSc4MCcgaGVpZ2h0PSc0MCcgZmlsbD0nbm9uZScgc3Ryb2tlPScjZmZmJyBzdHJva2Utd2lkdGg9JzEnLz4KICA8dGV4dCB4PSc5MCcgeT0nODUnIGNsYXNzPSd0eHQnIHRleHQtYW5jaG9yPSdtaWRkbGUnPlVOT1BFTkVEPC90ZXh0PgogIAogIDwhLS0gQWN0aXZlIC0tPgogIDxyZWN0IHg9JzE4MCcgeT0nNjAnIHdpZHRoPSc4MCcgaGVpZ2h0PSc0MCcgZmlsbD0nbm9uZScgc3Ryb2tlPScjZmZmJyBzdHJva2Utd2lkdGg9JzEnLz4KICA8dGV4dCB4PScyMjAnIHk9Jzg1JyBjbGFzcz0ndHh0JyB0ZXh0LWFuY2hvcj0nbWlkZGxlJz5BQ1RJVkU8L3RleHQ+CiAgCiAgPCEtLSBTdWNjZWVkZWQgLS0+CiAgPHJlY3QgeD0nMzEwJyB5PScyMCcgd2lkdGg9JzgwJyBoZWlnaHQ9JzQwJyBmaWxsPSdub25lJyBzdHJva2U9JyMwZjAnIHN0cm9rZS13aWR0aD0nMScvPgogIDx0ZXh0IHg9JzM1MCcgeT0nNDUnIGNsYXNzPSd0eHQnIHRleHQtYW5jaG9yPSdtaWRkbGUnPl9fX19fX19fXzwvdGV4dD4KICA8dGV4dCB4PSczNTAnIHk9JzU1JyBjbGFzcz0ndHh0JyB0ZXh0LWFuY2hvcj0nbWlkZGxlJz5TVUNDRUVERUQ8L3RleHQ+CiAgCiAgPCEtLSBEZWZlYXRlZCAtLT4KICA8cmVjdCB4PSczMTAnIHk9JzEwMCcgd2lkdGg9JzgwJyBoZWlnaHQ9JzQwJyBmaWxsPSdub25lJyBzdHJva2U9JyNmMDAnIHN0cm9rZS13aWR0aD0nMScvPgogIDx0ZXh0IHg9JzM1MCcgeT0nMTI1JyBjbGFzcz0ndHh0JyB0ZXh0LWFuY2hvcj0nbWlkZGxlJz5ERUZFQVRFRC9FWFBJUkVEPC90ZXh0PgogIAogIDwhLS0gUXVldWVkIC0tPgogIDxyZWN0IHg9JzQ0MCcgeT0nMjAnIHdpZHRoPSc4MCcgaGVpZ2h0PSc0MCcgZmlsbD0nbm9uZScgc3Ryb2tlPScjZmYwJyBzdHJva2Utd2lkdGg9JzEnLz4KICA8dGV4dCB4PSc0ODAnIHk9JzQ1JyBjbGFzcz0ndHh0JyB0ZXh0LWFuY2hvcj0nbWlkZGxlJz5RVUVVRUQ8L3RleHQ+CiAgCiAgPCEtLSBFeGVjdXRlZCAtLT4KICA8cmVjdCB4PSc1NzAnIHk9JzIwJyB3aWR0aD0nODAnIGhlaWdodD0nNDAnIGZpbGw9J25vbmUnIHN0cm9rZT0nIzBmZicgc3Ryb2tlLXdpZHRoPScxJy8+CiAgPHRleHQgeD0nNjEwJyB5PSc0NScgY2xhc3M9J3R4dCcgdGV4dC1hbmNob3I9J21pZGRsZSc+RVhFQ1VURUQ8L3RleHQ+CiAgCiAgPCEtLSBBcnJvd3MgLS0+CiAgPGxpbmUgeDE9JzEzMCcgeTE9JzgwJyB4Mj0nMTgwJyB5Mj0nODAnIHN0cm9rZT0nI2ZmZicgc3Ryb2tlLXdpZHRoPScxJyBtYXJrZXItZW5kPSd1cmwoI2Fycm93KScvPgogIDxsaW5lIHgxPScyNjAnIHkxPSc4MCcgeDI9JzMxMCcgeTI9JzQwJyBzdHJva2U9JyMwZjAnIHN0cm9rZS13aWR0aD0nMScgbWFya2VyLWVuZD0ndXJsKCNhcnJvdyknLz4KICA8bGluZSB4MT0nMjYwJyB5MT0nODAnIHgyPSczMTAnIHkyPScxMjAnIHN0cm9rZT0nI2YwMCcgc3Ryb2tlLXdpZHRoPScxJyBtYXJrZXItZW5kPSd1cmwoI2Fycm93KScvPgogIDxsaW5lIHgxPSczOTAnIHkxPSc0MCcgeDI9JzQ0MCcgeTI9JzQwJyBzdHJva2U9JyNmZjAnIHN0cm9rZS13aWR0aD0nMScgbWFya2VyLWVuZD0ndXJsKCNhcnJvdyknLz4KICA8bGluZSB4MT0nNTIwJyB5MT0nNDAnIHgyPSc1NzAnIHkyPSc0MCcgc3Ryb2tlPScjMGZmJyBzdHJva2Utd2lkdGg9JzEnIG1hcmtlci1lbmQ9J3VybCgjYXJyb3cpJy8+CiAgCiAgPCEtLSBMYWJlbHMgLS0+CiAgPHRleHQgeD0nMTU1JyB5PSc3MCcgY2xhc3M9J2xhYmVsJyB0ZXh0LWFuY2hvcj0nbWlkZGxlJz5vcGVuPC90ZXh0PgogIDx0ZXh0IHg9JzI3MCcgeT0nNTAnIGNsYXNzPSdsYWJlbCc+cGFzcz88L3RleHQ+CiAgPHRleHQgeD0nMjcwJyB5PScxMTAnIGNsYXNzPSdsYWJlbCc+ZmFpbC90aW1lb3V0PC90ZXh0PgogIDx0ZXh0IHg9JzQxNScgeT0nMzAnIGNsYXNzPSdsYWJlbCcgdGV4dC1hbmNob3I9J21pZGRsZSc+cXVldWU8L3RleHQ+CiAgPHRleHQgeD0nNTQ1JyB5PSczMCcgY2xhc3M9J2xhYmVsJyB0ZXh0LWFuY2hvcj0nbWlkZGxlJz5leGVjPC90ZXh0PgogIAogIDxkZWZzPgogICAgPG1hcmtlciBpZD0nYXJyb3cnIG1hcmtlcldpZHRoPScxMCcgbWFya2VySGVpZ2h0PSc3JyByZWZYPSc5JyByZWZZPSczLjUnIG9yaWVudD0nYXV0bycgZmlsbD0nI2ZmZic+CiAgICAgIDxwb2x5Z29uIHBvaW50cz0nMCwwIDEwLDMuNSAwLDcnIC8+CiAgICA8L21hcmtlcj4KICA8L2RlZnM+Cjwvc3ZnPg==" />
+<img src="<svg xmlns='http://www.w3.org/2000/svg' width='700' height='300' viewBox='0 0 700 300'>
+  <rect width='700' height='300' fill='#000'/>
+  <style>
+    .txt{font-family:monospace;font-size:10px;fill:#fff;}
+    .label{font-family:monospace;font-size:8px;fill:#888;}
+  </style>
+  
+  <text x='350' y='30' class='txt' text-anchor='middle'>PROPOSAL LIFECYCLE</text>
+  
+  <!-- Unopened -->
+  <rect x='50' y='60' width='80' height='40' fill='none' stroke='#fff' stroke-width='1'/>
+  <text x='90' y='85' class='txt' text-anchor='middle'>UNOPENED</text>
+  
+  <!-- Active -->
+  <rect x='180' y='60' width='80' height='40' fill='none' stroke='#fff' stroke-width='1'/>
+  <text x='220' y='85' class='txt' text-anchor='middle'>ACTIVE</text>
+  
+  <!-- Succeeded -->
+  <rect x='310' y='20' width='80' height='40' fill='none' stroke='#0f0' stroke-width='1'/>
+  <text x='350' y='45' class='txt' text-anchor='middle'>_________</text>
+  <text x='350' y='55' class='txt' text-anchor='middle'>SUCCEEDED</text>
+  
+  <!-- Defeated -->
+  <rect x='310' y='100' width='80' height='40' fill='none' stroke='#f00' stroke-width='1'/>
+  <text x='350' y='125' class='txt' text-anchor='middle'>DEFEATED/EXPIRED</text>
+  
+  <!-- Queued -->
+  <rect x='440' y='20' width='80' height='40' fill='none' stroke='#ff0' stroke-width='1'/>
+  <text x='480' y='45' class='txt' text-anchor='middle'>QUEUED</text>
+  
+  <!-- Executed -->
+  <rect x='570' y='20' width='80' height='40' fill='none' stroke='#0ff' stroke-width='1'/>
+  <text x='610' y='45' class='txt' text-anchor='middle'>EXECUTED</text>
+  
+  <!-- Arrows -->
+  <line x1='130' y1='80' x2='180' y2='80' stroke='#fff' stroke-width='1' marker-end='url(#arrow)'/>
+  <line x1='260' y1='80' x2='310' y2='40' stroke='#0f0' stroke-width='1' marker-end='url(#arrow)'/>
+  <line x1='260' y1='80' x2='310' y2='120' stroke='#f00' stroke-width='1' marker-end='url(#arrow)'/>
+  <line x1='390' y1='40' x2='440' y2='40' stroke='#ff0' stroke-width='1' marker-end='url(#arrow)'/>
+  <line x1='520' y1='40' x2='570' y2='40' stroke='#0ff' stroke-width='1' marker-end='url(#arrow)'/>
+  
+  <!-- Labels -->
+  <text x='155' y='70' class='label' text-anchor='middle'>open</text>
+  <text x='270' y='50' class='label'>pass?</text>
+  <text x='270' y='110' class='label'>fail/timeout</text>
+  <text x='415' y='30' class='label' text-anchor='middle'>queue</text>
+  <text x='545' y='30' class='label' text-anchor='middle'>exec</text>
+  
+  <defs>
+    <marker id='arrow' markerWidth='10' markerHeight='7' refX='9' refY='3.5' orient='auto' fill='#fff'>
+      <polygon points='0,0 10,3.5 0,7' />
+    </marker>
+  </defs>
+</svg>" />
 
 ### 3. Futarchy Markets
 
