@@ -2555,9 +2555,9 @@
         <div class="intro-text">
           <h2>Radical Simplicity, Focused Power</h2>
           <p>
-            Majeur is a minimal framework to manage digital organizations.
-            Built on battle-tested governance primitives, flexible with modular code, 
-            with new ways to reward good governance with real ownership.
+            Majeur is a minimal framework to organize and hold digital assets online.
+            Built on battle-tested primitives, fully modular without platform lock-in, 
+            with new ways to reward good governance with ownership.
           </p>
           <p class="intro-highlight">
             Deploy your DAO in minutes. Govern with clarity. Own your decisions.
@@ -2665,7 +2665,7 @@
             <p class="feature-copy">
               Voting power doesn't have to follow a single delegate. Each holder
               can fan out to up to four delegates in basis-point slices, with
-              exact rebalancing on every transfer. Growing their advisory.
+              exact rebalancing on every transfer. Growing your advisory.
             </p>
             <div class="feature-meta">
               Weighted delegation · Up to four delegates
@@ -3395,7 +3395,7 @@
     <section class="dao-gallery-section" id="daoGallery">
       <div class="dao-gallery-header">
         <h2 class="dao-gallery-title">Your DAOs</h2>
-        <p class="dao-gallery-subtitle">Majeur organizations you belong to</p>
+        <p class="dao-gallery-subtitle">Moloch organizations you belong to</p>
       </div>
       <div class="dao-tiles" id="daoTiles">
         <!-- DAO tiles will be dynamically rendered here -->
@@ -3406,7 +3406,7 @@
     <section class="all-daos-section" id="allDaosGallery">
       <div class="all-daos-header">
         <h2 class="all-daos-title">All DAOs</h2>
-        <p class="all-daos-subtitle">Explore all Majeur organizations</p>
+        <p class="all-daos-subtitle">Explore all Moloch Majeur organizations</p>
       </div>
       <div class="dao-tiles" id="allDaosTiles">
         <!-- All DAO tiles will be dynamically rendered here -->
@@ -4239,7 +4239,6 @@
           // Fetch user's DAOs
           showStatus('Fetching your DAOs...', false);
           await fetchUserDAOs();
-          await fetchAllDAOs();
           showStatus(`Connected to ${wallet.name}`, false);
         } catch (error) {
           console.error(error);
@@ -4338,73 +4337,6 @@
         }
       }
 
-      // Render all DAOs gallery
-      // Render all DAOs gallery
-      function renderAllDAOsGallery() {
-        console.log('renderAllDAOsGallery called');
-        console.log('allDAOs:', allDAOs);
-        console.log('allDAOs.length:', allDAOs.length);
-
-        const allDaosTiles = document.getElementById('allDaosTiles');
-        const allDaosGallery = document.getElementById('allDaosGallery');
-
-        console.log('allDaosTiles element:', allDaosTiles);
-        console.log('allDaosGallery element:', allDaosGallery);
-
-        if (!allDaosTiles) {
-          console.log('allDaosTiles not found, returning');
-          return;
-        }
-
-        allDaosTiles.innerHTML = '';
-
-        const userDAOAddresses = new Set(userDAOs.map(udao => udao.dao.dao.toLowerCase()));
-        console.log('userDAOAddresses:', userDAOAddresses);
-
-        allDAOs.forEach((daoLens, index) => {
-          console.log(`Processing DAO ${index}:`, daoLens);
-          const dao = daoLens;
-          const isUserMember = userDAOAddresses.has(dao.dao.toLowerCase());
-
-          const tile = document.createElement('div');
-          tile.className = 'all-dao-tile dao-tile';
-          if (isUserMember) {
-            tile.classList.add('user-member');
-          }
-          tile.style.position = 'relative';
-          tile.onclick = () => openDAO(index, 'all');
-
-          tile.innerHTML = `
-            <div class="dao-tile-name">${dao.meta.name}</div>
-            <div class="dao-tile-symbol">${dao.meta.symbol}</div>
-            <div class="dao-tile-stats">
-              <div class="dao-stat">
-                <div class="dao-stat-label">Total Shares</div>
-                <div class="dao-stat-value">${ethers.formatUnits(dao.supplies.sharesTotalSupply, 18)}</div>
-              </div>
-              <div class="dao-stat">
-                <div class="dao-stat-label">Total Loot</div>
-                <div class="dao-stat-value">${ethers.formatUnits(dao.supplies.lootTotalSupply, 18)}</div>
-              </div>
-              <div class="dao-stat">
-                <div class="dao-stat-label">Proposals</div>
-                <div class="dao-stat-value">${dao.proposals.length}</div>
-              </div>
-              <div class="dao-stat">
-                <div class="dao-stat-label">Members</div>
-                <div class="dao-stat-value">${dao.members.length}</div>
-              </div>
-            </div>
-          `;
-
-          allDaosTiles.appendChild(tile);
-        });
-
-        console.log(`Rendered ${allDAOs.length} DAO tiles`);
-        console.log('Showing allDaosGallery');
-        allDaosGallery.classList.add('show');
-      }
-
       // Fetch all DAOs from View Helper (not filtered by user)
       async function fetchAllDAOs() {
         if (!provider) return;
@@ -4422,14 +4354,12 @@
             5 // messageCount (fewer details for browse view)
           );
 
-          console.log('fetchAllDAOs result:', result);
-          console.log('fetchAllDAOs result.length:', result.length);
-          console.log('fetchAllDAOs result type:', typeof result);
-
           allDAOs = result;
-          console.log('allDAOs assigned, length:', allDAOs.length);
 
-          renderAllDAOsGallery();
+          // Only show if there are DAOs to display
+          if (allDAOs.length > 0) {
+            renderAllDAOsGallery();
+          }
 
           return allDAOs;
         } catch (error) {
@@ -4568,13 +4498,8 @@
       }
 
       // Open DAO dashboard
-      async function openDAO(daoIndex, source = 'user') {
-        // Get the DAO from the appropriate source
-        if (source === 'all') {
-          currentDAO = { dao: allDAOs[daoIndex], member: null };
-        } else {
-          currentDAO = userDAOs[daoIndex];
-        }
+      async function openDAO(daoIndex) {
+        currentDAO = userDAOs[daoIndex];
 
         const dashboardTitle = document.getElementById('dashboardTitle');
         dashboardTitle.textContent = currentDAO.dao.meta.name;
@@ -4583,7 +4508,6 @@
         await renderProposals();
 
         document.getElementById('daoGallery').classList.remove('show');
-        document.getElementById('allDaosGallery').classList.remove('show');
         document.getElementById('daoDashboard').classList.add('show');
       }
 
@@ -4592,7 +4516,6 @@
         currentDAO = null;
         document.getElementById('daoDashboard').classList.remove('show');
         document.getElementById('daoGallery').classList.add('show');
-        document.getElementById('allDaosGallery').classList.add('show');
       }
 
       // Render chatroom messages

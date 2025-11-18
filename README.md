@@ -14,6 +14,8 @@ Summoner: [`0x0000000000330B8df9E3bc5E553074DA58eE9138`](https://contractscan.xy
 
 Renderer: [`0x00000000005556244d291c4C7187cDF3702A0019`](https://contractscan.xyz/contract/0x00000000005556244d291c4C7187cDF3702A0019)
 
+MolochViewHelper: [`0x000000000066317bd3662A649D8901c076268Df9`](https://contractscan.xyz/contract/0x000000000066317bd3662A649D8901c076268Df9)
+
 ## TL;DR
 
 Moloch (Majeur) is a DAO framework where:

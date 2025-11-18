@@ -94,6 +94,10 @@ interface IMoloch {
             uint256 finalWinningSupply,
             uint256 payoutPerUnit
         );
+
+    // Chat / messages
+    function getMessageCount() external view returns (uint256);
+    function messages(uint256) external view returns (string memory);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -184,6 +188,11 @@ struct DAOTreasury {
     uint256 reth;
 }
 
+struct MessageView {
+    uint256 index;
+    string text;
+}
+
 struct DAOLens {
     address dao;
     DAOMeta meta;
@@ -192,16 +201,32 @@ struct DAOLens {
     DAOTreasury treasury;
     MemberView[] members;
     ProposalView[] proposals;
+    MessageView[] messages;
+}
+
+struct UserMemberView {
+    address dao;
+    DAOMeta meta;
+    DAOGovConfig gov;
+    DAOTokenSupplies supplies;
+    DAOTreasury treasury;
+    MemberView member;
+}
+
+struct UserDAOLens {
+    DAOLens dao;
+    MemberView member;
 }
 
 /* -------------------------------------------------------------------------- */
-/*                              VIEW HELPER CONTRACT                           */
+/*                              VIEW HELPER CONTRACT                          */
 /* -------------------------------------------------------------------------- */
 
 contract MolochViewHelper {
     /* ---------------------------- Core references --------------------------- */
 
     // Summoner factory on Ethereum mainnet
+    // NOTE: change this if you deploy Summoner to a different address / network.
     ISummoner public constant SUMMONER = ISummoner(0x0000000000330B8df9E3bc5E553074DA58eE9138);
 
     // Mainnet token addresses (treasury scan)
@@ -236,17 +261,19 @@ contract MolochViewHelper {
     }
 
     /* ---------------------------------------------------------------------- */
-    /*                      SINGLE-DAO: FULL STATE SNAPSHOT                    */
+    /*                      SINGLE-DAO: FULL STATE SNAPSHOT                   */
     /* ---------------------------------------------------------------------- */
 
     /// @notice Full state for a single DAO: meta, config, supplies, members,
-    ///         proposals & votes, futarchy, treasury.
-    function getDAOFullState(address dao, uint256 proposalStart, uint256 proposalCount)
-        public
-        view
-        returns (DAOLens memory out)
-    {
-        out = _buildDAOFullState(dao, proposalStart, proposalCount);
+    ///         proposals & votes, futarchy, treasury, messages.
+    function getDAOFullState(
+        address dao,
+        uint256 proposalStart,
+        uint256 proposalCount,
+        uint256 messageStart,
+        uint256 messageCount
+    ) public view returns (DAOLens memory out) {
+        out = _buildDAOFullState(dao, proposalStart, proposalCount, messageStart, messageCount);
     }
 
     /* ---------------------------------------------------------------------- */
@@ -259,16 +286,19 @@ contract MolochViewHelper {
     ///  - meta (name, symbol, contractURI, token addresses)
     ///  - governance config
     ///  - token supplies + DAO-held shares/loot
-    ///  - members (badges seats) + voting power + delegation splits
+    ///  - members (badge seats) + voting power + delegation splits
     ///  - proposals [proposalStart .. proposalStart+proposalCount)
     ///  - per-proposal tallies, state, per-member votes
     ///  - per-proposal futarchy config
     ///  - treasury balances (ETH, USDC, USDT, DAI, wstETH, rETH)
+    ///  - messages [messageStart .. messageStart+messageCount)
     function getDAOsFullState(
         uint256 daoStart,
         uint256 daoCount,
         uint256 proposalStart,
-        uint256 proposalCount
+        uint256 proposalCount,
+        uint256 messageStart,
+        uint256 messageCount
     ) public view returns (DAOLens[] memory out) {
         uint256 total = SUMMONER.getDAOCount();
         if (daoStart >= total) {
@@ -283,19 +313,233 @@ contract MolochViewHelper {
 
         for (uint256 i; i < len; ++i) {
             address dao = SUMMONER.daos(daoStart + i);
-            out[i] = _buildDAOFullState(dao, proposalStart, proposalCount);
+            out[i] =
+                _buildDAOFullState(dao, proposalStart, proposalCount, messageStart, messageCount);
         }
     }
 
     /* ---------------------------------------------------------------------- */
-    /*                             INTERNAL BUILDERS                           */
+    /*                       USER-FOCUSED PORTFOLIO VIEW                      */
     /* ---------------------------------------------------------------------- */
 
-    function _buildDAOFullState(address dao, uint256 proposalStart, uint256 proposalCount)
-        internal
+    /// @notice Find all DAOs (within a slice) where `user` has shares, loot, or a badge seat.
+    /// @dev Lightweight summary: no proposals/messages; intended for wallet dashboards.
+    function getUserDAOs(address user, uint256 daoStart, uint256 daoCount)
+        public
         view
-        returns (DAOLens memory out)
+        returns (UserMemberView[] memory out)
     {
+        uint256 total = SUMMONER.getDAOCount();
+        if (daoStart >= total) {
+            return new UserMemberView[](total);
+        }
+
+        uint256 daoEnd = daoStart + daoCount;
+        if (daoEnd > total) daoEnd = total;
+
+        // First pass: count matches
+        uint256 matchCount;
+        for (uint256 i = daoStart; i < daoEnd; ++i) {
+            address dao = SUMMONER.daos(i);
+            IMoloch M = IMoloch(dao);
+
+            address sharesToken = M.shares();
+            address lootToken = M.loot();
+            address badgesToken = M.badges();
+
+            if (
+                IShares(sharesToken).balanceOf(user) != 0 || ILoot(lootToken).balanceOf(user) != 0
+                    || IBadges(badgesToken).seatOf(user) != 0
+            ) {
+                ++matchCount;
+            }
+        }
+
+        out = new UserMemberView[](matchCount);
+        uint256 k;
+
+        // Second pass: populate views
+        for (uint256 i = daoStart; i < daoEnd; ++i) {
+            address dao = SUMMONER.daos(i);
+            IMoloch M = IMoloch(dao);
+
+            address sharesToken = M.shares();
+            address lootToken = M.loot();
+            address badgesToken = M.badges();
+
+            uint256 sharesBal = IShares(sharesToken).balanceOf(user);
+            uint256 lootBal = ILoot(lootToken).balanceOf(user);
+            uint256 seatId = IBadges(badgesToken).seatOf(user);
+
+            if (sharesBal == 0 && lootBal == 0 && seatId == 0) {
+                continue;
+            }
+
+            // Meta
+            DAOMeta memory meta;
+            meta.name = M.name(0);
+            meta.symbol = M.symbol(0);
+            meta.contractURI = M.contractURI();
+            meta.sharesToken = sharesToken;
+            meta.lootToken = lootToken;
+            meta.badgesToken = badgesToken;
+            meta.renderer = M.renderer();
+
+            // Gov config
+            DAOGovConfig memory gov;
+            gov.proposalThreshold = M.proposalThreshold();
+            gov.minYesVotesAbsolute = M.minYesVotesAbsolute();
+            gov.quorumAbsolute = M.quorumAbsolute();
+            gov.proposalTTL = M.proposalTTL();
+            gov.timelockDelay = M.timelockDelay();
+            gov.quorumBps = M.quorumBps();
+            gov.ragequittable = M.ragequittable();
+            gov.autoFutarchyParam = M.autoFutarchyParam();
+            gov.autoFutarchyCap = M.autoFutarchyCap();
+            gov.rewardToken = M.rewardToken();
+
+            // Supplies
+            DAOTokenSupplies memory supplies;
+            supplies.sharesTotalSupply = IShares(sharesToken).totalSupply();
+            supplies.lootTotalSupply = ILoot(lootToken).totalSupply();
+            supplies.sharesHeldByDAO = IShares(sharesToken).balanceOf(dao);
+            supplies.lootHeldByDAO = ILoot(lootToken).balanceOf(dao);
+
+            // Treasury snapshot
+            DAOTreasury memory treasury = _getTreasury(dao);
+
+            (address[] memory dels, uint32[] memory bps) =
+                IShares(sharesToken).splitDelegationOf(user);
+            uint256 votingPower = IShares(sharesToken).getVotes(user);
+
+            MemberView memory memberView = MemberView({
+                account: user,
+                shares: sharesBal,
+                loot: lootBal,
+                seatId: uint16(seatId),
+                votingPower: votingPower,
+                delegates: dels,
+                delegatesBps: bps
+            });
+
+            out[k] = UserMemberView({
+                dao: dao,
+                meta: meta,
+                gov: gov,
+                supplies: supplies,
+                treasury: treasury,
+                member: memberView
+            });
+
+            ++k;
+        }
+    }
+
+    /// @notice Full DAO state (like getDAOsFullState) but filtered to DAOs where `user` is a member.
+    /// @dev This is the heavy "one-shot" user-dashboard view: use small daoCount / proposalCount / messageCount.
+    function getUserDAOsFullState(
+        address user,
+        uint256 daoStart,
+        uint256 daoCount,
+        uint256 proposalStart,
+        uint256 proposalCount,
+        uint256 messageStart,
+        uint256 messageCount
+    ) public view returns (UserDAOLens[] memory out) {
+        uint256 total = SUMMONER.getDAOCount();
+        if (daoStart >= total) {
+            return new UserDAOLens[](total);
+        }
+
+        uint256 daoEnd = daoStart + daoCount;
+        if (daoEnd > total) daoEnd = total;
+
+        // First pass: count matches
+        uint256 matchCount;
+        for (uint256 i = daoStart; i < daoEnd; ++i) {
+            address dao = SUMMONER.daos(i);
+            IMoloch M = IMoloch(dao);
+
+            address sharesToken = M.shares();
+            address lootToken = M.loot();
+            address badgesToken = M.badges();
+
+            if (
+                IShares(sharesToken).balanceOf(user) != 0 || ILoot(lootToken).balanceOf(user) != 0
+                    || IBadges(badgesToken).seatOf(user) != 0
+            ) {
+                ++matchCount;
+            }
+        }
+
+        out = new UserDAOLens[](matchCount);
+        uint256 k;
+
+        // Second pass: build full DAO state + user member view
+        for (uint256 i = daoStart; i < daoEnd; ++i) {
+            address daoAddr = SUMMONER.daos(i);
+            IMoloch M = IMoloch(daoAddr);
+
+            address sharesToken = M.shares();
+            address lootToken = M.loot();
+            address badgesToken = M.badges();
+
+            uint256 sharesBal = IShares(sharesToken).balanceOf(user);
+            uint256 lootBal = ILoot(lootToken).balanceOf(user);
+            uint256 seatId = IBadges(badgesToken).seatOf(user);
+
+            if (sharesBal == 0 && lootBal == 0 && seatId == 0) {
+                continue;
+            }
+
+            DAOLens memory daoLens = _buildDAOFullState(
+                daoAddr, proposalStart, proposalCount, messageStart, messageCount
+            );
+
+            (address[] memory dels, uint32[] memory bps) =
+                IShares(sharesToken).splitDelegationOf(user);
+            uint256 votingPower = IShares(sharesToken).getVotes(user);
+
+            MemberView memory memberView = MemberView({
+                account: user,
+                shares: sharesBal,
+                loot: lootBal,
+                seatId: uint16(seatId),
+                votingPower: votingPower,
+                delegates: dels,
+                delegatesBps: bps
+            });
+
+            out[k] = UserDAOLens({dao: daoLens, member: memberView});
+            ++k;
+        }
+    }
+
+    /* ---------------------------------------------------------------------- */
+    /*                         DAO MESSAGES / CHAT VIEW                       */
+    /* ---------------------------------------------------------------------- */
+
+    /// @notice Paginated fetch of DAO messages (chat).
+    /// @dev Only message text + index is available on-chain with current Moloch storage.
+    function getDAOMessages(address dao, uint256 start, uint256 count)
+        public
+        view
+        returns (MessageView[] memory out)
+    {
+        out = _getMessagesInternal(dao, start, count);
+    }
+
+    /* ---------------------------------------------------------------------- */
+    /*                             INTERNAL BUILDERS                          */
+    /* ---------------------------------------------------------------------- */
+
+    function _buildDAOFullState(
+        address dao,
+        uint256 proposalStart,
+        uint256 proposalCount,
+        uint256 messageStart,
+        uint256 messageCount
+    ) internal view returns (DAOLens memory out) {
         IMoloch M = IMoloch(dao);
 
         // --- Meta & config
@@ -332,11 +576,12 @@ contract MolochViewHelper {
         supplies.sharesHeldByDAO = sharesToken.balanceOf(dao);
         supplies.lootHeldByDAO = lootToken.balanceOf(dao);
 
-        // --- Members & proposals
+        // --- Members, proposals, messages
 
         MemberView[] memory members =
             _getMembers(meta.sharesToken, meta.lootToken, meta.badgesToken);
         ProposalView[] memory proposals = _getProposals(M, members, proposalStart, proposalCount);
+        MessageView[] memory messages = _getMessagesInternal(dao, messageStart, messageCount);
 
         DAOTreasury memory treasury = _getTreasury(dao);
 
@@ -347,12 +592,14 @@ contract MolochViewHelper {
         out.treasury = treasury;
         out.members = members;
         out.proposals = proposals;
+        out.messages = messages;
     }
 
     /* ---------------------------------------------------------------------- */
-    /*                           MEMBER ENUMERATION                            */
+    /*                           MEMBER ENUMERATION                           */
     /* ---------------------------------------------------------------------- */
 
+    /// @dev Enumerate members as "badge seats" (top-256 by shares, sticky).
     function _getMembers(address sharesToken, address lootToken, address badgesToken)
         internal
         view
@@ -384,7 +631,7 @@ contract MolochViewHelper {
     }
 
     /* ---------------------------------------------------------------------- */
-    /*                              PROPOSAL VIEWS                             */
+    /*                              PROPOSAL VIEWS                            */
     /* ---------------------------------------------------------------------- */
 
     function _getProposals(IMoloch M, MemberView[] memory members, uint256 start, uint256 count)
@@ -489,7 +736,33 @@ contract MolochViewHelper {
     }
 
     /* ---------------------------------------------------------------------- */
-    /*                           TREASURY BALANCE VIEW                         */
+    /*                           MESSAGES (INTERNAL)                          */
+    /* ---------------------------------------------------------------------- */
+
+    function _getMessagesInternal(address dao, uint256 start, uint256 count)
+        internal
+        view
+        returns (MessageView[] memory out)
+    {
+        IMoloch M = IMoloch(dao);
+        uint256 total = M.getMessageCount();
+        if (start >= total) {
+            return new MessageView[](total);
+        }
+
+        uint256 end = start + count;
+        if (end > total) end = total;
+        uint256 len = end - start;
+
+        out = new MessageView[](len);
+        for (uint256 i; i < len; ++i) {
+            uint256 idx = start + i;
+            out[i] = MessageView({index: idx, text: M.messages(idx)});
+        }
+    }
+
+    /* ---------------------------------------------------------------------- */
+    /*                           TREASURY BALANCE VIEW                        */
     /* ---------------------------------------------------------------------- */
 
     function _getTreasury(address dao) internal view returns (DAOTreasury memory t) {
