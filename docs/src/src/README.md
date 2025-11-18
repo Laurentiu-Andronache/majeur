@@ -1,6 +1,7 @@
 
 
 # Contents
+- [peripheral](/src/peripheral)
 - [Moloch](Moloch.sol/contract.Moloch.md)
 - [Shares](Moloch.sol/contract.Shares.md)
 - [Loot](Moloch.sol/contract.Loot.md)
@@ -17,13 +18,13 @@
 - [ETHTransferFailed](Moloch.sol/error.ETHTransferFailed.md)
 - [TransferFromFailed](Moloch.sol/error.TransferFromFailed.md)
 - [Summoner](Moloch.sol/contract.Summoner.md)
-- [balanceOfThis](Moloch.sol/function.balanceOfThis.md)
 - [mulDiv](Moloch.sol/function.mulDiv.md)
 - [toUint96](Moloch.sol/function.toUint96.md)
-- [safeTransferFrom](Moloch.sol/function.safeTransferFrom.md)
 - [toUint48](Moloch.sol/function.toUint48.md)
-- [safeTransfer](Moloch.sol/function.safeTransfer.md)
 - [safeTransferETH](Moloch.sol/function.safeTransferETH.md)
+- [safeTransfer](Moloch.sol/function.safeTransfer.md)
+- [balanceOfThis](Moloch.sol/function.balanceOfThis.md)
+- [safeTransferFrom](Moloch.sol/function.safeTransferFrom.md)
 - [_revertOverflow](Moloch.sol/function._revertOverflow.md)
 - [IMajeurRenderer](Renderer.sol/interface.IMajeurRenderer.md)
 - [IMoloch](Renderer.sol/interface.IMoloch.md)

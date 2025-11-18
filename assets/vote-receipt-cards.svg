@@ -1,0 +1,73 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='1280' height='640' viewBox='0 0 1280 640'>
+  <rect width='1280' height='640' fill='#000'/>
+  <style>
+    .g{font-family:Garamond,serif;}
+    .m{font-family:monospace;}
+  </style>
+  
+  <!-- YES Receipt -->
+  <g transform='translate(0,20)'>
+    <rect x='20' y='20' width='380' height='560' fill='none' stroke='#0f0' stroke-width='1'/>
+    <text x='210' y='55' class='g' font-size='18' fill='#fff' text-anchor='middle'>MAJEUR DAO</text>
+    <text x='210' y='75' class='g' font-size='11' fill='#fff' text-anchor='middle'>VOTE RECE%PT</text>
+    <line x1='40' y1='90' x2='380' y2='90' stroke='#fff' stroke-width='1'/>
+    
+    <!-- YES hand -->
+    <text x='210' y='135' class='m' font-size='9' fill='#0f0' text-anchor='middle'>|</text>
+    <text x='210' y='146' class='m' font-size='9' fill='#0f0' text-anchor='middle'>/_\</text>
+    <text x='210' y='157' class='m' font-size='9' fill='#0f0' text-anchor='middle'>/   \</text>
+    <text x='210' y='168' class='m' font-size='9' fill='#0f0' text-anchor='middle'>|  *  |</text>
+    <text x='210' y='179' class='m' font-size='9' fill='#0f0' text-anchor='middle'>|     |</text>
+    <text x='210' y='190' class='m' font-size='9' fill='#0f0' text-anchor='middle'>|_____|</text>
+    
+    <text x='60' y='292' class='m' font-size='9' fill='#fff'>1234...5678</text>
+    <text x='60' y='345' class='g' font-size='14' fill='#0f0'>YES</text>
+    <text x='60' y='395' class='m' font-size='9' fill='#fff'>10,000 votes</text>
+    <text x='60' y='445' class='m' font-size='9' fill='#fff'>Pool 10 ETH</text>
+    <text x='210' y='510' class='g' font-size='12' fill='#0f0' text-anchor='middle'>REDEEMABLE</text>
+  </g>
+  
+  <!-- NO Receipt -->
+  <g transform='translate(440,20)'>
+    <rect x='20' y='20' width='380' height='560' fill='none' stroke='#f00' stroke-width='1'/>
+    <text x='210' y='55' class='g' font-size='18' fill='#fff' text-anchor='middle'>MAJEUR DAO</text>
+    <text x='210' y='75' class='g' font-size='11' fill='#fff' text-anchor='middle'>VOTE RECEIPT</text>
+    <line x1='40' y1='90' x2='380' y2='90' stroke='#fff' stroke-width='1'/>
+    
+    <!-- X symbol -->
+    <text x='210' y='145' class='m' font-size='9' fill='#f00' text-anchor='middle'>\       /</text>
+    <text x='210' y='156' class='m' font-size='9' fill='#f00' text-anchor='middle'> \     / </text>
+    <text x='210' y='167' class='m' font-size='9' fill='#f00' text-anchor='middle'>  \     /</text>
+    <text x='210' y='178' class='m' font-size='9' fill='#f00' text-anchor='middle'>    X    </text>
+    <text x='210' y='189' class='m' font-size='9' fill='#f00' text-anchor='middle'>  /    \   </text>
+    <text x='210' y='200' class='m' font-size='9' fill='#f00' text-anchor='middle'> /    s \ </text>
+    <text x='210' y='211' class='m' font-size='9' fill='#f00' text-anchor='middle'>/      \</text>
+    
+    <text x='60' y='292' class='m' font-size='9' fill='#fff'>1234...5678</text>
+    <text x='60' y='345' class='g' font-size='14' fill='#f00'>NO</text>
+    <text x='60' y='395' class='m' font-size='9' fill='#fff'>5 000 votes</text>
+    <text x='210' y='510' class='g' font-size='12' fill='#f00' text-anchor='middle'>SEALED</text>
+  </g>
+  
+  <!-- ABSTAIN Receipt -->
+  <g transform='translate(880,20)'>
+    <rect x='20' y='20' width='380' height='560' fill='none' stroke='#aaa' stroke-width='1'/>
+    <text x='210' y='55' class='g' font-size='18' fill='#fff' text-anchor='middle'>MAJEUR DAO</text>
+    <text x='210' y='75' class='g' font-size='11' fill='#fff' text-anchor='middle'>VOTE%RECE%PT</text>
+    <line x1='40' y1='90' x2='380' y2='90' stroke='#fff' stroke-width='1'/>
+    
+    <!-- Circle -->
+    <text x='210' y='145' class='m' font-size='9' fill='#aaa' text-anchor='middle'>___</text>
+    <text x='210' y='156' class='m' font-size='9' fill='#aaa' text-anchor='middle'>/     \</text>
+    <text x='210' y='167' class='m' font-size='9' fill='#aaa' text-anchor='middle'>|       |</text>
+    <text x='210' y='178' class='m' font-size='9' fill='#aaa' text-anchor='middle'>|       |</text>
+    <text x='210' y='189' class='m' font-size='9' fill='#aaa' text-anchor='middle'>|       |</text>
+    <text x='210' y='200' class='m' font-size='9' fill='#aaa' text-anchor='middle'>\     /</text>
+    <text x='210' y='211' class='m' font-size='9' fill='#aaa' text-anchor='middle'>---</text>
+    
+    <text x='60' y='292' class='m' font-size='9' fill='#fff'>1234...5678</text>
+    <text x='60' y='345' class='g' font-size='14' fill='#aaa'>ABSTAIN</text>
+    <text x='60' y='395' class='m' font-size='9' fill='#fff'>2,000 votes</text>
+    <text x='210' y='510' class='g' font-size='12' fill='#aaa' text-anchor='middle'>SEALED</text>
+  </g>
+</svg>
