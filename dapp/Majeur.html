@@ -277,6 +277,233 @@
         cursor: not-allowed;
       }
 
+      .summon-button:active:not(:disabled) {
+        transform: translateY(0);
+        box-shadow: 0 5px 15px rgba(157, 123, 255, 0.3);
+      }
+
+      /* Universal button enhancements */
+      button:not(:disabled) {
+        cursor: pointer;
+      }
+
+      button:active:not(:disabled) {
+        transform: scale(0.98);
+      }
+
+      /* Smooth scrolling */
+      * {
+        scroll-behavior: smooth;
+      }
+
+      /* Focus styles for accessibility */
+      *:focus-visible {
+        outline: 2px solid #9d7bff;
+        outline-offset: 2px;
+      }
+
+      /* Tooltip */
+      .tooltip {
+        position: relative;
+        display: inline-block;
+      }
+
+      .tooltip .tooltip-text {
+        visibility: hidden;
+        background: rgba(10, 0, 21, 0.95);
+        color: #e6d9ff;
+        text-align: center;
+        padding: 0.5rem 0.75rem;
+        border-radius: 4px;
+        border: 1px solid rgba(157, 123, 255, 0.4);
+        position: absolute;
+        z-index: 3000;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        white-space: nowrap;
+        opacity: 0;
+        transition: opacity 0.3s, visibility 0.3s;
+        font-size: 0.8rem;
+        font-family: "EB Garamond", serif;
+        pointer-events: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      }
+
+      .tooltip .tooltip-text::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: rgba(10, 0, 21, 0.95) transparent transparent transparent;
+      }
+
+      .tooltip:hover .tooltip-text {
+        visibility: visible;
+        opacity: 1;
+      }
+
+      /* Pulse animation for important elements */
+      @keyframes pulse {
+        0%, 100% {
+          box-shadow: 0 0 0 0 rgba(157, 123, 255, 0.4);
+        }
+        50% {
+          box-shadow: 0 0 0 8px rgba(157, 123, 255, 0);
+        }
+      }
+
+      .pulse {
+        animation: pulse 2s infinite;
+      }
+
+      /* Card fade-in animation */
+      @keyframes cardFadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .card-appear {
+        animation: cardFadeIn 0.4s ease-out forwards;
+      }
+
+      /* Mobile touch feedback */
+      @media (hover: none) and (pointer: coarse) {
+        .receipt-card:active,
+        .badge-card:active,
+        .balance-card:active {
+          transform: scale(0.98);
+          transition: transform 0.1s ease;
+        }
+
+        button:active:not(:disabled) {
+          transform: scale(0.95);
+          transition: transform 0.1s ease;
+        }
+
+        /* Increase touch targets on mobile */
+        button {
+          min-height: 44px;
+          min-width: 44px;
+        }
+      }
+
+      /* Improve clickable element feedback */
+      a, button, [onclick], .cursor-pointer {
+        -webkit-tap-highlight-color: rgba(157, 123, 255, 0.2);
+      }
+
+      /* Progress bar for network activity */
+      .progress-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: transparent;
+        z-index: 10000;
+        pointer-events: none;
+      }
+
+      .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #9d7bff, #6b4fb8, #9d7bff);
+        background-size: 200% 100%;
+        animation: progressAnimation 1.5s ease-in-out infinite;
+        box-shadow: 0 0 10px rgba(157, 123, 255, 0.5);
+      }
+
+      @keyframes progressAnimation {
+        0% {
+          width: 0%;
+          background-position: 0% 0%;
+        }
+        50% {
+          width: 70%;
+          background-position: 100% 0%;
+        }
+        100% {
+          width: 100%;
+          background-position: 200% 0%;
+        }
+      }
+
+      /* Notification toast */
+      .toast-container {
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        z-index: 9999;
+        max-width: 400px;
+      }
+
+      .toast {
+        background: rgba(10, 0, 21, 0.95);
+        border: 1px solid rgba(157, 123, 255, 0.5);
+        border-radius: 6px;
+        padding: 1rem 1.25rem;
+        margin-bottom: 0.5rem;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+        animation: slideInRight 0.3s ease-out;
+        backdrop-filter: blur(10px);
+      }
+
+      @keyframes slideInRight {
+        from {
+          opacity: 0;
+          transform: translateX(100%);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      /* Improve form inputs */
+      input:focus, textarea:focus, select:focus {
+        border-color: #9d7bff !important;
+        box-shadow: 0 0 0 3px rgba(157, 123, 255, 0.1) !important;
+      }
+
+      /* Selection styling */
+      ::selection {
+        background: rgba(157, 123, 255, 0.3);
+        color: #e6d9ff;
+      }
+
+      ::-moz-selection {
+        background: rgba(157, 123, 255, 0.3);
+        color: #e6d9ff;
+      }
+
+      /* Scrollbar styling for webkit browsers */
+      ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.2);
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: rgba(157, 123, 255, 0.3);
+        border-radius: 5px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(157, 123, 255, 0.5);
+      }
+
       .advanced-toggle {
         text-align: center;
         margin: 1.5rem 0;
@@ -312,18 +539,90 @@
       }
 
       .status-message {
-        padding: 1rem;
+        padding: 1rem 1.25rem;
         margin-top: 1rem;
         border: 1px solid rgba(157, 123, 255, 0.3);
         background: rgba(157, 123, 255, 0.1);
         text-align: center;
         font-style: italic;
+        border-radius: 6px;
+        animation: slideInDown 0.3s ease-out;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(157, 123, 255, 0.15);
+      }
+
+      .status-message.success {
+        border-color: rgba(102, 255, 102, 0.4);
+        background: rgba(102, 255, 102, 0.1);
+        color: #66ff66;
       }
 
       .error-message {
-        border-color: rgba(255, 0, 0, 0.3);
-        background: rgba(255, 0, 0, 0.1);
+        border-color: rgba(255, 107, 107, 0.4);
+        background: rgba(255, 107, 107, 0.1);
         color: #ff6b6b;
+      }
+
+      .status-message.warning {
+        border-color: rgba(255, 193, 7, 0.4);
+        background: rgba(255, 193, 7, 0.1);
+        color: #ffc107;
+      }
+
+      @keyframes slideInDown {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes fadeOut {
+        from {
+          opacity: 1;
+        }
+        to {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+      }
+
+      /* Loading spinner */
+      .spinner {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(157, 123, 255, 0.3);
+        border-top-color: #9d7bff;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin-right: 0.5rem;
+        vertical-align: middle;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      /* Loading skeleton */
+      .skeleton {
+        background: linear-gradient(
+          90deg,
+          rgba(157, 123, 255, 0.05) 0%,
+          rgba(157, 123, 255, 0.15) 50%,
+          rgba(157, 123, 255, 0.05) 100%
+        );
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+        border-radius: 4px;
+      }
+
+      @keyframes shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
       }
 
       /* HERO / LANDER */
@@ -1494,6 +1793,14 @@
         padding: 2rem;
         backdrop-filter: blur(10px);
         text-align: center;
+        border-radius: 6px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .badge-card:hover {
+        border-color: rgba(157, 123, 255, 0.5);
+        box-shadow: 0 4px 16px rgba(157, 123, 255, 0.15);
       }
 
       .badge-image {
@@ -1503,12 +1810,13 @@
         margin: 1rem auto;
         border: 1px solid rgba(157, 123, 255, 0.3);
         border-radius: 8px;
-        transition: all 0.3s ease;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       }
 
       .badge-card .badge-image:hover {
-        transform: scale(1.02);
+        transform: scale(1.03);
         border-color: #9d7bff;
+        box-shadow: 0 4px 20px rgba(157, 123, 255, 0.3);
       }
 
       .balance-card {
@@ -1516,6 +1824,14 @@
         border: 1px solid rgba(157, 123, 255, 0.3);
         padding: 2rem;
         backdrop-filter: blur(10px);
+        border-radius: 6px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .balance-card:hover {
+        border-color: rgba(157, 123, 255, 0.5);
+        box-shadow: 0 4px 16px rgba(157, 123, 255, 0.15);
       }
 
       .balance-item {
@@ -1564,13 +1880,22 @@
         background: rgba(0, 0, 0, 0.3);
         border: 1px solid rgba(157, 123, 255, 0.2);
         padding: 1.25rem;
-        transition: all 0.3s ease;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         cursor: pointer;
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
       }
 
       .receipt-card:hover {
-        border-color: rgba(157, 123, 255, 0.4);
-        background: rgba(157, 123, 255, 0.05);
+        border-color: rgba(157, 123, 255, 0.5);
+        background: rgba(157, 123, 255, 0.08);
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(157, 123, 255, 0.2);
+      }
+
+      .receipt-card:active {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(157, 123, 255, 0.15);
       }
 
       .receipt-image {
@@ -2246,6 +2571,33 @@
           gap: 0.75rem;
         }
 
+        /* Mobile optimizations for purchase modal and sales */
+        .wallet-modal {
+          width: 95%;
+          padding: 1rem;
+          margin: 1rem;
+        }
+
+        .wallet-modal input[type="number"] {
+          font-size: 16px !important; /* Prevent zoom on iOS */
+        }
+
+        #purchaseModal input {
+          font-size: 16px !important; /* Prevent zoom on iOS */
+        }
+
+        #salesSection {
+          margin-top: 1rem !important;
+        }
+
+        .treasury-section {
+          padding: 1rem 0.75rem;
+        }
+
+        .treasury-title {
+          font-size: 0.9rem;
+        }
+
         .dao-stat-label {
           font-size: 0.55rem;
         }
@@ -2680,6 +3032,14 @@
     </style>
   </head>
   <body>
+    <!-- Progress Bar -->
+    <div class="progress-bar" id="progressBar" style="display: none;">
+      <div class="progress-bar-fill"></div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
     <!-- Starry Background -->
     <div class="starry-bg">
       <div class="stars-layer"></div>
@@ -5591,6 +5951,38 @@
         }
       ];
 
+      // ERC20 ABI for token interactions
+      const ERC20_ABI = [
+        {
+          "inputs": [{"internalType": "address", "name": "owner", "type": "address"}, {"internalType": "address", "name": "spender", "type": "address"}],
+          "name": "allowance",
+          "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [{"internalType": "address", "name": "spender", "type": "address"}, {"internalType": "uint256", "name": "amount", "type": "uint256"}],
+          "name": "approve",
+          "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [{"internalType": "address", "name": "account", "type": "address"}],
+          "name": "balanceOf",
+          "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "decimals",
+          "outputs": [{"internalType": "uint8", "name": "", "type": "uint8"}],
+          "stateMutability": "view",
+          "type": "function"
+        }
+      ];
+
       // Constants for minimal proxy pattern (from Solidity reference)
       const CLONE_PREFIX = '0x602d5f8160095f39f35f5f365f5f37365f73';
       const CLONE_SUFFIX = '0x5af43d5f5f3e6029573d5ffd5b3d5ff3';
@@ -5610,6 +6002,19 @@
         dai: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
         wsteth: '0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0',
         reth: '0xae78736Cd615f374D3085123A210448E74Fc6393'
+      };
+
+      // Shared interfaces (created once, reused throughout)
+      const INTERFACES = {
+        setQuorum: new ethers.Interface(['function setQuorum(uint256)']),
+        setRagequittable: new ethers.Interface(['function setRagequittable(bool)']),
+        setSale: new ethers.Interface(['function setSale(address,uint256,uint256,bool,bool,bool)']),
+        setProposalTTL: new ethers.Interface(['function setProposalTTL(uint64)']),
+        setTimelockDelay: new ethers.Interface(['function setTimelockDelay(uint64)']),
+        mintFromMoloch: new ethers.Interface(['function mintFromMoloch(address,uint256)']),
+        setProposalThreshold: new ethers.Interface(['function setProposalThreshold(uint96)']),
+        setTransfersLocked: new ethers.Interface(['function setTransfersLocked(bool,bool)']),
+        setAutoFutarchy: new ethers.Interface(['function setAutoFutarchy(uint256,uint256)'])
       };
 
       // Helper to create minimal proxy init code
@@ -6102,10 +6507,10 @@
           showStatus('Executing ragequit...', false);
           const tx = await daoContract.ragequit(tokenAddresses, sharesToBurn, lootToBurn);
 
-          showStatus('Transaction submitted. Waiting for confirmation...', false);
+          showStatus(`Transaction submitted. <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" rel="noopener" style="color: #9d7bff; text-decoration: underline;">View on Etherscan</a>`, false);
           await tx.wait();
 
-          showStatus('Ragequit executed successfully!', false);
+          showStatus(`✨ Ragequit executed successfully! <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" rel="noopener" style="color: #9d7bff; text-decoration: underline;">View transaction</a>`, false);
           closeRagequitModal();
 
           // Refresh DAO data
@@ -6648,7 +7053,7 @@
                 <button onclick="openPurchaseModal('${sale.token.address}', '${sale.token.symbol}', ${sale.token.decimals}, ${sale.isLoot})"
                         onmouseover="this.style.background='rgba(157, 123, 255, 0.25)'; this.style.borderColor='#9d7bff';"
                         onmouseout="this.style.background='rgba(157, 123, 255, 0.15)'; this.style.borderColor='rgba(157, 123, 255, 0.3)';"
-                        style="width: 100%; padding: 0.6rem; background: rgba(157, 123, 255, 0.15); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.12em; cursor: pointer; text-transform: uppercase; transition: all 0.2s ease; font-weight: 600;">
+                        style="width: 100%; padding: 0.75rem; background: rgba(157, 123, 255, 0.15); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.12em; cursor: pointer; text-transform: uppercase; transition: all 0.2s ease; font-weight: 600; border-radius: 4px; min-height: 44px;">
                   Purchase ${tokenSymbol}
                 </button>
               </div>
@@ -7319,8 +7724,7 @@
           const quorumBps = Math.floor(parseFloat(percentInput) * 100);
 
           // Encode setQuorum(uint256 bps)
-          const iface = new ethers.Interface(['function setQuorum(uint256)']);
-          const calldata = iface.encodeFunctionData('setQuorum', [quorumBps]);
+          const calldata = INTERFACES.setQuorum.encodeFunctionData('setQuorum', [quorumBps]);
 
           document.getElementById('proposalTo').value = daoAddress;
           document.getElementById('proposalValue').value = '0';
@@ -7411,8 +7815,7 @@
       async function populateRagequitProposal(daoAddress, newStatus) {
         try {
           // Encode setRagequittable(bool)
-          const iface = new ethers.Interface(['function setRagequittable(bool)']);
-          const calldata = iface.encodeFunctionData('setRagequittable', [newStatus]);
+          const calldata = INTERFACES.setRagequittable.encodeFunctionData('setRagequittable', [newStatus]);
 
           document.getElementById('proposalTo').value = daoAddress;
           document.getElementById('proposalValue').value = '0';
@@ -7455,14 +7858,14 @@
         content.innerHTML = `
           <div style="margin-bottom: 1rem;">
             <label style="display: block; font-size: 0.85rem; color: rgba(230, 217, 255, 0.7); margin-bottom: 0.5rem;">Amount to Purchase (${targetSymbol})</label>
-            <input type="number" id="purchaseAmount" placeholder="0.0" step="any" min="0"
-                   style="width: 100%; padding: 0.75rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 1rem;" />
+            <input type="number" id="purchaseAmount" placeholder="0.0" step="any" min="0" inputmode="decimal"
+                   style="width: 100%; padding: 0.875rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 16px; border-radius: 4px;" />
           </div>
-          <div style="margin-bottom: 1.5rem; padding: 0.75rem; background: rgba(157, 123, 255, 0.1); border-radius: 4px; font-size: 0.85rem; color: rgba(230, 217, 255, 0.8);">
+          <div style="margin-bottom: 1.5rem; padding: 0.875rem; background: rgba(157, 123, 255, 0.1); border-radius: 4px; font-size: 0.85rem; color: rgba(230, 217, 255, 0.8); line-height: 1.5;">
             Payment will be in <strong>${tokenSymbol}</strong>
           </div>
           <button onclick="executePurchase('${payToken}', ${tokenDecimals}, ${isLoot})"
-                  style="width: 100%; padding: 0.875rem; background: rgba(157, 123, 255, 0.2); border: 1px solid rgba(157, 123, 255, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.8rem; letter-spacing: 0.15em; cursor: pointer; text-transform: uppercase; font-weight: 600;">
+                  style="width: 100%; padding: 1rem; background: rgba(157, 123, 255, 0.2); border: 1px solid rgba(157, 123, 255, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.8rem; letter-spacing: 0.15em; cursor: pointer; text-transform: uppercase; font-weight: 600; border-radius: 4px; transition: all 0.2s ease; min-height: 48px;">
             Confirm Purchase
           </button>
         `;
@@ -7491,10 +7894,42 @@
             return;
           }
 
-          const cost = shareAmount * sale.pricePerShare / (10n ** 18n);
-          const maxPay = cost * 105n / 100n; // 5% slippage
+          // Calculate cost with proper precision handling
+          // pricePerShare is in payToken decimals, shareAmount is in 18 decimals
+          const cost = (shareAmount * sale.pricePerShare) / (10n ** 18n);
+          const maxPay = (cost * 105n) / 100n; // 5% slippage
 
-          showStatus('Confirming purchase...', false);
+          // ERC20 token: check allowance and approve if needed
+          if (payToken !== ethers.ZeroAddress) {
+            showStatus('Checking token allowance...', false);
+
+            const tokenContract = new ethers.Contract(payToken, ERC20_ABI, signer);
+
+            // Check user balance
+            const userBalance = await tokenContract.balanceOf(connectedAddress);
+            if (userBalance < cost) {
+              showStatus(`Insufficient balance. Need ${ethers.formatUnits(cost, tokenDecimals)} tokens`, true);
+              return;
+            }
+
+            // Check allowance
+            const currentAllowance = await tokenContract.allowance(connectedAddress, currentDAO.dao.dao);
+
+            if (currentAllowance < cost) {
+              showStatus('Approving token spend... Please confirm in wallet', false);
+
+              // Request approval for exact amount needed (or can use MaxUint256 for unlimited)
+              const approveTx = await tokenContract.approve(currentDAO.dao.dao, cost);
+
+              showStatus(`Approval transaction submitted. <a href="https://etherscan.io/tx/${approveTx.hash}" target="_blank" rel="noopener" style="color: #9d7bff; text-decoration: underline;">View on Etherscan</a>`, false);
+
+              await approveTx.wait();
+
+              showStatus('Approval confirmed! Proceeding with purchase...', false);
+            }
+          }
+
+          showStatus('Confirming purchase... Please sign the transaction', false);
 
           let tx;
           if (payToken === ethers.ZeroAddress) {
@@ -7503,11 +7938,13 @@
             tx = await molochContract.buyShares(payToken, shareAmount, maxPay);
           }
 
-          showStatus('Transaction submitted. Waiting for confirmation...', false);
+          const tokenType = isLoot ? 'LOOT' : 'SHARES';
+          showStatus(`Transaction submitted. <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" rel="noopener" style="color: #9d7bff; text-decoration: underline;">View on Etherscan</a>`, false);
+
           await tx.wait();
 
-          const tokenType = isLoot ? 'LOOT' : 'SHARES';
-          showStatus(`Purchase successful! You received ${amountInput} ${tokenType}`, false);
+          showStatus(`✨ Purchase successful! You received ${amountInput} ${tokenType}. <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" rel="noopener" style="color: #9d7bff; text-decoration: underline;">View transaction</a>`, false);
+
           closePurchaseModal();
           await refreshCurrentDAO();
           await renderSalesInfo();
@@ -7515,17 +7952,21 @@
           console.error('Purchase failed:', error);
 
           if (isUserRejection(error)) {
-            showStatus('Purchase cancelled', false);
+            showStatus('Transaction cancelled by user', false);
             return;
           }
 
           let errorMessage = 'Purchase failed';
-          if (error.message?.includes('insufficient')) {
-            errorMessage = 'Insufficient balance or allowance';
+          if (error.message?.includes('insufficient funds')) {
+            errorMessage = 'Insufficient funds for transaction';
+          } else if (error.message?.includes('ERC20: insufficient allowance')) {
+            errorMessage = 'Insufficient token allowance. Please try again';
           } else if (error.shortMessage) {
             errorMessage = error.shortMessage;
           } else if (error.reason) {
             errorMessage = error.reason;
+          } else if (error.message) {
+            errorMessage = error.message.slice(0, 100);
           }
 
           showStatus(errorMessage, true);
@@ -7585,10 +8026,7 @@
           const daoAddress = currentDAO.dao.dao;
 
           // Encode setSale call
-          const saleIface = new ethers.Interface([
-            'function setSale(address,uint256,uint256,bool,bool,bool)'
-          ]);
-          const calldata = saleIface.encodeFunctionData('setSale', [
+          const calldata = INTERFACES.setSale.encodeFunctionData('setSale', [
             address, pricePerShare, cap, minting, active, isLoot
           ]);
 
@@ -8010,9 +8448,19 @@
       async function renderVoteReceipts() {
         const receiptsGrid = document.getElementById('receiptsGrid');
         if (!currentDAO || !connectedAddress) {
-          receiptsGrid.innerHTML = '<p style="text-align: center; color: rgba(230, 217, 255, 0.6); font-style: italic; grid-column: 1/-1;">Connect wallet to view receipts</p>';
+          receiptsGrid.innerHTML = '';
+          receiptsGrid.appendChild(createEmptyState(
+            '🔌',
+            'WALLET NOT CONNECTED',
+            'Connect your wallet to view your vote receipt collection',
+            'Connect Wallet',
+            connectWallet
+          ));
           return;
         }
+
+        // Show loading state
+        showLoadingState(receiptsGrid, 3, 'card');
 
         const receipts = [];
         const molochContract = new ethers.Contract(currentDAO.dao.dao, MOLOCH_ABI, provider);
@@ -8051,12 +8499,20 @@
         receipts.push(...results.filter(r => r !== null));
 
         if (receipts.length === 0) {
-          receiptsGrid.innerHTML = '<p style="text-align: center; color: rgba(230, 217, 255, 0.6); font-style: italic; grid-column: 1/-1;">No vote receipts yet. Vote on proposals to collect them!</p>';
+          receiptsGrid.innerHTML = '';
+          receiptsGrid.appendChild(createEmptyState(
+            '🎫',
+            'NO VOTE RECEIPTS YET',
+            'Vote on proposals to start collecting unique receipt NFTs that track your participation',
+            'View Proposals',
+            () => switchDaoView('dao')
+          ));
           return;
         }
 
         // Render receipt cards with metadata
-        receiptsGrid.innerHTML = '<p style="text-align: center; color: rgba(230, 217, 255, 0.6); font-style: italic; grid-column: 1/-1;">Loading receipt metadata...</p>';
+        receiptsGrid.innerHTML = '';
+        showLoadingState(receiptsGrid, receipts.length, 'card');
 
         const supportLabels = ['Against', 'For', 'Abstain'];
         const supportColors = ['#ff6b6b', '#66ff66', '#9d7bff'];
@@ -8090,9 +8546,10 @@
 
         receiptsGrid.innerHTML = '';
 
-        receiptsWithMetadata.forEach(receipt => {
+        receiptsWithMetadata.forEach((receipt, index) => {
           const card = document.createElement('div');
-          card.className = 'receipt-card';
+          card.className = 'receipt-card card-appear';
+          card.style.animationDelay = `${index * 0.05}s`;
 
           const balanceFormatted = ethers.formatUnits(receipt.balance, 18);
           const supportLabel = supportLabels[receipt.support];
@@ -8110,16 +8567,39 @@
             }
           }
 
+          // Check for futarchy claim eligibility
+          let claimButtonHTML = '';
+          const proposal = currentDAO.dao.proposals.find(p => p.id.toString() === receipt.proposalId.toString());
+
+          if (proposal?.futarchy?.enabled && proposal.futarchy.resolved) {
+            const winnerSupport = Number(proposal.futarchy.winner);
+            const userSupport = Number(receipt.support);
+
+            if (userSupport === winnerSupport) {
+              claimButtonHTML = `
+                <button onclick="event.stopPropagation(); claimFutarchyReward('${receipt.proposalId.toString()}', '${receipt.balance.toString()}');"
+                        style="width: 100%; margin-top: 0.75rem; padding: 0.6rem; background: linear-gradient(135deg, #66ff66 0%, #44cc44 100%); border: none; color: #000; font-family: 'Cinzel', serif; font-size: 0.65rem; letter-spacing: 0.1em; cursor: pointer; text-transform: uppercase; font-weight: 600; border-radius: 4px; transition: all 0.2s ease;">
+                  🎉 Claim Rewards
+                </button>
+              `;
+            }
+          }
+
           card.innerHTML = `
             ${imageHTML}
             ${nameHTML}
             <div class="receipt-proposal">Proposal #${receipt.proposalId.toString().slice(0, 8)}...</div>
             <div class="receipt-vote" style="color: ${supportColor};">Voted ${supportLabel}</div>
             <div class="receipt-amount">${parseFloat(balanceFormatted).toFixed(4)} receipts</div>
+            ${claimButtonHTML}
           `;
 
-          // Make card clickable to open modal
-          card.onclick = () => openNFTModal(receipt.metadata, 'Vote Receipt');
+          // Make card clickable to open modal with receipt data
+          card.onclick = (e) => {
+            // Don't open modal if clicking the claim button
+            if (e.target.tagName === 'BUTTON') return;
+            openNFTModal(receipt.metadata, 'Vote Receipt', receipt);
+          };
 
           receiptsGrid.appendChild(card);
         });
@@ -8165,7 +8645,7 @@
       }
 
       // Open NFT modal
-      function openNFTModal(metadata, title) {
+      function openNFTModal(metadata, title, receiptData = null) {
         if (!metadata) return;
 
         const modal = document.getElementById('nftModal');
@@ -8190,15 +8670,59 @@
           `;
         }
 
+        // Check for futarchy claim eligibility if this is a vote receipt
+        let futarchyClaimHTML = '';
+        if (receiptData && currentDAO) {
+          const proposal = currentDAO.dao.proposals.find(p => p.id.toString() === receiptData.proposalId.toString());
+
+          if (proposal?.futarchy?.enabled && proposal.futarchy.resolved) {
+            const winnerSupport = Number(proposal.futarchy.winner); // 0 or 1
+            const userSupport = Number(receiptData.support);
+
+            // Check if user voted on winning side (0=Against, 1=For)
+            if (userSupport === winnerSupport) {
+              const balanceFormatted = ethers.formatUnits(receiptData.balance, 18);
+              const payoutPerUnit = proposal.futarchy.payoutPerUnit;
+              const estimatedReward = (receiptData.balance * payoutPerUnit) / (10n ** 18n);
+              const estimatedRewardFormatted = ethers.formatUnits(estimatedReward, 18);
+
+              futarchyClaimHTML = `
+                <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(102, 255, 102, 0.1); border: 1px solid rgba(102, 255, 102, 0.3); border-radius: 4px;">
+                  <div style="font-family: 'Cinzel', serif; font-size: 0.85rem; color: #66ff66; letter-spacing: 0.1em; margin-bottom: 0.75rem; text-align: center;">
+                    🎉 FUTARCHY REWARDS AVAILABLE
+                  </div>
+                  <div style="font-family: 'EB Garamond', serif; font-size: 0.9rem; color: rgba(230, 217, 255, 0.9); text-align: center; margin-bottom: 0.75rem;">
+                    You voted on the winning side! You have <strong>${parseFloat(balanceFormatted).toFixed(4)}</strong> winning receipts.
+                  </div>
+                  <div style="font-size: 0.85rem; color: rgba(230, 217, 255, 0.8); text-align: center; margin-bottom: 1rem;">
+                    Estimated reward: <strong>${parseFloat(estimatedRewardFormatted).toFixed(4)} LOOT</strong>
+                  </div>
+                  <button onclick="claimFutarchyFromReceipt('${receiptData.proposalId.toString()}', '${receiptData.balance.toString()}')"
+                          style="width: 100%; padding: 0.875rem; background: linear-gradient(135deg, #66ff66 0%, #44cc44 100%); border: none; color: #000; font-family: 'Cinzel', serif; font-size: 0.8rem; letter-spacing: 0.15em; cursor: pointer; text-transform: uppercase; font-weight: 600; border-radius: 4px; transition: all 0.2s ease; min-height: 44px;">
+                    Claim Rewards
+                  </button>
+                </div>
+              `;
+            }
+          }
+        }
+
         modalBody.innerHTML = `
           ${imageHTML}
           <div class="nft-modal-title">${metadata.name || title}</div>
           ${metadata.description ? `<div class="nft-modal-description">${metadata.description}</div>` : ''}
           ${attributesHTML}
+          ${futarchyClaimHTML}
         `;
 
         modal.classList.add('show');
         document.body.style.overflow = 'hidden';
+      }
+
+      // Claim futarchy rewards from receipt modal
+      async function claimFutarchyFromReceipt(proposalId, amountStr) {
+        closeNFTModal();
+        await claimFutarchyReward(proposalId, amountStr);
       }
 
       // Close NFT modal
@@ -8207,13 +8731,6 @@
         modal.classList.remove('show');
         document.body.style.overflow = '';
       }
-
-      // Close modal with ESC key
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-          closeNFTModal();
-        }
-      });
 
       // Render tile emblem (for gallery tiles)
       async function renderTileEmblem(daoAddress, emblemId) {
@@ -8778,10 +9295,10 @@
 
           const tx = await molochContract.castVote(proposalIdBigInt, support);
 
-          showStatus('Transaction submitted. Waiting for confirmation...', false);
+          showStatus(`Transaction submitted. <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" rel="noopener" style="color: #9d7bff; text-decoration: underline;">View on Etherscan</a>`, false);
           await tx.wait();
 
-          showStatus(`Vote ${voteType} submitted successfully!`, false);
+          showStatus(`✨ Vote ${voteType} submitted successfully! <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" rel="noopener" style="color: #9d7bff; text-decoration: underline;">View transaction</a>`, false);
 
           // Refresh DAO data
           await refreshCurrentDAO();
@@ -8837,10 +9354,10 @@
           showStatus('Cancelling vote...', false);
           const tx = await molochContract.cancelVote(proposalIdBigInt);
 
-          showStatus('Transaction submitted. Waiting for confirmation...', false);
+          showStatus(`Transaction submitted. <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" rel="noopener" style="color: #9d7bff; text-decoration: underline;">View on Etherscan</a>`, false);
           await tx.wait();
 
-          showStatus('Vote cancelled successfully!', false);
+          showStatus(`✨ Vote cancelled successfully! <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" rel="noopener" style="color: #9d7bff; text-decoration: underline;">View transaction</a>`, false);
 
           // Refresh DAO data
           await refreshCurrentDAO();
@@ -8891,10 +9408,10 @@
           showStatus('Claiming futarchy rewards...', false);
           const tx = await molochContract.cashOutFutarchy(proposalIdBigInt, amount);
 
-          showStatus('Transaction submitted. Waiting for confirmation...', false);
+          showStatus(`Transaction submitted. <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" rel="noopener" style="color: #9d7bff; text-decoration: underline;">View on Etherscan</a>`, false);
           const receipt = await tx.wait();
 
-          showStatus('Rewards claimed successfully!', false);
+          showStatus(`✨ Rewards claimed successfully! <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" rel="noopener" style="color: #9d7bff; text-decoration: underline;">View transaction</a>`, false);
 
           // Refresh DAO data
           await refreshCurrentDAO();
@@ -9367,10 +9884,10 @@
             proposalData.nonce
           );
 
-          showStatus('Transaction submitted. Waiting for confirmation...', false);
+          showStatus(`Transaction submitted. <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" rel="noopener" style="color: #9d7bff; text-decoration: underline;">View on Etherscan</a>`, false);
           await tx.wait();
 
-          showStatus('Proposal executed successfully!', false);
+          showStatus(`✨ Proposal executed successfully! <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" rel="noopener" style="color: #9d7bff; text-decoration: underline;">View transaction</a>`, false);
 
           // Refresh
           await refreshCurrentDAO();
@@ -9484,11 +10001,251 @@
         return input;
       }
 
-      function showStatus(message, isError = false) {
+      // Debounce utility for performance optimization
+      function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+          const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+          };
+          clearTimeout(timeout);
+          timeout = setTimeout(later, wait);
+        };
+      }
+
+      // Throttle utility for scroll/resize events
+      function throttle(func, limit) {
+        let inThrottle;
+        return function(...args) {
+          if (!inThrottle) {
+            func.apply(this, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+          }
+        };
+      }
+
+      // Create tooltip helper
+      function addTooltip(element, text) {
+        if (!element || !text) return;
+        element.classList.add('tooltip');
+        const tooltip = document.createElement('span');
+        tooltip.className = 'tooltip-text';
+        tooltip.textContent = text;
+        element.appendChild(tooltip);
+      }
+
+      // Create enhanced empty state
+      function createEmptyState(icon, title, description, actionText = null, actionCallback = null) {
+        const container = document.createElement('div');
+        container.style.cssText = `
+          grid-column: 1/-1;
+          text-align: center;
+          padding: 3rem 1.5rem;
+          color: rgba(230, 217, 255, 0.6);
+        `;
+
+        container.innerHTML = `
+          <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.6;">${icon}</div>
+          <div style="font-family: 'Cinzel', serif; font-size: 1rem; color: rgba(230, 217, 255, 0.8); margin-bottom: 0.5rem; letter-spacing: 0.1em;">${title}</div>
+          <div style="font-family: 'EB Garamond', serif; font-size: 0.9rem; font-style: italic; max-width: 400px; margin: 0 auto;">${description}</div>
+        `;
+
+        if (actionText && actionCallback) {
+          const button = document.createElement('button');
+          button.textContent = actionText;
+          button.style.cssText = `
+            margin-top: 1.5rem;
+            padding: 0.75rem 1.5rem;
+            background: rgba(157, 123, 255, 0.2);
+            border: 1px solid rgba(157, 123, 255, 0.4);
+            color: #9d7bff;
+            font-family: 'Cinzel', serif;
+            font-size: 0.8rem;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            border-radius: 4px;
+          `;
+          button.onclick = actionCallback;
+          button.onmouseover = () => {
+            button.style.background = 'rgba(157, 123, 255, 0.3)';
+            button.style.borderColor = '#9d7bff';
+            button.style.transform = 'translateY(-2px)';
+          };
+          button.onmouseout = () => {
+            button.style.background = 'rgba(157, 123, 255, 0.2)';
+            button.style.borderColor = 'rgba(157, 123, 255, 0.4)';
+            button.style.transform = 'translateY(0)';
+          };
+          container.appendChild(button);
+        }
+
+        return container;
+      }
+
+      // Create loading skeleton
+      function createSkeleton(type = 'card') {
+        const skeleton = document.createElement('div');
+        skeleton.className = 'skeleton';
+
+        if (type === 'card') {
+          skeleton.style.cssText = 'height: 200px; width: 100%; margin-bottom: 1rem;';
+        } else if (type === 'text') {
+          skeleton.style.cssText = 'height: 1rem; width: 100%; margin-bottom: 0.5rem;';
+        } else if (type === 'title') {
+          skeleton.style.cssText = 'height: 1.5rem; width: 60%; margin-bottom: 1rem;';
+        }
+
+        return skeleton;
+      }
+
+      // Show loading state
+      function showLoadingState(container, count = 3, type = 'card') {
+        if (!container) return;
+        container.innerHTML = '';
+        for (let i = 0; i < count; i++) {
+          container.appendChild(createSkeleton(type));
+        }
+      }
+
+      // Progress bar utilities
+      function showProgress() {
+        const bar = document.getElementById('progressBar');
+        if (bar) bar.style.display = 'block';
+      }
+
+      function hideProgress() {
+        const bar = document.getElementById('progressBar');
+        if (bar) {
+          setTimeout(() => {
+            bar.style.display = 'none';
+          }, 300);
+        }
+      }
+
+      // Toast notification system
+      function showToast(message, type = 'info', duration = 4000) {
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+
+        let icon = 'ℹ️';
+        let color = '#9d7bff';
+
+        if (type === 'success') {
+          icon = '✨';
+          color = '#66ff66';
+        } else if (type === 'error') {
+          icon = '⚠️';
+          color = '#ff6b6b';
+        } else if (type === 'warning') {
+          icon = '⚡';
+          color = '#ffc107';
+        }
+
+        toast.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div style="font-size: 1.5rem;">${icon}</div>
+            <div style="flex: 1; color: ${color}; font-family: 'EB Garamond', serif;">${message}</div>
+          </div>
+        `;
+
+        container.appendChild(toast);
+
+        // Auto remove
+        setTimeout(() => {
+          toast.style.animation = 'fadeOut 0.3s ease-out forwards';
+          setTimeout(() => {
+            container.removeChild(toast);
+          }, 300);
+        }, duration);
+      }
+
+      // Keyboard shortcuts (consolidated)
+      document.addEventListener('keydown', (e) => {
+        // ESC to close modals
+        if (e.key === 'Escape') {
+          closeNFTModal();
+          closeWalletModal();
+          closePurchaseModal();
+          closeRagequitModal();
+        }
+
+        // Ctrl/Cmd + B to go back to gallery
+        if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+          e.preventDefault();
+          if (currentDAO) {
+            backToGallery();
+          }
+        }
+
+        // Ctrl/Cmd + / to show keyboard shortcuts
+        if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+          e.preventDefault();
+          showToast('Keyboard Shortcuts: Cmd/Ctrl+B = Back to Gallery | ESC = Close Modals', 'info', 6000);
+        }
+      });
+
+      let statusTimeout = null;
+
+      function showStatus(message, isError = false, type = 'info', autoDismiss = true) {
         const statusEl = document.getElementById('statusMessage');
-        statusEl.innerHTML = `<div class="status-message ${isError ? 'error-message' : ''}">${message}</div>`;
-        if (!isError) {
-          setTimeout(() => statusEl.innerHTML = '', 10000);
+
+        // Clear existing timeout
+        if (statusTimeout) {
+          clearTimeout(statusTimeout);
+          statusTimeout = null;
+        }
+
+        // Determine status class
+        let statusClass = 'status-message';
+        if (isError) {
+          statusClass += ' error-message';
+        } else if (type === 'success') {
+          statusClass += ' success';
+        } else if (type === 'warning') {
+          statusClass += ' warning';
+        }
+
+        // Add spinner for loading states
+        const spinner = message.includes('...') && !message.includes('✨') && !message.includes('href=')
+          ? '<span class="spinner"></span>'
+          : '';
+
+        statusEl.innerHTML = `<div class="${statusClass}">${spinner}${message}</div>`;
+
+        // Auto-dismiss success messages after delay
+        if (autoDismiss && !isError) {
+          const delay = message.includes('✨') ? 8000 : 6000;
+          statusTimeout = setTimeout(() => {
+            const msgEl = statusEl.querySelector('.status-message');
+            if (msgEl) {
+              msgEl.style.animation = 'fadeOut 0.3s ease-out forwards';
+              setTimeout(() => {
+                statusEl.innerHTML = '';
+              }, 300);
+            }
+          }, delay);
+        }
+      }
+
+      function clearStatus() {
+        const statusEl = document.getElementById('statusMessage');
+        const msgEl = statusEl.querySelector('.status-message');
+        if (msgEl) {
+          msgEl.style.animation = 'fadeOut 0.3s ease-out forwards';
+          setTimeout(() => {
+            statusEl.innerHTML = '';
+          }, 300);
+        }
+        if (statusTimeout) {
+          clearTimeout(statusTimeout);
+          statusTimeout = null;
         }
       }
 
@@ -9568,38 +10325,6 @@
         const value = parseInt(document.getElementById(valueId).value || 0);
         const unit = parseInt(document.getElementById(unitId).value || 1);
         return value * unit;
-      }
-
-      // CREATE2 address prediction
-      function predictCreate2Address(deployer, salt, initCodeHash) {
-        const encoded = ethers.solidityPacked(
-          ['bytes1', 'address', 'bytes32', 'bytes32'],
-          ['0xff', deployer, salt, initCodeHash]
-        );
-        const hash = ethers.keccak256(encoded);
-        return '0x' + hash.slice(-40);
-      }
-
-      // Predict Moloch DAO address
-      function predictDaoAddress(summonerAddress, implementationAddress, initHolders, initShares, userSalt) {
-        // Summoner uses: keccak256(abi.encode(initHolders, initShares, salt))
-        const abiCoder = new ethers.AbiCoder();
-        const saltData = abiCoder.encode(
-          ['address[]', 'uint256[]', 'bytes32'],
-          [initHolders, initShares, userSalt]
-        );
-        const salt = ethers.keccak256(saltData);
-
-        // Minimal proxy bytecode that summoner deploys
-        // This is the exact bytecode from the summoner's create2 call
-        const proxyBytecode = ethers.concat([
-          '0x602d5f8160095f39f35f5f365f5f37365f73',
-          ethers.zeroPadValue(implementationAddress, 20),
-          '0x5af43d5f5f3e6029573d5ffd5b3d5ff3'
-        ]);
-        
-        const initCodeHash = ethers.keccak256(proxyBytecode);
-        return predictCreate2Address(summonerAddress, salt, initCodeHash);
       }
 
       document.getElementById('summonForm').addEventListener('submit', async (e) => {
@@ -9696,22 +10421,20 @@
           // Add proposal TTL setting if specified
           const proposalTTL = getSecondsFromInput('proposalTTL', 'proposalTTLUnit');
           if (proposalTTL > 0) {
-            const iface = new ethers.Interface(['function setProposalTTL(uint64)']);
             initCalls.push({
               target: predictedDao, // Self-call to the DAO
               value: 0n,
-              data: iface.encodeFunctionData('setProposalTTL', [proposalTTL])
+              data: INTERFACES.setProposalTTL.encodeFunctionData('setProposalTTL', [proposalTTL])
             });
           }
 
           // Add timelock delay setting if specified
           const timelockDelay = getSecondsFromInput('timelockDelay', 'timelockDelayUnit');
           if (timelockDelay > 0) {
-            const iface = new ethers.Interface(['function setTimelockDelay(uint64)']);
             initCalls.push({
               target: predictedDao, // Self-call to the DAO
               value: 0n,
-              data: iface.encodeFunctionData('setTimelockDelay', [timelockDelay])
+              data: INTERFACES.setTimelockDelay.encodeFunctionData('setTimelockDelay', [timelockDelay])
             });
           }
 
@@ -9744,7 +10467,6 @@
             const LOOT_IMPL_ADDRESS = '0x6f1f2aF76a3aDD953277e9F369242697C87bc6A5';
             
             // Create direct loot minting calls
-            const lootInterface = new ethers.Interface(['function mintFromMoloch(address,uint256)']);
             
             let lootCallsAdded = 0;
             for (let i = 0; i < initHolders.length; i++) {
@@ -9753,7 +10475,7 @@
                 initCalls.push({
                   target: predictedLoot,
                   value: 0n,
-                  data: lootInterface.encodeFunctionData('mintFromMoloch', [
+                  data: INTERFACES.mintFromMoloch.encodeFunctionData('mintFromMoloch', [
                     initHolders[i],
                     lootAmounts[i]
                   ])
@@ -9769,11 +10491,10 @@
 
           // Add proposal threshold setting if specified
           if (proposalThresholdWei > 0n) {
-            const iface = new ethers.Interface(['function setProposalThreshold(uint96)']);
             initCalls.push({
               target: predictedDao, // Self-call to the DAO
               value: 0n,
-              data: iface.encodeFunctionData('setProposalThreshold', [proposalThresholdWei])
+              data: INTERFACES.setProposalThreshold.encodeFunctionData('setProposalThreshold', [proposalThresholdWei])
             });
           }
 
@@ -9784,11 +10505,10 @@
           if (enableSharesTransfer || enableLootTransfer) {
             // Call setTransfersLocked(bool sharesLocked, bool lootLocked)
             // Note: false = unlocked/transferable, true = locked/non-transferable
-            const iface = new ethers.Interface(['function setTransfersLocked(bool sharesLocked, bool lootLocked)']);
             initCalls.push({
               target: predictedDao, // Self-call to the DAO
               value: 0n,
-              data: iface.encodeFunctionData('setTransfersLocked', [
+              data: INTERFACES.setTransfersLocked.encodeFunctionData('setTransfersLocked', [
                 !enableSharesTransfer, // Invert: checkbox=true means unlocked, so sharesLocked=false
                 !enableLootTransfer    // Invert: checkbox=true means unlocked, so lootLocked=false
               ])
@@ -9814,11 +10534,10 @@
             }
 
             // Add setAutoFutarchy call
-            const futarchyIface = new ethers.Interface(['function setAutoFutarchy(uint256,uint256)']);
             initCalls.push({
               target: predictedDao, // Self-call to the DAO
               value: 0n,
-              data: futarchyIface.encodeFunctionData('setAutoFutarchy', [param, cap])
+              data: INTERFACES.setAutoFutarchy.encodeFunctionData('setAutoFutarchy', [param, cap])
             });
           }
 
@@ -9854,13 +10573,10 @@
               const isLoot = tokenType === 'loot';
 
               // Add setSale call
-              const saleIface = new ethers.Interface([
-                'function setSale(address,uint256,uint256,bool,bool,bool)'
-              ]);
               initCalls.push({
                 target: predictedDao, // Self-call to the DAO
                 value: 0n,
-                data: saleIface.encodeFunctionData('setSale', [
+                data: INTERFACES.setSale.encodeFunctionData('setSale', [
                   payToken, pricePerShare, cap, minting, true, isLoot
                 ])
               });
@@ -9886,10 +10602,10 @@
             { value: 0 }
           );
 
-          showStatus(`Transaction submitted: ${tx.hash.slice(0, 10)}...`);
-          
+          showStatus(`Transaction submitted. <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" rel="noopener" style="color: #9d7bff; text-decoration: underline;">View on Etherscan</a>`);
+
           const receipt = await tx.wait();
-          
+
           // Find DAO address from events - ethers v6 syntax
           const event = receipt.logs
             .map(log => {
@@ -9900,11 +10616,17 @@
               }
             })
             .find(e => e && e.name === 'NewDAO');
-            
+
           const daoAddress = event?.args?.dao;
-          
-          showStatus(`✨ DAO summoned successfully at: <a href="https://etherscan.io/address/${daoAddress}" target="_blank">${daoAddress}</a>`);
-          
+
+          showStatus(`✨ DAO summoned successfully at: <a href="https://etherscan.io/address/${daoAddress}" target="_blank" rel="noopener" style="color: #9d7bff; text-decoration: underline;">${daoAddress}</a> | <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" rel="noopener" style="color: #9d7bff; text-decoration: underline;">View transaction</a>`);
+
+          // Refresh DAO lists to include newly summoned DAO
+          if (connectedAddress) {
+            await fetchUserDAOs();
+            await fetchAllDAOs();
+          }
+
           // Reset form
           document.getElementById('summonForm').reset();
           document.getElementById('foundingMembersList').innerHTML = '';
