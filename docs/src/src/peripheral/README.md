@@ -16,5 +16,8 @@
 - [FutarchyView](MolochViewHelper.sol/struct.FutarchyView.md)
 - [ProposalView](MolochViewHelper.sol/struct.ProposalView.md)
 - [DAOTreasury](MolochViewHelper.sol/struct.DAOTreasury.md)
+- [MessageView](MolochViewHelper.sol/struct.MessageView.md)
 - [DAOLens](MolochViewHelper.sol/struct.DAOLens.md)
+- [UserMemberView](MolochViewHelper.sol/struct.UserMemberView.md)
+- [UserDAOLens](MolochViewHelper.sol/struct.UserDAOLens.md)
 - [MolochViewHelper](MolochViewHelper.sol/contract.MolochViewHelper.md)

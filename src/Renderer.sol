@@ -438,10 +438,21 @@ contract Renderer {
             );
 
             if (F.resolved) {
+                // payoutPerUnit is 1e18-scaled: format with 3 decimals inline
+                uint256 whole = F.payoutPerUnit / 1e18;
+                uint256 frac = (F.payoutPerUnit % 1e18) / 1e15; // thousandths (0-999)
+                // convert frac to 3-char string with leading zeros
+                string memory f = Display.toString(1000 + frac); // "1xyz"
+                bytes memory fb = bytes(f);
+                // extract last 3 chars
+                string memory fracStr = string(abi.encodePacked(fb[1], fb[2], fb[3]));
+
                 svg = string.concat(
                     svg,
                     "<text x='60' y='458' class='m' font-size='9' fill='#fff'>Payout ",
-                    Display.fmtAmount18Simple(F.payoutPerUnit),
+                    Display.toString(whole),
+                    ".",
+                    fracStr,
                     unit,
                     "/vote</text>"
                 );
@@ -715,7 +726,7 @@ library Display {
     function fmtAmount18Simple(uint256 amount) internal pure returns (string memory) {
         if (amount == 0) return "0";
         uint256 whole = amount / 1e18;
-        if (whole == 0) return "<1";
+        if (whole == 0) return "&lt;1";
         return fmtComma(whole);
     }
 

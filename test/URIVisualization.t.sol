@@ -354,6 +354,60 @@ contract URIVisualizationTest is Test {
         _logDecodedURI(uri);
     }
 
+    function test_visualize_vote_receipt_with_futarchy_small_loot_payout() public {
+        // Create the proposal that will have futarchy
+        bytes memory call = abi.encodeWithSelector(Target.store.selector, 999);
+        uint256 h = moloch.proposalId(0, address(target), 0, call, keccak256("small-loot-fut"));
+
+        // Fund futarchy with minted loot via governance
+        // Total voting power: 100e18 (60 alice + 40 bob)
+        // For 0.001 loot per share: pool = 100e18 * 0.001 = 0.1e18 loot
+        uint256 lootPool = 0.1e18;
+
+        bytes memory fundData = abi.encodeWithSelector(
+            Moloch.fundFutarchy.selector,
+            h,
+            address(1007),
+            lootPool // address(1007) = minted loot
+        );
+
+        uint256 govH =
+            moloch.proposalId(0, address(moloch), 0, fundData, keccak256("fund-small-loot"));
+
+        // Pass governance proposal to fund futarchy
+        moloch.openProposal(govH);
+        vm.roll(block.number + 1);
+        vm.warp(block.timestamp + 1);
+
+        vm.prank(alice);
+        moloch.castVote(govH, 1);
+        vm.prank(bob);
+        moloch.castVote(govH, 1);
+
+        moloch.executeByVotes(0, address(moloch), 0, fundData, keccak256("fund-small-loot"));
+
+        // Now vote on the actual proposal
+        vm.roll(block.number + 1);
+        vm.warp(block.timestamp + 1);
+
+        vm.prank(alice);
+        moloch.castVote(h, 1);
+        vm.prank(bob);
+        moloch.castVote(h, 1);
+
+        // Execute to resolve futarchy
+        moloch.executeByVotes(0, address(target), 0, call, keccak256("small-loot-fut"));
+
+        uint256 receiptId = uint256(keccak256(abi.encodePacked("Moloch:receipt", h, uint8(1))));
+
+        string memory uri = moloch.tokenURI(receiptId);
+
+        console2.log("\n=== VOTE RECEIPT - WITH FUTARCHY (SMALL LOOT PAYOUT: 0.001 per share) ===");
+        console2.log("URI:", uri);
+
+        _logDecodedURI(uri);
+    }
+
     function test_visualize_permit_active() public {
         bytes memory call = abi.encodeWithSelector(Target.store.selector, 555);
         bytes32 nonce = keccak256("permit-viz");

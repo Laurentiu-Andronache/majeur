@@ -4178,7 +4178,7 @@
         </div>
         
         <div class="intro-text">
-          <h2>Radical Simplicity, Focused Power</h2>
+          <h2>Radical Transparency, Focused Power</h2>
           <p>
             Majeur is a minimal framework to manage digital organizations.
             Built on battle-tested governance primitives, flexible with modular code, 
@@ -6006,7 +6006,7 @@
 
       // Shared interfaces (created once, reused throughout)
       const INTERFACES = {
-        setQuorum: new ethers.Interface(['function setQuorum(uint256)']),
+        setQuorumBps: new ethers.Interface(['function setQuorumBps(uint16)']),
         setRagequittable: new ethers.Interface(['function setRagequittable(bool)']),
         setSale: new ethers.Interface(['function setSale(address,uint256,uint256,bool,bool,bool)']),
         setProposalTTL: new ethers.Interface(['function setProposalTTL(uint64)']),
@@ -6014,7 +6014,8 @@
         mintFromMoloch: new ethers.Interface(['function mintFromMoloch(address,uint256)']),
         setProposalThreshold: new ethers.Interface(['function setProposalThreshold(uint96)']),
         setTransfersLocked: new ethers.Interface(['function setTransfersLocked(bool,bool)']),
-        setAutoFutarchy: new ethers.Interface(['function setAutoFutarchy(uint256,uint256)'])
+        setAutoFutarchy: new ethers.Interface(['function setAutoFutarchy(uint256,uint256)']),
+        setRenderer: new ethers.Interface(['function setRenderer(address)'])
       };
 
       // Helper to create minimal proxy init code
@@ -6585,15 +6586,15 @@
         try {
           const viewHelper = new ethers.Contract(VIEW_HELPER_ADDRESS, VIEW_HELPER_ABI, provider);
 
-          // Default params: start at DAO 0, fetch up to 10, recent 10 proposals, recent 10 messages
+          // Default params: start at DAO 0, fetch up to 10 DAOs, recent 20 proposals, recent 20 messages
           const result = await viewHelper.getUserDAOsFullState(
             connectedAddress,
-            0, // daoStart
+            0,  // daoStart
             10, // daoCount
-            0, // proposalStart
-            10, // proposalCount
-            0, // messageStart
-            10 // messageCount
+            0,  // proposalStart
+            20, // proposalCount (increased for better visibility)
+            0,  // messageStart
+            20  // messageCount (increased for better visibility)
           );
 
           userDAOs = result;
@@ -6973,6 +6974,35 @@
               </a>
             </div>
             <div style="font-size: 0.95rem; color: #e6d9ff;">${futarchyText}</div>
+          </div>
+          <div style="margin-top: 0.75rem;">
+            <div style="font-size: 0.7rem; color: rgba(230, 217, 255, 0.5); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.35rem;">
+              Renderer
+              <a href="#" onclick="event.preventDefault(); prepareRendererProposal(); switchDaoView('dao');"
+                 title="Create proposal to change renderer"
+                 style="color: #9d7bff; opacity: 0.5; line-height: 1;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="16"></line>
+                  <line x1="8" y1="12" x2="16" y2="12"></line>
+                </svg>
+              </a>
+            </div>
+            <div style="font-size: 0.85rem; color: #e6d9ff;">
+              <a href="https://etherscan.io/address/${currentDAO.dao.meta.renderer}"
+                 target="_blank"
+                 rel="noopener noreferrer"
+                 style="color: #9d7bff; text-decoration: none; display: inline-flex; align-items: center; gap: 0.25rem;"
+                 onmouseover="this.style.textDecoration='underline';"
+                 onmouseout="this.style.textDecoration='none';">
+                ${currentDAO.dao.meta.renderer.slice(0, 6)}...${currentDAO.dao.meta.renderer.slice(-4)}
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                  <polyline points="15 3 21 3 21 9"></polyline>
+                  <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+              </a>
+            </div>
           </div>
         `;
       }
@@ -7477,11 +7507,7 @@
           const amountWei = ethers.parseUnits(amount, 18); // Shares and loot are always 18 decimals
 
           // Encode mintFromMoloch(address recipient, uint256 amount)
-          const abiCoder = new ethers.AbiCoder();
-          const mintCalldata = '0x7c1fb593' + abiCoder.encode(
-            ['address', 'uint256'],
-            [recipientAddress, amountWei]
-          ).slice(2);
+          const mintCalldata = INTERFACES.mintFromMoloch.encodeFunctionData('mintFromMoloch', [recipientAddress, amountWei]);
 
           document.getElementById('proposalTo').value = tokenAddress;
           document.getElementById('proposalValue').value = '0';
@@ -7617,11 +7643,7 @@
           }
 
           // Encode setAutoFutarchy(uint256 param, uint256 cap)
-          const abiCoder = new ethers.AbiCoder();
-          const futarchyCalldata = '0xc7b6a5b7' + abiCoder.encode(
-            ['uint256', 'uint256'],
-            [param, cap]
-          ).slice(2);
+          const futarchyCalldata = INTERFACES.setAutoFutarchy.encodeFunctionData('setAutoFutarchy', [param, cap]);
 
           document.getElementById('proposalTo').value = daoAddress;
           document.getElementById('proposalValue').value = '0';
@@ -7643,6 +7665,110 @@
 
         } catch (error) {
           console.error('Error populating futarchy proposal:', error);
+          showStatus('Failed to populate form: ' + error.message, true);
+        }
+      }
+
+      // Renderer proposal helper
+      async function prepareRendererProposal() {
+        if (!currentDAO || !currentDAO.dao) {
+          showStatus('Please select a DAO first', true);
+          return;
+        }
+
+        const dao = currentDAO.dao;
+        const daoAddress = dao.dao;
+        const currentRenderer = dao.meta.renderer;
+
+        // Scroll to proposal form
+        const proposalForm = document.querySelector('.proposal-form');
+        if (proposalForm) {
+          proposalForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Add renderer helper UI if not already present
+        let helperDiv = document.getElementById('rendererHelper');
+        if (!helperDiv) {
+          helperDiv = document.createElement('div');
+          helperDiv.id = 'rendererHelper';
+          helperDiv.style.cssText = 'margin-bottom: 1rem; padding: 1rem; background: rgba(157, 123, 255, 0.1); border: 1px solid rgba(157, 123, 255, 0.3); border-radius: 4px;';
+          proposalForm.insertBefore(helperDiv, proposalForm.querySelector('.proposal-form-group'));
+        }
+
+        // Show renderer helper
+        helperDiv.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <div style="font-family: 'Cinzel', serif; font-size: 0.85rem; color: #9d7bff; letter-spacing: 0.1em;">
+              CHANGE RENDERER
+            </div>
+            <button onclick="clearRendererHelper()" style="background: none; border: none; color: rgba(230, 217, 255, 0.6); cursor: pointer; font-size: 1.2rem; padding: 0; line-height: 1;">&times;</button>
+          </div>
+          <div style="margin-bottom: 0.75rem;">
+            <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Current Renderer</label>
+            <div style="font-size: 0.85rem; color: rgba(230, 217, 255, 0.5); margin-bottom: 0.75rem; font-family: 'Courier New', monospace;">
+              <a href="https://etherscan.io/address/${currentRenderer}" target="_blank" rel="noopener noreferrer" style="color: #9d7bff; text-decoration: none;">${currentRenderer}</a>
+            </div>
+            <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">New Renderer Address</label>
+            <input type="text" id="rendererAddress" placeholder="0x..."
+                   style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'Courier New', monospace; font-size: 0.85rem;" />
+            <div style="margin-top: 0.5rem; font-size: 0.75rem; color: rgba(230, 217, 255, 0.5);">
+              The renderer contract generates NFT metadata for receipts and badges
+            </div>
+          </div>
+          <button onclick="populateRendererProposal('${daoAddress}')"
+                  onmouseover="this.style.background='rgba(157, 123, 255, 0.35)'; this.style.borderColor='#9d7bff'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(157, 123, 255, 0.3)';"
+                  onmouseout="this.style.background='rgba(157, 123, 255, 0.2)'; this.style.borderColor='rgba(157, 123, 255, 0.4)'; this.style.transform='translateY(0)'; this.style.boxShadow='none';"
+                  style="width: 100%; padding: 0.75rem; background: rgba(157, 123, 255, 0.2); border: 1px solid rgba(157, 123, 255, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.75rem; letter-spacing: 0.15em; cursor: pointer; text-transform: uppercase; transition: all 0.2s ease; font-weight: 600;">
+            Populate Proposal Form
+          </button>
+        `;
+
+        // Focus on input
+        setTimeout(() => {
+          const input = document.getElementById('rendererAddress');
+          if (input) {
+            input.focus();
+          }
+        }, 100);
+      }
+
+      function clearRendererHelper() {
+        const helperDiv = document.getElementById('rendererHelper');
+        if (helperDiv) helperDiv.remove();
+      }
+
+      async function populateRendererProposal(daoAddress) {
+        try {
+          const rendererInput = document.getElementById('rendererAddress').value.trim();
+
+          if (!rendererInput || !ethers.isAddress(rendererInput)) {
+            showStatus('Please enter a valid Ethereum address', true);
+            return;
+          }
+
+          // Encode setRenderer(address)
+          const rendererCalldata = INTERFACES.setRenderer.encodeFunctionData('setRenderer', [rendererInput]);
+
+          document.getElementById('proposalTo').value = daoAddress;
+          document.getElementById('proposalValue').value = '0';
+          document.getElementById('proposalData').value = rendererCalldata;
+          document.getElementById('proposalDescription').value = `Change renderer to ${rendererInput}`;
+
+          // Update UI hints and translations
+          updateTargetAddressHint();
+          updateCalldataTranslation();
+          updateCalldataPreview();
+
+          showStatus('Proposal form populated!', false);
+          clearRendererHelper();
+
+          // Scroll to show the populated form
+          setTimeout(() => {
+            document.getElementById('proposalDescription').scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 300);
+
+        } catch (error) {
+          console.error('Error populating renderer proposal:', error);
           showStatus('Failed to populate form: ' + error.message, true);
         }
       }
@@ -7723,8 +7849,8 @@
 
           const quorumBps = Math.floor(parseFloat(percentInput) * 100);
 
-          // Encode setQuorum(uint256 bps)
-          const calldata = INTERFACES.setQuorum.encodeFunctionData('setQuorum', [quorumBps]);
+          // Encode setQuorumBps(uint16 bps)
+          const calldata = INTERFACES.setQuorumBps.encodeFunctionData('setQuorumBps', [quorumBps]);
 
           document.getElementById('proposalTo').value = daoAddress;
           document.getElementById('proposalValue').value = '0';
@@ -8184,11 +8310,7 @@
           const pricePerShare = ethers.parseUnits(priceInput, decimals);
           const cap = capInput && parseFloat(capInput) > 0 ? ethers.parseEther(capInput) : 0n;
 
-          const abiCoder = new ethers.AbiCoder();
-          const saleCalldata = '0x62843c99' + abiCoder.encode(
-            ['address', 'uint256', 'uint256', 'bool', 'bool', 'bool'],
-            [payToken, pricePerShare, cap, minting, active, isLoot]
-          ).slice(2);
+          const saleCalldata = INTERFACES.setSale.encodeFunctionData('setSale', [payToken, pricePerShare, cap, minting, active, isLoot]);
 
           const tokenType = isLoot ? 'LOOT' : 'SHARES';
           const statusText = active ? 'Enable' : 'Disable';
@@ -8481,12 +8603,23 @@
 
           try {
             const balance = await molochContract.balanceOf(connectedAddress, receiptId);
-            if (balance > 0n) {
+
+            // Show receipt if:
+            // 1. User still has balance > 0 (hasn't claimed), OR
+            // 2. User voted on winning side of resolved futarchy (even if claimed/burned)
+            const hasBalance = balance > 0n;
+
+            const isWinningFutarchyVote = proposal.futarchy?.enabled
+              && proposal.futarchy.resolved
+              && Number(proposal.futarchy.winner) === support;
+
+            if (hasBalance || isWinningFutarchyVote) {
               return {
                 proposalId: proposal.id,
                 support,
                 balance,
-                receiptId
+                receiptId,
+                claimed: !hasBalance && isWinningFutarchyVote // Track if already claimed
               };
             }
           } catch (err) {
@@ -8547,61 +8680,81 @@
         receiptsGrid.innerHTML = '';
 
         receiptsWithMetadata.forEach((receipt, index) => {
-          const card = document.createElement('div');
-          card.className = 'receipt-card card-appear';
-          card.style.animationDelay = `${index * 0.05}s`;
+          try {
+            const card = document.createElement('div');
+            card.className = 'receipt-card card-appear';
+            card.style.animationDelay = `${index * 0.05}s`;
 
-          const balanceFormatted = ethers.formatUnits(receipt.balance, 18);
-          const supportLabel = supportLabels[receipt.support];
-          const supportColor = supportColors[receipt.support];
+            const balanceFormatted = ethers.formatUnits(receipt.balance, 18);
+            const supportLabel = supportLabels[receipt.support];
+            const supportColor = supportColors[receipt.support];
 
-          let imageHTML = '';
-          let nameHTML = '';
+            let imageHTML = '';
+            let nameHTML = '';
 
-          if (receipt.metadata) {
-            if (receipt.metadata.image) {
-              imageHTML = `<img src="${receipt.metadata.image}" class="receipt-image" alt="Receipt" />`;
+            if (receipt.metadata) {
+              if (receipt.metadata.image) {
+                imageHTML = `<img src="${receipt.metadata.image}" class="receipt-image" alt="Receipt" />`;
+              }
+              if (receipt.metadata.name) {
+                nameHTML = `<div class="receipt-name">${receipt.metadata.name}</div>`;
+              }
             }
-            if (receipt.metadata.name) {
-              nameHTML = `<div class="receipt-name">${receipt.metadata.name}</div>`;
+
+            // Check for futarchy claim eligibility
+            let claimButtonHTML = '';
+            const proposal = currentDAO.dao.proposals.find(p => p.id.toString() === receipt.proposalId.toString());
+
+            if (proposal?.futarchy?.enabled && proposal.futarchy.resolved) {
+              const winnerSupport = Number(proposal.futarchy.winner);
+              const userSupport = Number(receipt.support);
+
+              if (userSupport === winnerSupport) {
+                if (receipt.claimed || receipt.balance === 0n) {
+                  // Already claimed - show claimed status
+                  claimButtonHTML = `
+                    <div style="width: 100%; margin-top: 0.75rem; padding: 0.6rem; background: rgba(102, 255, 102, 0.1); border: 1px solid rgba(102, 255, 102, 0.3); color: #66ff66; font-family: 'Cinzel', serif; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; text-align: center; border-radius: 4px;">
+                      ✓ Rewards Claimed
+                    </div>
+                  `;
+                } else {
+                  // Has unclaimed rewards
+                  claimButtonHTML = `
+                    <button onclick="event.stopPropagation(); claimFutarchyReward('${receipt.proposalId.toString()}', '${receipt.balance.toString()}');"
+                            style="width: 100%; margin-top: 0.75rem; padding: 0.6rem; background: linear-gradient(135deg, #66ff66 0%, #44cc44 100%); border: none; color: #000; font-family: 'Cinzel', serif; font-size: 0.65rem; letter-spacing: 0.1em; cursor: pointer; text-transform: uppercase; font-weight: 600; border-radius: 4px; transition: all 0.2s ease;">
+                      Claim Rewards
+                    </button>
+                  `;
+                }
+              }
             }
+
+            // Handle display for claimed vs unclaimed receipts
+            const amountDisplay = receipt.claimed || receipt.balance === 0n
+              ? '<div class="receipt-amount" style="opacity: 0.6;">Receipt Claimed</div>'
+              : `<div class="receipt-amount">${parseFloat(balanceFormatted).toFixed(4)} receipts</div>`;
+
+            card.innerHTML = `
+              ${imageHTML}
+              ${nameHTML}
+              <div class="receipt-proposal">Proposal #${receipt.proposalId.toString().slice(0, 8)}...</div>
+              <div class="receipt-vote" style="color: ${supportColor};">Voted ${supportLabel}</div>
+              ${amountDisplay}
+              <div style="font-size: 0.65rem; opacity: 0.5; margin-top: 0.5rem; font-family: monospace;">Receipt: ${receipt.receiptId.slice(0, 10)}...${receipt.receiptId.slice(-8)}</div>
+              ${claimButtonHTML}
+            `;
+
+            // Make card clickable to open modal with receipt data
+            card.onclick = (e) => {
+              // Don't open modal if clicking the claim button
+              if (e.target.tagName === 'BUTTON') return;
+              openNFTModal(receipt.metadata, 'Vote Receipt', receipt);
+            };
+
+            receiptsGrid.appendChild(card);
+          } catch (renderError) {
+            console.error('Error rendering receipt:', renderError);
           }
-
-          // Check for futarchy claim eligibility
-          let claimButtonHTML = '';
-          const proposal = currentDAO.dao.proposals.find(p => p.id.toString() === receipt.proposalId.toString());
-
-          if (proposal?.futarchy?.enabled && proposal.futarchy.resolved) {
-            const winnerSupport = Number(proposal.futarchy.winner);
-            const userSupport = Number(receipt.support);
-
-            if (userSupport === winnerSupport) {
-              claimButtonHTML = `
-                <button onclick="event.stopPropagation(); claimFutarchyReward('${receipt.proposalId.toString()}', '${receipt.balance.toString()}');"
-                        style="width: 100%; margin-top: 0.75rem; padding: 0.6rem; background: linear-gradient(135deg, #66ff66 0%, #44cc44 100%); border: none; color: #000; font-family: 'Cinzel', serif; font-size: 0.65rem; letter-spacing: 0.1em; cursor: pointer; text-transform: uppercase; font-weight: 600; border-radius: 4px; transition: all 0.2s ease;">
-                  🎉 Claim Rewards
-                </button>
-              `;
-            }
-          }
-
-          card.innerHTML = `
-            ${imageHTML}
-            ${nameHTML}
-            <div class="receipt-proposal">Proposal #${receipt.proposalId.toString().slice(0, 8)}...</div>
-            <div class="receipt-vote" style="color: ${supportColor};">Voted ${supportLabel}</div>
-            <div class="receipt-amount">${parseFloat(balanceFormatted).toFixed(4)} receipts</div>
-            ${claimButtonHTML}
-          `;
-
-          // Make card clickable to open modal with receipt data
-          card.onclick = (e) => {
-            // Don't open modal if clicking the claim button
-            if (e.target.tagName === 'BUTTON') return;
-            openNFTModal(receipt.metadata, 'Vote Receipt', receipt);
-          };
-
-          receiptsGrid.appendChild(card);
         });
       }
 
@@ -8891,7 +9044,9 @@
           return;
         }
 
-        currentDAO.dao.messages.forEach(message => {
+        // Reverse to show most recent first
+        const messagesReversed = [...currentDAO.dao.messages].reverse();
+        messagesReversed.forEach(message => {
           const msgDiv = document.createElement('div');
           const proposalData = decodeProposalMessage(message.text);
 
@@ -8983,7 +9138,7 @@
           chatroomMessages.appendChild(msgDiv);
         });
 
-        chatroomMessages.scrollTop = chatroomMessages.scrollHeight;
+        // No auto-scroll since newest messages are now at the top
       }
 
       // Send chat message
@@ -9072,11 +9227,14 @@
           return true;
         });
 
+        // Reverse to show most recent first
+        const proposalsReversed = [...uniqueProposals].reverse();
+
         // Check if user has voted on any proposals (use voters data from view helper - no RPC calls!)
         const userVoteStatus = {};
 
         if (connectedAddress) {
-          uniqueProposals.forEach(proposal => {
+          proposalsReversed.forEach(proposal => {
             // Check if user is in the voters array (already provided by view helper)
             const userVote = proposal.voters?.find(v =>
               v.voter?.toLowerCase() === connectedAddress.toLowerCase()
@@ -9088,7 +9246,7 @@
 
         const molochContract = new ethers.Contract(currentDAO.dao.dao, MOLOCH_ABI, provider);
 
-        uniqueProposals.forEach(proposal => {
+        proposalsReversed.forEach(proposal => {
           const proposalDiv = document.createElement('div');
           proposalDiv.className = 'proposal-item';
 
@@ -9298,10 +9456,10 @@
           showStatus(`Transaction submitted. <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" rel="noopener" style="color: #9d7bff; text-decoration: underline;">View on Etherscan</a>`, false);
           await tx.wait();
 
-          showStatus(`✨ Vote ${voteType} submitted successfully! <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" rel="noopener" style="color: #9d7bff; text-decoration: underline;">View transaction</a>`, false);
+          showStatus(`✨ Vote ${voteType} cast! Refreshing...`, false);
 
-          // Refresh DAO data
-          await refreshCurrentDAO();
+          // Refresh DAO data with loading feedback
+          await refreshCurrentDAO(true);
           await renderProposals();
         } catch (error) {
           console.error('Error voting:', error);
@@ -9357,10 +9515,10 @@
           showStatus(`Transaction submitted. <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" rel="noopener" style="color: #9d7bff; text-decoration: underline;">View on Etherscan</a>`, false);
           await tx.wait();
 
-          showStatus(`✨ Vote cancelled successfully! <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" rel="noopener" style="color: #9d7bff; text-decoration: underline;">View transaction</a>`, false);
+          showStatus(`✨ Vote cancelled! Refreshing...`, false);
 
-          // Refresh DAO data
-          await refreshCurrentDAO();
+          // Refresh DAO data with loading feedback
+          await refreshCurrentDAO(true);
           await renderProposals();
         } catch (error) {
           console.error('Error cancelling vote:', error);
@@ -9411,10 +9569,10 @@
           showStatus(`Transaction submitted. <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" rel="noopener" style="color: #9d7bff; text-decoration: underline;">View on Etherscan</a>`, false);
           const receipt = await tx.wait();
 
-          showStatus(`✨ Rewards claimed successfully! <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" rel="noopener" style="color: #9d7bff; text-decoration: underline;">View transaction</a>`, false);
+          showStatus(`✨ Rewards claimed! Refreshing...`, false);
 
-          // Refresh DAO data
-          await refreshCurrentDAO();
+          // Refresh DAO data with loading feedback
+          await refreshCurrentDAO(true);
           await renderProposals();
         } catch (error) {
           console.error('Error claiming futarchy rewards:', error);
@@ -9583,8 +9741,8 @@
           const abiCoder = new ethers.AbiCoder();
           let translation = '';
 
-          // setAutoFutarchy(uint256 param, uint256 cap) - 0xc7b6a5b7 (for DAO self-calls)
-          if (isDaoSelfCall && functionSelector === '0xc7b6a5b7' && calldata.length >= 138) {
+          // setAutoFutarchy(uint256 param, uint256 cap) - 0x92a023a9 (for DAO self-calls)
+          if (isDaoSelfCall && functionSelector === '0x92a023a9' && calldata.length >= 138) {
             const decoded = abiCoder.decode(['uint256', 'uint256'], '0x' + calldata.slice(10));
             const param = decoded[0];
             const cap = decoded[1];
@@ -9603,8 +9761,32 @@
               <div style="margin-top: 0.25rem; font-size: 0.75rem; opacity: 0.7;">DAO self-call (governance)</div>
             `;
           }
-          // setSale(address payToken, uint256 pricePerShare, uint256 cap, bool minting, bool active, bool isLoot) - 0x62843c99
-          else if (isDaoSelfCall && functionSelector === '0x62843c99' && calldata.length >= 202) {
+          // setQuorumBps(uint16) - 0x0527aab6
+          else if (isDaoSelfCall && functionSelector === '0x0527aab6' && calldata.length >= 74) {
+            const decoded = abiCoder.decode(['uint16'], '0x' + calldata.slice(10));
+            const bps = Number(decoded[0]);
+            const percent = (bps / 100).toFixed(2);
+
+            translation = `
+              <div style="opacity: 0.8; margin-bottom: 0.35rem; font-size: 0.8rem;">Change Quorum</div>
+              <div>Set quorum to: <strong>${percent}%</strong></div>
+              <div style="margin-top: 0.25rem; font-size: 0.75rem; opacity: 0.7;">DAO self-call (governance)</div>
+            `;
+          }
+          // setRagequittable(bool) - 0x174c480e
+          else if (isDaoSelfCall && functionSelector === '0x174c480e' && calldata.length >= 74) {
+            const decoded = abiCoder.decode(['bool'], '0x' + calldata.slice(10));
+            const enabled = decoded[0];
+            const status = enabled ? 'Enable' : 'Disable';
+
+            translation = `
+              <div style="opacity: 0.8; margin-bottom: 0.35rem; font-size: 0.8rem;">Toggle Ragequit</div>
+              <div><strong>${status}</strong> ragequit functionality</div>
+              <div style="margin-top: 0.25rem; font-size: 0.75rem; opacity: 0.7;">DAO self-call (governance)</div>
+            `;
+          }
+          // setSale(address payToken, uint256 pricePerShare, uint256 cap, bool minting, bool active, bool isLoot) - 0x48b7fef2
+          else if (isDaoSelfCall && functionSelector === '0x48b7fef2' && calldata.length >= 394) {
             const decoded = abiCoder.decode(['address', 'uint256', 'uint256', 'bool', 'bool', 'bool'], '0x' + calldata.slice(10));
             const payToken = decoded[0];
             const pricePerShare = decoded[1];
@@ -9645,8 +9827,20 @@
               <div style="margin-top: 0.25rem; font-size: 0.75rem; opacity: 0.7;">${sourceText}, ${capText}</div>
             `;
           }
-          // mintFromMoloch(address recipient, uint256 amount) - 0x7c1fb593
-          else if (token && functionSelector === '0x7c1fb593' && calldata.length >= 138) {
+          // setRenderer(address) - 0x56d3163d
+          else if (isDaoSelfCall && functionSelector === '0x56d3163d' && calldata.length >= 74) {
+            const decoded = abiCoder.decode(['address'], '0x' + calldata.slice(10));
+            const newRenderer = decoded[0];
+
+            translation = `
+              <div style="opacity: 0.8; margin-bottom: 0.35rem; font-size: 0.8rem;">Change Renderer</div>
+              <div>Set renderer to:</div>
+              <div style="margin-top: 0.25rem; font-size: 0.8rem;"><code style="background: rgba(0,0,0,0.3); padding: 0.15rem 0.35rem;">${newRenderer}</code></div>
+              <div style="margin-top: 0.25rem; font-size: 0.75rem; opacity: 0.7;">DAO self-call (governance)</div>
+            `;
+          }
+          // mintFromMoloch(address recipient, uint256 amount) - 0x2806b0af
+          else if (token && functionSelector === '0x2806b0af' && calldata.length >= 138) {
             const decoded = abiCoder.decode(['address', 'uint256'], '0x' + calldata.slice(10));
             const recipient = decoded[0];
             const amount = decoded[1];
@@ -9783,7 +9977,7 @@
           showStatus('Transaction submitted. Waiting for confirmation...', false);
           await tx.wait();
 
-          showStatus(`Proposal created successfully! ID: ${computedProposalId.toString()}`, false);
+          showStatus(`✨ Proposal created! Refreshing...`, false);
 
           // Clear form (reset op to 0/call)
           document.getElementById('proposalOp').value = '0';
@@ -9797,8 +9991,8 @@
           updateCalldataTranslation();
           updateCalldataPreview();
 
-          // Refresh
-          await refreshCurrentDAO();
+          // Refresh with loading feedback
+          await refreshCurrentDAO(true);
           renderChatroom();
           await renderProposals();
         } catch (error) {
@@ -9887,10 +10081,10 @@
           showStatus(`Transaction submitted. <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" rel="noopener" style="color: #9d7bff; text-decoration: underline;">View on Etherscan</a>`, false);
           await tx.wait();
 
-          showStatus(`✨ Proposal executed successfully! <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" rel="noopener" style="color: #9d7bff; text-decoration: underline;">View transaction</a>`, false);
+          showStatus(`✨ Proposal executed! Refreshing...`, false);
 
-          // Refresh
-          await refreshCurrentDAO();
+          // Refresh with loading feedback
+          await refreshCurrentDAO(true);
           await renderProposals();
         } catch (error) {
           console.error('Error executing proposal:', error);
@@ -9924,22 +10118,26 @@
       }
 
       // Refresh current DAO data
-      async function refreshCurrentDAO() {
+      async function refreshCurrentDAO(showLoading = false) {
         if (!currentDAO || !provider || !connectedAddress) return;
 
         try {
+          if (showLoading) {
+            showStatus('Refreshing...', false);
+          }
+
           const viewHelper = new ethers.Contract(VIEW_HELPER_ADDRESS, VIEW_HELPER_ABI, provider);
 
-          // Find the current DAO's index in the summoner
-          // For now, just refresh all user DAOs and find it
+          // Fetch more proposals and messages (20 each) to ensure we see new items
+          // Note: fetches from start (0), so we get the most recent items
           const updatedDAOs = await viewHelper.getUserDAOsFullState(
             connectedAddress,
-            0,
-            10,
-            0,
-            10,
-            0,
-            10
+            0,  // daoStart
+            10, // daoCount
+            0,  // proposalStart (0 = most recent)
+            20, // proposalCount (fetch more proposals)
+            0,  // messageStart (0 = most recent)
+            20  // messageCount (fetch more messages)
           );
 
           // Find current DAO in updated list
@@ -9950,8 +10148,22 @@
               break;
             }
           }
+
+          if (showLoading) {
+            showStatus('Refreshed', false);
+            // Clear status after a short delay
+            setTimeout(() => {
+              const statusEl = document.getElementById('status');
+              if (statusEl && statusEl.textContent === 'Refreshed') {
+                statusEl.textContent = '';
+              }
+            }, 1500);
+          }
         } catch (error) {
           console.error('Error refreshing DAO:', error);
+          if (showLoading) {
+            showStatus('Error refreshing DAO', true);
+          }
         }
       }
 
@@ -10594,7 +10806,7 @@
             daoURI,
             quorumBps,
             ragequittable,
-            '0x00000000005556244d291c4c7187cdf3702a0019', // default renderer
+            '0x000000000011C799980827F52d3137b4abD6E654', // default renderer
             salt,
             initHolders,
             initShares,

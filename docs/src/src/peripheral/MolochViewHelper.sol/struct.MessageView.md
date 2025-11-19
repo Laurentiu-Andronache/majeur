@@ -1,15 +1,11 @@
-# DAOTreasury
+# MessageView
 [Git Source](https://github.com/z0r0z/SAW/blob/85fb0d63390fce7bd4bfabe46851a83d4d00bbc1/src/peripheral/MolochViewHelper.sol)
 
 
 ```solidity
-struct DAOTreasury {
-uint256 eth;
-uint256 usdc;
-uint256 usdt;
-uint256 dai;
-uint256 wsteth;
-uint256 reth;
+struct MessageView {
+uint256 index;
+string text;
 }
 ```
 

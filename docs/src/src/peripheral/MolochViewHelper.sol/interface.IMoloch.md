@@ -1,5 +1,5 @@
 # IMoloch
-[Git Source](https://github.com/z0r0z/SAW/blob/4543b7efb14e209f705fa5119a17da115da65148/src/peripheral/MolochViewHelper.sol)
+[Git Source](https://github.com/z0r0z/SAW/blob/85fb0d63390fce7bd4bfabe46851a83d4d00bbc1/src/peripheral/MolochViewHelper.sol)
 
 
 ## Functions
@@ -218,5 +218,19 @@ function futarchy(uint256 id)
         uint256 finalWinningSupply,
         uint256 payoutPerUnit
     );
+```
+
+### getMessageCount
+
+
+```solidity
+function getMessageCount() external view returns (uint256);
+```
+
+### messages
+
+
+```solidity
+function messages(uint256) external view returns (string memory);
 ```
 

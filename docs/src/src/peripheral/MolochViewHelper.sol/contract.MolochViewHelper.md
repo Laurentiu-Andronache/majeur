@@ -1,5 +1,5 @@
 # MolochViewHelper
-[Git Source](https://github.com/z0r0z/SAW/blob/4543b7efb14e209f705fa5119a17da115da65148/src/peripheral/MolochViewHelper.sol)
+[Git Source](https://github.com/z0r0z/SAW/blob/85fb0d63390fce7bd4bfabe46851a83d4d00bbc1/src/peripheral/MolochViewHelper.sol)
 
 
 ## State Variables
@@ -65,14 +65,17 @@ function getDaos(uint256 start, uint256 count) public view returns (address[] me
 ### getDAOFullState
 
 Full state for a single DAO: meta, config, supplies, members,
-proposals & votes, futarchy, treasury.
+proposals & votes, futarchy, treasury, messages.
 
 
 ```solidity
-function getDAOFullState(address dao, uint256 proposalStart, uint256 proposalCount)
-    public
-    view
-    returns (DAOLens memory out);
+function getDAOFullState(
+    address dao,
+    uint256 proposalStart,
+    uint256 proposalCount,
+    uint256 messageStart,
+    uint256 messageCount
+) public view returns (DAOLens memory out);
 ```
 
 ### getDAOsFullState
@@ -82,11 +85,12 @@ For each DAO in [daoStart, daoStart+daoCount), returns:
 - meta (name, symbol, contractURI, token addresses)
 - governance config
 - token supplies + DAO-held shares/loot
-- members (badges seats) + voting power + delegation splits
+- members (badge seats) + voting power + delegation splits
 - proposals [proposalStart .. proposalStart+proposalCount)
 - per-proposal tallies, state, per-member votes
 - per-proposal futarchy config
 - treasury balances (ETH, USDC, USDT, DAI, wstETH, rETH)
+- messages [messageStart .. messageStart+messageCount)
 
 
 ```solidity
@@ -94,21 +98,75 @@ function getDAOsFullState(
     uint256 daoStart,
     uint256 daoCount,
     uint256 proposalStart,
-    uint256 proposalCount
+    uint256 proposalCount,
+    uint256 messageStart,
+    uint256 messageCount
 ) public view returns (DAOLens[] memory out);
+```
+
+### getUserDAOs
+
+Find all DAOs (within a slice) where `user` has shares, loot, or a badge seat.
+
+Lightweight summary: no proposals/messages; intended for wallet dashboards.
+
+
+```solidity
+function getUserDAOs(address user, uint256 daoStart, uint256 daoCount)
+    public
+    view
+    returns (UserMemberView[] memory out);
+```
+
+### getUserDAOsFullState
+
+Full DAO state (like getDAOsFullState) but filtered to DAOs where `user` is a member.
+
+This is the heavy "one-shot" user-dashboard view: use small daoCount / proposalCount / messageCount.
+
+
+```solidity
+function getUserDAOsFullState(
+    address user,
+    uint256 daoStart,
+    uint256 daoCount,
+    uint256 proposalStart,
+    uint256 proposalCount,
+    uint256 messageStart,
+    uint256 messageCount
+) public view returns (UserDAOLens[] memory out);
+```
+
+### getDAOMessages
+
+Paginated fetch of DAO messages (chat).
+
+Only message text + index is available on-chain with current Moloch storage.
+
+
+```solidity
+function getDAOMessages(address dao, uint256 start, uint256 count)
+    public
+    view
+    returns (MessageView[] memory out);
 ```
 
 ### _buildDAOFullState
 
 
 ```solidity
-function _buildDAOFullState(address dao, uint256 proposalStart, uint256 proposalCount)
-    internal
-    view
-    returns (DAOLens memory out);
+function _buildDAOFullState(
+    address dao,
+    uint256 proposalStart,
+    uint256 proposalCount,
+    uint256 messageStart,
+    uint256 messageCount
+) internal view returns (DAOLens memory out);
 ```
 
 ### _getMembers
+
+Enumerate members as "badge seats" (top-256 by shares, sticky).
 
 
 ```solidity
@@ -126,6 +184,16 @@ function _getProposals(IMoloch M, MemberView[] memory members, uint256 start, ui
     internal
     view
     returns (ProposalView[] memory pv);
+```
+
+### _getMessagesInternal
+
+
+```solidity
+function _getMessagesInternal(address dao, uint256 start, uint256 count)
+    internal
+    view
+    returns (MessageView[] memory out);
 ```
 
 ### _getTreasury
