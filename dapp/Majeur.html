@@ -1175,8 +1175,11 @@
       .feature-art path,
       .feature-art line,
       .feature-art polyline,
-      .feature-art polygon {
+      .feature-art polygon,
+      .feature-art rect,
+      .feature-art ellipse {
         vector-effect: non-scaling-stroke;
+        transform-box: fill-box;
       }
 
       @media (max-width: 900px) {
@@ -5183,9 +5186,72 @@
       </div>
     </section>
 
-    <!-- Central thread continuation -->
-    <div style="position: relative; width: 100%; height: 2px; margin: -1px 0; pointer-events: none;">
-      <div style="position: absolute; left: 50%; transform: translateX(-50%); width: 1px; height: 100%; background: rgba(230, 217, 255, 0.08);"></div>
+    <!-- Scroll Journey Line: Radials converge to single line -->
+
+    <!-- Converging radials (fixed to viewport) -->
+    <svg id="radial-convergence" style="
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 50;
+    " viewBox="0 0 100 100" preserveAspectRatio="none">
+      <g id="radial-group" opacity="0.6">
+        <line x1="10" y1="15" x2="50" y2="25" stroke="rgba(230, 217, 255, 0.6)" stroke-width="0.08" />
+        <line x1="25" y1="15" x2="50" y2="25" stroke="rgba(230, 217, 255, 0.4)" stroke-width="0.06" />
+        <line x1="40" y1="15" x2="50" y2="25" stroke="rgba(230, 217, 255, 0.8)" stroke-width="0.1" />
+        <line x1="60" y1="15" x2="50" y2="25" stroke="rgba(230, 217, 255, 0.8)" stroke-width="0.1" />
+        <line x1="75" y1="15" x2="50" y2="25" stroke="rgba(230, 217, 255, 0.4)" stroke-width="0.06" />
+        <line x1="90" y1="15" x2="50" y2="25" stroke="rgba(230, 217, 255, 0.6)" stroke-width="0.08" />
+      </g>
+    </svg>
+
+    <!-- Central journey line (fixed, visible centerline) -->
+    <div id="journey-line-container" style="
+      position: fixed;
+      left: 50%;
+      top: 0;
+      width: 3px;
+      height: 100vh;
+      transform: translateX(-50%);
+      pointer-events: none;
+      z-index: 50;
+      opacity: 0;
+    ">
+      <div id="journey-line" style="
+        position: absolute;
+        top: 0;
+        left: 50%;
+        width: 2px;
+        height: 0%;
+        transform: translateX(-50%);
+        background: linear-gradient(
+          180deg,
+          rgba(157, 123, 255, 0.4) 0%,
+          rgba(230, 217, 255, 0.7) 50%,
+          rgba(157, 123, 255, 0.4) 100%
+        );
+        box-shadow:
+          0 0 8px rgba(157, 123, 255, 0.6),
+          0 0 16px rgba(157, 123, 255, 0.3);
+      "></div>
+
+      <div id="journey-endpoint" style="
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        width: 12px;
+        height: 12px;
+        transform: translate(-50%, 50%);
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(230, 217, 255, 1) 0%, rgba(157, 123, 255, 0.6) 100%);
+        box-shadow:
+          0 0 12px rgba(230, 217, 255, 0.8),
+          0 0 24px rgba(157, 123, 255, 0.4);
+        opacity: 0;
+      "></div>
     </div>
 
     <!-- Feature pages -->
@@ -6418,6 +6484,519 @@
         });
         document.querySelectorAll('img[data-src]').forEach(img => imageObserver.observe(img));
       }
+
+      // Scroll-synced SVG animations for feature pages
+      (function initFeatureAnimations() {
+        const featurePages = document.querySelectorAll('.feature-page');
+        let scrollProgress = new Map();
+        let animationFrameId = null;
+
+        // Calculate scroll progress for each feature page (0 to 1)
+        function calculateScrollProgress(element) {
+          const rect = element.getBoundingClientRect();
+          const windowHeight = window.innerHeight;
+
+          // Element enters from bottom and exits from top
+          const start = windowHeight;
+          const end = -rect.height;
+          const range = start - end;
+          const current = rect.top;
+
+          // Progress: 0 when element is below viewport, 1 when above
+          const progress = Math.max(0, Math.min(1, (start - current) / range));
+          return progress;
+        }
+
+        // Apply animations based on scroll progress
+        function applyAnimations() {
+          featurePages.forEach((page) => {
+            const progress = calculateScrollProgress(page);
+            scrollProgress.set(page, progress);
+
+            const svg = page.querySelector('.feature-art');
+            if (!svg) return;
+
+            const featureId = page.id;
+
+            // SEATS: Rotate circles and radial ticks
+            if (featureId === 'seats') {
+              const circles = svg.querySelectorAll('circle');
+              const groups = svg.querySelectorAll('g');
+
+              const rotation = progress * 360 * 2; // 2 full rotations
+
+              // Rotate the outer circle (r="120")
+              circles.forEach(circle => {
+                const r = circle.getAttribute('r');
+                if (r === '120') {
+                  circle.style.transformOrigin = 'center';
+                  circle.style.transform = `rotate(${rotation}deg)`;
+                } else if (r === '84') {
+                  // Rotate inner circle in opposite direction
+                  circle.style.transformOrigin = 'center';
+                  circle.style.transform = `rotate(${-rotation * 0.7}deg)`;
+                }
+              });
+
+              // Rotate radial ticks (the g with stroke and lines)
+              groups.forEach(g => {
+                if (g.getAttribute('stroke') === '#e6d9ff' && g.querySelector('line')) {
+                  g.style.transformOrigin = '160 160';
+                  g.style.transform = `rotate(${rotation * 0.5}deg)`;
+                }
+                // Rotate orbiting dots group
+                if (g.getAttribute('fill') === '#e6d9ff' && g.querySelectorAll('circle').length > 0) {
+                  g.style.transformOrigin = '160 160';
+                  g.style.transform = `rotate(${rotation}deg)`;
+                }
+              });
+            }
+
+            // SPLIT: Animate paths with dash offset and rotate BPS ring
+            if (featureId === 'split') {
+              const paths = svg.querySelectorAll('path[stroke="#e6d9ff"]');
+              const bpsRing = svg.querySelector('circle[stroke-dasharray]');
+
+              paths.forEach((path) => {
+                try {
+                  const length = path.getTotalLength();
+                  path.style.strokeDasharray = length;
+                  path.style.strokeDashoffset = length * (1 - progress);
+                } catch (e) {
+                  // Skip if getTotalLength fails
+                }
+              });
+
+              if (bpsRing) {
+                const rotation = progress * 360;
+                bpsRing.style.transformOrigin = 'center';
+                bpsRing.style.transform = `rotate(${rotation}deg)`;
+              }
+            }
+
+            // PERMIT: Rotate keyhole and pulse burn triangle
+            if (featureId === 'permit') {
+              const allElements = svg.querySelectorAll('*');
+              const rotation = progress * 360 * 1.5; // More rotation
+
+              allElements.forEach(el => {
+                const cx = el.getAttribute('cx');
+                const cy = el.getAttribute('cy');
+                const r = el.getAttribute('r');
+
+                // Rotate keyhole outer circle (cx="160" cy="132" r="13")
+                if (cx === '160' && cy === '132' && r === '13') {
+                  el.style.transformOrigin = '160 132';
+                  el.style.transform = `rotate(${rotation}deg)`;
+                }
+
+                // Rotate keyhole dot (cx="160" cy="128" r="4")
+                if (cx === '160' && cy === '128' && r === '4') {
+                  const orbit = Math.sin(progress * Math.PI * 2) * 8;
+                  el.style.transformOrigin = '160 132';
+                  el.style.transform = `rotate(${rotation * 2}deg)`;
+                }
+
+                // Rotate tablet frames
+                if (el.tagName === 'rect') {
+                  const x = el.getAttribute('x');
+                  if (x === '90' || x === '102') {
+                    const tilt = Math.sin(progress * Math.PI) * 3;
+                    el.style.transformOrigin = '160 160';
+                    el.style.transform = `rotate(${tilt}deg)`;
+                  }
+                }
+
+                // Pulse burn triangle
+                if (el.tagName === 'polygon') {
+                  const scale = 1 + Math.sin(progress * Math.PI * 4) * 0.15;
+                  const glow = 0.75 + Math.sin(progress * Math.PI * 4) * 0.25;
+                  el.style.transformOrigin = '64 244';
+                  el.style.transform = `scale(${scale})`;
+                  el.style.opacity = glow;
+                }
+
+                // Bounce one-way arrow
+                if (el.tagName === 'polyline') {
+                  const bounce = Math.sin(progress * Math.PI * 3) * 8;
+                  el.style.transform = `translate(${bounce}, ${-bounce * 0.5})`;
+                }
+              });
+
+              // Animate hash lines with draw effect
+              const hashGroup = svg.querySelector('g[stroke="#9d7bff"]');
+              if (hashGroup) {
+                const lines = hashGroup.querySelectorAll('line');
+                lines.forEach((line, i) => {
+                  const x1 = parseFloat(line.getAttribute('x1'));
+                  const x2 = parseFloat(line.getAttribute('x2'));
+                  const length = x2 - x1;
+                  const drawProgress = Math.max(0, Math.min(1, progress * 2 - i * 0.2));
+
+                  line.style.strokeDasharray = length;
+                  line.style.strokeDashoffset = length * (1 - drawProgress);
+                });
+              }
+            }
+
+            // FUTARCHY: Animate curves and rotate proposal orbit
+            if (featureId === 'futarchy') {
+              const allElements = svg.querySelectorAll('*');
+              const rotation = progress * 360;
+
+              allElements.forEach(el => {
+                const cx = el.getAttribute('cx');
+                const cy = el.getAttribute('cy');
+                const r = el.getAttribute('r');
+                const d = el.getAttribute('d');
+                const x1 = el.getAttribute('x1');
+                const y1 = el.getAttribute('y1');
+
+                // Draw axis lines progressively
+                if (el.tagName === 'line') {
+                  const lineX1 = parseFloat(x1);
+                  const lineY1 = parseFloat(y1);
+
+                  // Horizontal axis (y1="240")
+                  if (lineY1 === 240) {
+                    const length = parseFloat(el.getAttribute('x2')) - lineX1;
+                    const drawProgress = Math.max(0, Math.min(1, progress * 1.5));
+                    el.style.strokeDasharray = length;
+                    el.style.strokeDashoffset = length * (1 - drawProgress);
+                  }
+
+                  // Vertical axis (x1="80")
+                  if (lineX1 === 80 && lineY1 < 240) {
+                    const length = parseFloat(el.getAttribute('y2')) - lineY1;
+                    const drawProgress = Math.max(0, Math.min(1, progress * 1.5));
+                    el.style.strokeDasharray = length;
+                    el.style.strokeDashoffset = length * (1 - drawProgress);
+                  }
+
+                  // Pool glyph line
+                  if (x1 === '202') {
+                    const scale = 1 + Math.sin(progress * Math.PI * 3) * 0.2;
+                    el.style.transformOrigin = '225 220';
+                    el.style.transform = `scaleX(${scale})`;
+                  }
+                }
+
+                // Rotate proposal orbit circle (cx="160" cy="140" r="80")
+                if (cx === '160' && cy === '140' && r === '80') {
+                  el.style.transformOrigin = '160 140';
+                  el.style.transform = `rotate(${rotation}deg)`;
+                }
+
+                // Rotate center dot (cx="160" cy="140" r="3")
+                if (cx === '160' && cy === '140' && r === '3') {
+                  const pulse = 1 + Math.sin(progress * Math.PI * 3) * 0.5;
+                  el.style.transformOrigin = 'center';
+                  el.style.transform = `scale(${pulse})`;
+                }
+
+                // Pulse outcome nodes with glow effect
+                if (el.tagName === 'circle') {
+                  const cxVal = parseFloat(cx);
+                  const cyVal = parseFloat(cy);
+
+                  // Node at (214, 132)
+                  if (cxVal === 214 && cyVal === 132) {
+                    const pulse = 1 + Math.sin(progress * Math.PI * 4) * 0.6;
+                    const opacity = 1 + Math.sin(progress * Math.PI * 4) * 0.5;
+                    el.style.transformOrigin = 'center';
+                    el.style.transform = `scale(${pulse})`;
+                    el.style.opacity = Math.min(1, opacity);
+                  }
+
+                  // Node at (232, 190)
+                  if (cxVal === 232 && cyVal === 190) {
+                    const pulse = 1 + Math.sin(progress * Math.PI * 4 + Math.PI) * 0.6;
+                    const opacity = 1 + Math.sin(progress * Math.PI * 4 + Math.PI) * 0.5;
+                    el.style.transformOrigin = 'center';
+                    el.style.transform = `scale(${pulse})`;
+                    el.style.opacity = Math.min(1, opacity);
+                  }
+                }
+
+                // Animate market curves with progressive drawing AND wave motion
+                if (el.tagName === 'path' && d && d.includes('C')) {
+                  const startsWith80 = d.startsWith('M80');
+
+                  if (startsWith80) {
+                    try {
+                      const pathLength = el.getTotalLength();
+                      const waveOffset = Math.sin(progress * Math.PI * 3) * 10;
+
+                      // First curve (YES market) - solid line
+                      if (d.includes('210 130')) {
+                        const drawProgress = Math.max(0, Math.min(1, progress * 1.8));
+                        el.style.strokeDasharray = pathLength;
+                        el.style.strokeDashoffset = pathLength * (1 - drawProgress);
+                        el.style.transform = `translate(0, ${waveOffset})`;
+                      }
+                      // Second curve (NO market) - dashed line
+                      else if (d.includes('230 190')) {
+                        const drawProgress = Math.max(0, Math.min(1, (progress - 0.1) * 1.8));
+                        el.style.strokeDasharray = `5 6, ${pathLength}`;
+                        el.style.strokeDashoffset = pathLength * (1 - drawProgress);
+                        el.style.transform = `translate(0, ${-waveOffset})`;
+                      }
+                    } catch (e) {
+                      // Fallback to wave only if getTotalLength fails
+                      const waveOffset = Math.sin(progress * Math.PI * 3) * 10;
+                      if (d.includes('210 130')) {
+                        el.style.transform = `translate(0, ${waveOffset})`;
+                      } else if (d.includes('230 190')) {
+                        el.style.transform = `translate(0, ${-waveOffset})`;
+                      }
+                    }
+                  }
+                }
+
+                // Animate pool glyph rectangle with tilt
+                if (el.tagName === 'rect' && el.getAttribute('x') === '196') {
+                  const scale = 1 + Math.sin(progress * Math.PI * 3) * 0.12;
+                  const tilt = Math.sin(progress * Math.PI * 2) * 3;
+                  el.style.transformOrigin = 'center';
+                  el.style.transform = `scale(${scale}) rotate(${tilt}deg)`;
+                }
+              });
+            }
+
+            // RAGEQUIT: Rotate broken circle and slide asset bars
+            if (featureId === 'ragequit') {
+              const brokenCircle = svg.querySelectorAll('path[d*="A70"]');
+              const wedge = svg.querySelector('path[d*="Z"]');
+              const assetBars = svg.querySelectorAll('rect[rx="4"]');
+
+              const rotation = progress * 180;
+
+              brokenCircle.forEach((arc) => {
+                arc.style.transformOrigin = '160 160';
+                arc.style.transform = `rotate(${rotation * 0.3}deg)`;
+              });
+
+              if (wedge) {
+                const distance = progress * 20;
+                wedge.style.transform = `translate(${distance}, ${-distance})`;
+              }
+
+              assetBars.forEach((bar, i) => {
+                const offset = Math.sin(progress * Math.PI + i * 0.5) * 2;
+                bar.style.transform = `translate(0, ${offset})`;
+              });
+            }
+
+            // SALE: Rotate coin stack and animate flow arrows
+            if (featureId === 'sale') {
+              const coinEllipses = svg.querySelectorAll('ellipse');
+              const flowArrows = svg.querySelectorAll('polyline');
+              const priceTag = svg.querySelector('rect[x="184"]');
+
+              const rotation = progress * 360;
+
+              coinEllipses.forEach((ellipse, i) => {
+                ellipse.style.transformOrigin = 'center';
+                ellipse.style.transform = `rotate(${rotation * (1 + i * 0.1)}deg)`;
+              });
+
+              flowArrows.forEach((arrow) => {
+                try {
+                  const length = arrow.getTotalLength();
+                  arrow.style.strokeDasharray = length;
+                  arrow.style.strokeDashoffset = length * (1 - progress);
+                } catch (e) {
+                  // Skip if getTotalLength fails
+                }
+              });
+
+              if (priceTag) {
+                const scale = 1 + Math.sin(progress * Math.PI * 3) * 0.05;
+                priceTag.style.transformOrigin = 'center';
+                priceTag.style.transform = `scale(${scale})`;
+              }
+            }
+
+            // CHANT: Rotate orbiting elements and pulse dialog
+            if (featureId === 'chant') {
+              const circles = svg.querySelectorAll('circle');
+              const dialogBubble = svg.querySelector('path[d*="Z"]');
+              const textLines = svg.querySelectorAll('line');
+              const dashedCircle = svg.querySelector('circle[stroke-dasharray]');
+
+              const rotation = progress * 360;
+
+              // Rotate the large dashed circle (orbit ring)
+              if (dashedCircle) {
+                dashedCircle.style.transformOrigin = 'center';
+                dashedCircle.style.transform = `rotate(${rotation * 0.5}deg)`;
+              }
+
+              // Rotate orbiting rune circles around center
+              circles.forEach(circle => {
+                const r = circle.getAttribute('r');
+                const cx = parseFloat(circle.getAttribute('cx'));
+                const cy = parseFloat(circle.getAttribute('cy'));
+                const fill = circle.getAttribute('fill');
+                const stroke = circle.getAttribute('stroke');
+
+                // Small orbiting circles (not the big dashed one)
+                if ((r === '4' || r === '3') && cx !== 160) {
+                  circle.style.transformOrigin = '160 160';
+                  circle.style.transform = `rotate(${rotation}deg)`;
+                }
+              });
+
+              // Pulse dialog bubble
+              if (dialogBubble) {
+                const scale = 1 + Math.sin(progress * Math.PI * 3) * 0.04;
+                dialogBubble.style.transformOrigin = '156 149';
+                dialogBubble.style.transform = `scale(${scale})`;
+              }
+
+              // Animate text lines with typing effect
+              textLines.forEach((line, i) => {
+                const x1 = parseFloat(line.getAttribute('x1'));
+                const x2 = parseFloat(line.getAttribute('x2'));
+                const length = x2 - x1;
+                const offset = Math.max(0, length * (1 - (progress * 3 - i * 0.3)));
+
+                if (progress * 3 > i * 0.3) {
+                  line.style.strokeDasharray = length;
+                  line.style.strokeDashoffset = offset;
+                }
+              });
+            }
+          });
+        }
+
+        // Smooth animation loop
+        function animate() {
+          applyAnimations();
+          animationFrameId = requestAnimationFrame(animate);
+        }
+
+        // Start animations when DOM is ready
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', () => {
+            animate();
+          });
+        } else {
+          animate();
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+          if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+          }
+        });
+      })();
+
+      // Scroll Journey Line Animation
+      (function initScrollJourneyLine() {
+        const journeyLineContainer = document.getElementById('journey-line-container');
+        const journeyLine = document.getElementById('journey-line');
+        const journeyEndpoint = document.getElementById('journey-endpoint');
+        const radialGroup = document.getElementById('radial-group');
+        const introPanel = document.querySelector('.intro-panel');
+        const summonerSection = document.getElementById('summoner');
+
+        if (!journeyLine || !journeyLineContainer || !introPanel || !summonerSection) return;
+
+        function updateJourneyLine() {
+          const scrollY = window.scrollY;
+          const windowHeight = window.innerHeight;
+          const docHeight = document.documentElement.scrollHeight;
+
+          // Get section positions
+          const introPanelRect = introPanel.getBoundingClientRect();
+          const introPanelTop = window.pageYOffset + introPanelRect.top;
+          const introPanelBottom = introPanelTop + introPanelRect.height;
+
+          const summonerRect = summonerSection.getBoundingClientRect();
+          const summonerTop = window.pageYOffset + summonerRect.top;
+
+          // Radial convergence: fade out radials as we scroll past intro
+          const introProgress = Math.max(0, Math.min(1, (scrollY - introPanelTop) / introPanelRect.height));
+          if (radialGroup) {
+            radialGroup.style.opacity = Math.max(0, 0.8 * (1 - introProgress * 1.2));
+          }
+
+          // Show journey line when past intro
+          if (scrollY >= introPanelBottom - windowHeight) {
+            journeyLineContainer.style.opacity = '1';
+
+            // Calculate progress from intro bottom to summoner top
+            const journeyStart = introPanelBottom;
+            const journeyEnd = summonerTop;
+            const journeyLength = journeyEnd - journeyStart;
+
+            // Use current scroll position to determine line progress
+            const currentScroll = scrollY + windowHeight * 0.6; // Slightly ahead of center
+            const lineProgress = Math.max(0, Math.min(1, (currentScroll - journeyStart) / journeyLength));
+
+            // Grow the line from top based on progress
+            journeyLine.style.height = `${lineProgress * 100}%`;
+
+            // Show endpoint when approaching summoner (last 20% of journey)
+            if (lineProgress > 0.8) {
+              const endpointProgress = (lineProgress - 0.8) / 0.2;
+              journeyEndpoint.style.opacity = endpointProgress;
+
+              // Pulse the endpoint
+              const pulse = 1 + Math.sin(Date.now() * 0.003) * 0.3;
+              journeyEndpoint.style.width = `${12 * pulse}px`;
+              journeyEndpoint.style.height = `${12 * pulse}px`;
+            } else {
+              journeyEndpoint.style.opacity = '0';
+            }
+
+            // Fade out after summoner
+            if (scrollY > summonerTop + windowHeight) {
+              journeyLineContainer.style.opacity = '0.3';
+            }
+          } else {
+            // Before intro: hide journey line, show radials
+            journeyLineContainer.style.opacity = '0';
+            journeyLine.style.height = '0%';
+            journeyEndpoint.style.opacity = '0';
+          }
+        }
+
+        // Update on scroll with debounce
+        let scrollTimeout;
+        let rafId;
+
+        function onScroll() {
+          if (scrollTimeout) clearTimeout(scrollTimeout);
+          scrollTimeout = setTimeout(updateJourneyLine, 5);
+        }
+
+        // Animation loop for smooth pulsing endpoint
+        function animate() {
+          // Only update the pulse, not the whole line (for performance)
+          const journeyEndpointOpacity = parseFloat(journeyEndpoint.style.opacity);
+          if (journeyEndpointOpacity > 0) {
+            const pulse = 1 + Math.sin(Date.now() * 0.003) * 0.3;
+            journeyEndpoint.style.width = `${12 * pulse}px`;
+            journeyEndpoint.style.height = `${12 * pulse}px`;
+          }
+          rafId = requestAnimationFrame(animate);
+        }
+
+        window.addEventListener('scroll', onScroll, { passive: true });
+        window.addEventListener('resize', updateJourneyLine);
+
+        // Initial setup and start animation
+        updateJourneyLine();
+        animate();
+
+        // Cleanup
+        window.addEventListener('beforeunload', () => {
+          if (rafId) cancelAnimationFrame(rafId);
+        });
+      })();
 
       // Auto-save form data to prevent loss
       const formInputs = {};
