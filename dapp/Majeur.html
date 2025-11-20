@@ -2,8 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Majeur ༼ つ ◕_◕ ༽つ</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230a0015'/%3E%3Cpath d='M16 4 L22 12 L30 12 L24 18 L26 26 L16 22 L6 26 L8 18 L2 12 L10 12 Z' fill='none' stroke='%239d7bff' stroke-width='1.5' stroke-linejoin='round'/%3E%3Ccircle cx='16' cy='16' r='2' fill='%239d7bff'/%3E%3C/svg%3E" />
+    <title>Majeur.*・｡ﾟ ·</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3CradialGradient id='g'%3E%3Cstop offset='0%25' stop-color='%239d7bff' stop-opacity='0.15'/%3E%3Cstop offset='100%25' stop-color='%239d7bff' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='32' height='32' fill='%23000'/%3E%3Ccircle cx='16' cy='16' r='14' fill='url(%23g)'/%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%239d7bff' stroke-width='0.3' stroke-dasharray='1,1.5' opacity='0.4'/%3E%3Cpath d='M8 6 L10 4 L12 6' fill='none' stroke='%239d7bff' stroke-width='0.5' opacity='0.6'/%3E%3Cpath d='M20 6 L22 4 L24 6' fill='none' stroke='%239d7bff' stroke-width='0.5' opacity='0.6'/%3E%3Ccircle cx='6' cy='16' r='1' fill='%239d7bff' opacity='0.5'/%3E%3Ccircle cx='26' cy='16' r='1' fill='%239d7bff' opacity='0.5'/%3E%3Cpath d='M8 26 L10 28 L12 26' fill='none' stroke='%239d7bff' stroke-width='0.5' opacity='0.6'/%3E%3Cpath d='M20 26 L22 28 L24 26' fill='none' stroke='%239d7bff' stroke-width='0.5' opacity='0.6'/%3E%3Cpath d='M9 11 L9 21 L11.5 17.5 L16 23 L20.5 17.5 L23 21 L23 11 L20.5 11 L16 15.5 L11.5 11 Z' fill='%239d7bff' stroke='%239d7bff' stroke-width='0.5' stroke-linejoin='round'/%3E%3Cpath d='M16 7 L16.5 9 L18 8.5 L17 10 L18.5 10.5 L17 11' fill='none' stroke='%239d7bff' stroke-width='0.3' opacity='0.5'/%3E%3C/svg%3E" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
@@ -3112,6 +3112,24 @@
             <div id="ragequitTokenList" style="display: flex; flex-direction: column; gap: 0.75rem;">
               <!-- Token checkboxes will be dynamically inserted here -->
             </div>
+
+            <!-- Custom Token Input -->
+            <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(157, 123, 255, 0.05); border: 1px solid rgba(157, 123, 255, 0.2); border-radius: 4px;">
+              <div style="font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.5rem;">Add Custom Token</div>
+              <div style="display: flex; gap: 0.5rem;">
+                <input type="text" id="ragequitCustomTokenInput" placeholder="Token address (0x...)"
+                       style="flex: 1; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.9rem;">
+                <button onclick="addCustomRagequitToken()"
+                        style="padding: 0.6rem 1rem; background: rgba(157, 123, 255, 0.2); border: 1px solid rgba(157, 123, 255, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.1em; cursor: pointer; text-transform: uppercase; white-space: nowrap;"
+                        onmouseover="this.style.background='rgba(157, 123, 255, 0.3)'"
+                        onmouseout="this.style.background='rgba(157, 123, 255, 0.2)'">
+                  Add
+                </button>
+              </div>
+              <div style="font-size: 0.7rem; color: rgba(230, 217, 255, 0.5); margin-top: 0.5rem;">
+                💡 Use this for tokens not in the standard list. Tokens will be auto-sorted by address.
+              </div>
+            </div>
           </div>
 
           <!-- Action Buttons -->
@@ -5028,15 +5046,14 @@
 
             <div id="saleConfigSection" style="display: none; margin-top: 1rem; padding: 1rem; background: rgba(157, 123, 255, 0.05); border: 1px solid rgba(157, 123, 255, 0.2); border-radius: 4px;">
               <div class="form-group">
-                <label class="form-label">Payment Token</label>
+                <label class="form-label">Payment Token (18-decimal only)</label>
                 <select class="form-input" id="salePaymentToken">
                   <option value="eth">ETH</option>
-                  <option value="usdc">USDC</option>
-                  <option value="usdt">USDT</option>
                   <option value="dai">DAI</option>
                   <option value="wsteth">wstETH</option>
                   <option value="reth">rETH</option>
                 </select>
+                <small style="color: rgba(230, 217, 255, 0.5); font-size: 0.8rem;">Token sales require 18-decimal tokens for simple pricing math</small>
               </div>
 
               <div class="form-group">
@@ -5048,9 +5065,9 @@
               </div>
 
               <div class="form-group">
-                <label class="form-label">Price per Token</label>
-                <input type="number" class="form-input" id="salePrice" placeholder="e.g., 0.1" step="any" min="0">
-                <small style="color: rgba(230, 217, 255, 0.5); font-size: 0.8rem;">Price in payment token per share/loot</small>
+                <label class="form-label">Price Ratio</label>
+                <input type="number" class="form-input" id="salePrice" placeholder="1" step="1" min="1">
+                <small style="color: rgba(230, 217, 255, 0.5); font-size: 0.8rem;">Simple integer ratio (e.g., "1" for 1:1, "2" for 2:1). Fractional prices not supported.</small>
               </div>
 
               <div class="form-group">
@@ -5121,7 +5138,22 @@
             <!-- DAO emblem will be rendered here -->
           </div>
           <div>
-            <h2 class="dao-dashboard-title" id="dashboardTitle">DAO Dashboard</h2>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <h2 class="dao-dashboard-title" id="dashboardTitle">DAO Dashboard</h2>
+              <button
+                onclick="manualRefreshDAO()"
+                id="refreshButton"
+                title="Refresh DAO state"
+                style="background: none; border: none; color: rgba(157, 123, 255, 0.6); cursor: pointer; padding: 0.25rem; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;"
+                onmouseover="this.style.color='#9d7bff'; this.style.transform='rotate(90deg)';"
+                onmouseout="this.style.color='rgba(157, 123, 255, 0.6)'; this.style.transform='rotate(0deg)';">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="23 4 23 10 17 10"></polyline>
+                  <polyline points="1 20 1 14 7 14"></polyline>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                </svg>
+              </button>
+            </div>
             <a class="dao-etherscan-link" id="daoEtherscanLink" href="#" target="_blank" rel="noopener noreferrer">
               <span id="daoAddressText">0x...</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -5980,6 +6012,20 @@
           "outputs": [{"internalType": "uint8", "name": "", "type": "uint8"}],
           "stateMutability": "view",
           "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "name",
+          "outputs": [{"internalType": "string", "name": "", "type": "string"}],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "symbol",
+          "outputs": [{"internalType": "string", "name": "", "type": "string"}],
+          "stateMutability": "view",
+          "type": "function"
         }
       ];
 
@@ -6386,6 +6432,9 @@
       }
 
       // Ragequit modal functions
+      // Store custom tokens for ragequit (cleared on modal open)
+      let ragequitCustomTokens = [];
+
       function openRagequitModal() {
         if (!currentDAO) {
           showStatus('No DAO selected', true);
@@ -6410,6 +6459,10 @@
         // Clear inputs
         document.getElementById('ragequitSharesInput').value = '';
         document.getElementById('ragequitLootInput').value = '';
+        document.getElementById('ragequitCustomTokenInput').value = '';
+
+        // Clear custom tokens list
+        ragequitCustomTokens = [];
 
         // Generate token list with checkboxes
         const tokenList = document.getElementById('ragequitTokenList');
@@ -6417,14 +6470,13 @@
 
         const treasury = currentDAO.dao.treasury;
         const tokens = [
+          { symbol: 'ETH', address: ethers.ZeroAddress, balance: treasury.eth, decimals: 18, icon: TOKEN_ICONS.eth },
           { symbol: 'USDC', address: TOKEN_ADDRESSES.usdc, balance: treasury.usdc, decimals: 6, icon: TOKEN_ICONS.usdc },
           { symbol: 'USDT', address: TOKEN_ADDRESSES.usdt, balance: treasury.usdt, decimals: 6, icon: TOKEN_ICONS.usdt },
           { symbol: 'DAI', address: TOKEN_ADDRESSES.dai, balance: treasury.dai, decimals: 18, icon: TOKEN_ICONS.dai },
           { symbol: 'wstETH', address: TOKEN_ADDRESSES.wsteth, balance: treasury.wsteth, decimals: 18, icon: TOKEN_ICONS.wsteth },
           { symbol: 'rETH', address: TOKEN_ADDRESSES.reth, balance: treasury.reth, decimals: 18, icon: TOKEN_ICONS.reth }
         ];
-
-        // Note: ETH is handled separately in ragequit, not included in token array
 
         tokens.forEach(token => {
           const formattedBalance = parseFloat(ethers.formatUnits(token.balance, token.decimals)).toFixed(4);
@@ -6462,6 +6514,112 @@
         document.getElementById('ragequitModal').classList.remove('show');
       }
 
+      // Add custom token to ragequit list
+      async function addCustomRagequitToken() {
+        const input = document.getElementById('ragequitCustomTokenInput');
+        const tokenAddress = input.value.trim();
+
+        if (!tokenAddress || !ethers.isAddress(tokenAddress)) {
+          showStatus('Invalid token address', true);
+          return;
+        }
+
+        // Normalize address
+        const normalizedAddress = ethers.getAddress(tokenAddress);
+
+        // Check if already added (standard or custom)
+        const tokenList = document.getElementById('ragequitTokenList');
+        const existingCheckbox = tokenList.querySelector(`input[value="${normalizedAddress}"]`);
+        if (existingCheckbox) {
+          showStatus('Token already in list', true);
+          return;
+        }
+
+        // Check if it's a forbidden address
+        if (normalizedAddress === currentDAO.dao.shares ||
+            normalizedAddress === currentDAO.dao.loot ||
+            normalizedAddress === currentDAO.dao.dao ||
+            normalizedAddress === '0x00000000000000000000000000000000000003EF') { // address(1007)
+          showStatus('Cannot ragequit with shares, loot, or DAO tokens', true);
+          return;
+        }
+
+        try {
+          showStatus('Fetching token info...', false);
+
+          const tokenContract = new ethers.Contract(normalizedAddress, ERC20_ABI, provider);
+
+          // Fetch token info
+          const [symbol, decimals, balance] = await Promise.all([
+            tokenContract.symbol().catch(() => 'UNKNOWN'),
+            tokenContract.decimals().catch(() => 18),
+            tokenContract.balanceOf(currentDAO.dao.dao).catch(() => 0n)
+          ]);
+
+          const formattedBalance = parseFloat(ethers.formatUnits(balance, decimals)).toFixed(4);
+
+          // Create token div
+          const tokenDiv = document.createElement('div');
+          tokenDiv.style.cssText = 'display: flex; align-items: center; padding: 0.75rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.2); cursor: pointer; transition: all 0.3s ease;';
+          tokenDiv.onmouseover = () => tokenDiv.style.borderColor = 'rgba(157, 123, 255, 0.4)';
+          tokenDiv.onmouseout = () => tokenDiv.style.borderColor = 'rgba(157, 123, 255, 0.2)';
+
+          // Custom token icon (generic coin)
+          const customIcon = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="16" cy="16" r="14" fill="none" stroke="#9d7bff" stroke-width="2"/>
+            <path d="M16 8v16M8 16h16" stroke="#9d7bff" stroke-width="2" stroke-linecap="round"/>
+          </svg>`;
+
+          tokenDiv.innerHTML = `
+            <input type="checkbox" id="token_custom_${normalizedAddress}" value="${normalizedAddress}"
+                   style="margin-right: 1rem; width: 20px; height: 20px; cursor: pointer;" checked>
+            <div style="width: 28px; height: 28px; margin-right: 1rem;">${customIcon}</div>
+            <div style="flex: 1;">
+              <div style="font-family: 'Cinzel', serif; font-size: 0.85rem; color: #9d7bff; margin-bottom: 0.25rem;">${symbol} <span style="font-size: 0.7rem; opacity: 0.6;">(Custom)</span></div>
+              <div style="font-family: 'EB Garamond', serif; font-size: 0.8rem; color: rgba(230, 217, 255, 0.6);">Balance: ${formattedBalance}</div>
+              <div style="font-family: 'EB Garamond', serif; font-size: 0.7rem; color: rgba(230, 217, 255, 0.4); margin-top: 0.25rem;">${normalizedAddress.slice(0, 10)}...${normalizedAddress.slice(-8)}</div>
+            </div>
+            <button onclick="removeCustomRagequitToken('${normalizedAddress}')"
+                    style="padding: 0.35rem 0.5rem; background: rgba(255, 0, 0, 0.1); border: 1px solid rgba(255, 0, 0, 0.3); color: #ff6b6b; font-size: 0.7rem; cursor: pointer; border-radius: 3px;"
+                    onmouseover="this.style.background='rgba(255, 0, 0, 0.2)'"
+                    onmouseout="this.style.background='rgba(255, 0, 0, 0.1)'">
+              Remove
+            </button>
+          `;
+
+          tokenDiv.onclick = (e) => {
+            if (e.target.type !== 'checkbox' && e.target.tagName !== 'BUTTON') {
+              const checkbox = tokenDiv.querySelector('input[type="checkbox"]');
+              checkbox.checked = !checkbox.checked;
+            }
+          };
+
+          tokenList.appendChild(tokenDiv);
+
+          // Store custom token info
+          ragequitCustomTokens.push({ address: normalizedAddress, symbol, decimals });
+
+          // Clear input
+          input.value = '';
+          showStatus(`Added ${symbol} to ragequit list`, false);
+
+        } catch (error) {
+          console.error('Error fetching custom token:', error);
+          showStatus('Failed to fetch token info', true);
+        }
+      }
+
+      // Remove custom token from ragequit list
+      function removeCustomRagequitToken(address) {
+        const tokenList = document.getElementById('ragequitTokenList');
+        const tokenDiv = tokenList.querySelector(`input[value="${address}"]`)?.closest('div[style*="display: flex"]');
+        if (tokenDiv) {
+          tokenDiv.remove();
+        }
+        ragequitCustomTokens = ragequitCustomTokens.filter(t => t.address !== address);
+        showStatus('Token removed', false);
+      }
+
       async function executeRagequit() {
         try {
           if (!signer || !currentDAO) {
@@ -6486,7 +6644,7 @@
             return;
           }
 
-          // Get selected tokens
+          // Get selected tokens (includes both standard and custom tokens)
           const checkboxes = document.querySelectorAll('#ragequitTokenList input[type="checkbox"]:checked');
           if (checkboxes.length === 0) {
             showStatus('Please select at least one token to claim', true);
@@ -6495,7 +6653,9 @@
 
           const tokenAddresses = Array.from(checkboxes).map(cb => cb.value);
 
-          // Sort addresses (required by contract)
+          // CRITICAL: Sort addresses in strictly ascending order (required by contract)
+          // Contract checks: if (i != 0 && tk <= prev) revert NotOk();
+          // This means each address must be > previous address (no equals, no descending)
           tokenAddresses.sort((a, b) => {
             const aBig = BigInt(a);
             const bBig = BigInt(b);
@@ -7026,28 +7186,95 @@
             { symbol: 'rETH', address: TOKEN_ADDRESSES.reth, decimals: 18 }
           ];
 
+          // Parse chat messages for SALE tags to find custom token sales
+          // SALE tags can appear in two places:
+          // 1. Directly in the message text
+          // 2. Inside PROPOSAL_DATA JSON in the description field
+          const customTokens = [];
+          if (currentDAO.dao.messages && currentDAO.dao.messages.length > 0) {
+            for (const message of currentDAO.dao.messages) {
+              if (!message.text) continue;
+
+              // Try to extract SALE tag from raw message first
+              let textToSearch = message.text;
+
+              // Also check if this is a proposal message - extract description
+              const propData = decodeProposalMessage(message.text);
+              if (propData && propData.description) {
+                textToSearch += '\n' + propData.description;
+              }
+
+              const saleMatch = textToSearch.match(/<<<SALE\s+token="([^"]+)"\s+price="([^"]+)"\s+decimals="(\d+)"\s+symbol="([^"]+)"\s+SALE>>>/);
+              if (saleMatch) {
+                const [, tokenAddress, price, decimals, symbol] = saleMatch;
+
+                // Normalize address for comparison
+                const normalizedAddress = tokenAddress.toLowerCase();
+
+                // Check if we already have this token
+                if (!tokens.find(t => t.address.toLowerCase() === normalizedAddress) &&
+                    !customTokens.find(t => t.address.toLowerCase() === normalizedAddress)) {
+
+                  console.log(`Found custom token sale in messages: ${symbol} (${tokenAddress})`);
+
+                  customTokens.push({
+                    symbol,
+                    address: tokenAddress,
+                    decimals: parseInt(decimals),
+                    isCustom: true
+                  });
+
+                  // Cache for other functions that might need it
+                  if (!customTokenCache[normalizedAddress]) {
+                    customTokenCache[normalizedAddress] = {
+                      symbol,
+                      decimals: parseInt(decimals),
+                      name: symbol
+                    };
+                  }
+                }
+              }
+            }
+          }
+
+          if (customTokens.length > 0) {
+            console.log(`Discovered ${customTokens.length} custom token sale(s):`, customTokens);
+          }
+
+          // Combine standard and custom tokens
+          const allTokens = [...tokens, ...customTokens];
+
+          console.log(`Checking sales for ${allTokens.length} tokens (${tokens.length} standard + ${customTokens.length} custom)`);
+
           // Batch all sales queries in parallel to reduce RPC calls
-          const salePromises = tokens.map(token =>
-            molochContract.sales(token.address).catch(err => {
-              console.error(`Error fetching sale for ${token.symbol}:`, err);
-              return { active: false }; // Return inactive on error
-            })
+          const salePromises = allTokens.map(token =>
+            molochContract.sales(token.address)
+              .then(sale => ({ token, sale }))
+              .catch(err => {
+                console.error(`Error fetching sale for ${token.symbol} (${token.address}):`, err);
+                return { token, sale: { active: false } }; // Return inactive on error
+              })
           );
 
           const salesResults = await Promise.all(salePromises);
 
           const activeSales = [];
-          salesResults.forEach((sale, index) => {
+          for (const result of salesResults) {
+            const { token, sale } = result;
             if (sale.active) {
+              console.log(`✓ Active sale found: ${token.symbol} (${token.address}) - Price: ${sale.pricePerShare.toString()}, Cap: ${sale.cap.toString()}, Minting: ${sale.minting}, isLoot: ${sale.isLoot}`);
+
               activeSales.push({
-                token: tokens[index],
+                token: token,
                 pricePerShare: sale.pricePerShare,
                 cap: sale.cap,
                 minting: sale.minting,
                 isLoot: sale.isLoot
               });
             }
-          });
+          }
+
+          console.log(`Found ${activeSales.length} active sale(s)`);
 
           if (activeSales.length === 0) {
             salesSection.style.display = 'none';
@@ -7060,16 +7287,55 @@
           for (const sale of activeSales) {
             const tokenType = sale.isLoot ? 'LOOT' : 'SHARES';
             const tokenSymbol = sale.isLoot ? `${currentDAO.dao.meta.symbol}-LOOT` : currentDAO.dao.meta.symbol;
-            const priceFormatted = parseFloat(ethers.formatUnits(sale.pricePerShare, sale.token.decimals)).toFixed(sale.token.decimals === 6 ? 2 : 4);
+            // pricePerShare is a simple integer ratio (token-wei per share-wei)
+            const priceRatio = sale.pricePerShare.toString();
+            const priceFormatted = `${priceRatio}:1`;
             const capText = sale.cap > 0n ? `${parseFloat(ethers.formatEther(sale.cap)).toFixed(2)} remaining` : 'Unlimited';
             const sourceText = sale.minting ? 'Minting new' : 'From treasury';
+
+            // Detect 1:1 ratio for governance staking/upgrade (18 decimals, price = 1)
+            const is1to1Upgrade = sale.token.decimals === 18 && sale.pricePerShare === 1n;
+            const displayTitle = is1to1Upgrade ? `${tokenType} GOVERNANCE STAKING/UPGRADE` : `${tokenType} SALE`;
+
+            // Fetch DAO balance for custom tokens
+            let daoBalance = '';
+            if (sale.token.isCustom) {
+              try {
+                const tokenContract = new ethers.Contract(sale.token.address, ERC20_ABI, provider);
+                const balance = await tokenContract.balanceOf(currentDAO.dao.dao);
+                const balanceFormatted = parseFloat(ethers.formatUnits(balance, sale.token.decimals)).toFixed(2);
+                daoBalance = `<div style="font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-top: 0.25rem;">DAO Balance: ${balanceFormatted} ${sale.token.symbol}</div>`;
+              } catch (err) {
+                console.error(`Error fetching DAO balance for ${sale.token.symbol}:`, err);
+              }
+            }
+
+            // Token contract link
+            const tokenContractLink = sale.token.address === ethers.ZeroAddress
+              ? ''
+              : `<div style="margin-top: 0.5rem; font-size: 0.7rem;">
+                   <a href="https://etherscan.io/token/${sale.token.address}"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style="color: rgba(157, 123, 255, 0.8); text-decoration: none; display: inline-flex; align-items: center; gap: 0.25rem;"
+                      onmouseover="this.style.color='#9d7bff'; this.style.textDecoration='underline';"
+                      onmouseout="this.style.color='rgba(157, 123, 255, 0.8)'; this.style.textDecoration='none';">
+                     <span>🔍</span> View ${sale.token.symbol} on Etherscan
+                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                       <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                       <polyline points="15 3 21 3 21 9"></polyline>
+                       <line x1="10" y1="14" x2="21" y2="3"></line>
+                     </svg>
+                   </a>
+                 </div>`;
 
             salesHTML += `
               <div style="padding: 0.75rem; background: rgba(157, 123, 255, 0.05); border: 1px solid rgba(157, 123, 255, 0.2); border-radius: 4px; margin-bottom: 0.75rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                  <div style="font-family: 'Cinzel', serif; font-size: 0.85rem; color: #9d7bff; letter-spacing: 0.1em;">${tokenType} SALE</div>
+                  <div style="font-family: 'Cinzel', serif; font-size: 0.85rem; color: #9d7bff; letter-spacing: 0.1em;">${displayTitle}</div>
                   <div style="font-size: 0.75rem; color: rgba(230, 217, 255, 0.6);">${sourceText}</div>
                 </div>
+                ${is1to1Upgrade ? '<div style="font-size: 0.75rem; color: rgba(157, 123, 255, 0.9); margin-bottom: 0.5rem; font-style: italic;">1:1 token upgrade • Ragequit to reclaim</div>' : ''}
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
                   <div>
                     <div style="font-size: 0.7rem; color: rgba(230, 217, 255, 0.5);">Price</div>
@@ -7080,11 +7346,13 @@
                     <div style="font-size: 0.9rem; color: #e6d9ff;">${capText}</div>
                   </div>
                 </div>
+                ${daoBalance}
+                ${tokenContractLink}
                 <button onclick="openPurchaseModal('${sale.token.address}', '${sale.token.symbol}', ${sale.token.decimals}, ${sale.isLoot})"
                         onmouseover="this.style.background='rgba(157, 123, 255, 0.25)'; this.style.borderColor='#9d7bff';"
                         onmouseout="this.style.background='rgba(157, 123, 255, 0.15)'; this.style.borderColor='rgba(157, 123, 255, 0.3)';"
-                        style="width: 100%; padding: 0.75rem; background: rgba(157, 123, 255, 0.15); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.12em; cursor: pointer; text-transform: uppercase; transition: all 0.2s ease; font-weight: 600; border-radius: 4px; min-height: 44px;">
-                  Purchase ${tokenSymbol}
+                        style="width: 100%; padding: 0.75rem; background: rgba(157, 123, 255, 0.15); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.12em; cursor: pointer; text-transform: uppercase; transition: all 0.2s ease; font-weight: 600; border-radius: 4px; min-height: 44px; margin-top: 0.75rem;">
+                  ${is1to1Upgrade ? 'Stake/Upgrade' : `Purchase ${tokenSymbol}`}
                 </button>
               </div>
             `;
@@ -7133,6 +7401,29 @@
 
           treasuryAssets.appendChild(assetDiv);
         });
+
+        // Add "+ Custom" option for custom tokens
+        const customAssetDiv = document.createElement('div');
+        customAssetDiv.className = 'treasury-asset';
+        customAssetDiv.style.cursor = 'pointer';
+        customAssetDiv.style.borderStyle = 'dashed';
+        customAssetDiv.style.minHeight = '120px'; // Better touch target
+        customAssetDiv.title = 'Click to send or configure sale for a custom ERC20 token';
+
+        const coinIcon = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="16" cy="16" r="14" fill="none" stroke="#9d7bff" stroke-width="2" stroke-dasharray="2,2"/>
+          <path d="M16 8v16M8 16h16" stroke="#9d7bff" stroke-width="2" stroke-linecap="round"/>
+        </svg>`;
+
+        customAssetDiv.innerHTML = `
+          <div class="treasury-asset-icon">${coinIcon}</div>
+          <div class="treasury-asset-symbol" style="font-size: 0.75rem;">+ Custom</div>
+          <div class="treasury-asset-balance" style="font-size: 0.7rem; opacity: 0.6;">ERC20</div>
+        `;
+
+        customAssetDiv.onclick = () => prepareCustomTokenProposal();
+
+        treasuryAssets.appendChild(customAssetDiv);
       }
 
       // Prepare transfer proposal from treasury asset
@@ -7162,7 +7453,14 @@
         helperDiv.dataset.assetAddress = asset.address;
         helperDiv.dataset.assetDecimals = asset.decimals;
 
-        // Show transfer helper with Send/Sale toggle
+        // Show transfer helper with Send/Sale toggle (Sale only for 18-decimal tokens)
+        const showSaleToggle = asset.decimals === 18;
+        const saleButtonHTML = showSaleToggle ? `
+                <button id="saleToggle" onclick="toggleProposalMode('sale')"
+                        style="padding: 0.35rem 0.75rem; background: transparent; border: none; color: rgba(230, 217, 255, 0.6); font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.1em; cursor: pointer; text-transform: uppercase; transition: all 0.2s ease;">
+                  Sale
+                </button>` : '';
+
         helperDiv.innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
             <div style="display: flex; gap: 0.5rem; align-items: center;">
@@ -7173,11 +7471,7 @@
                 <button id="sendToggle" onclick="toggleProposalMode('send')"
                         style="padding: 0.35rem 0.75rem; background: rgba(157, 123, 255, 0.3); border: none; color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.1em; cursor: pointer; text-transform: uppercase; transition: all 0.2s ease;">
                   Send
-                </button>
-                <button id="saleToggle" onclick="toggleProposalMode('sale')"
-                        style="padding: 0.35rem 0.75rem; background: transparent; border: none; color: rgba(230, 217, 255, 0.6); font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.1em; cursor: pointer; text-transform: uppercase; transition: all 0.2s ease;">
-                  Sale
-                </button>
+                </button>${saleButtonHTML}
               </div>
             </div>
             <button onclick="clearTransferHelper()" style="background: none; border: none; color: rgba(230, 217, 255, 0.6); cursor: pointer; font-size: 1.2rem; padding: 0; line-height: 1;">&times;</button>
@@ -7199,7 +7493,13 @@
 
         const symbol = helperDiv.dataset.assetSymbol;
         const address = helperDiv.dataset.assetAddress;
-        const decimals = helperDiv.dataset.assetDecimals;
+        const decimals = parseInt(helperDiv.dataset.assetDecimals);
+
+        // Sale mode only available for 18-decimal tokens
+        if (mode === 'sale' && decimals !== 18) {
+          showStatus('Token sales require 18-decimal tokens for proper share pricing', true);
+          return;
+        }
 
         // Update toggle button states
         if (mode === 'send') {
@@ -7210,16 +7510,16 @@
 
           // Show send fields
           fieldsDiv.innerHTML = `
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+            <div style="display: grid; grid-template-columns: 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
               <div>
                 <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Recipient Address or ENS</label>
                 <input type="text" id="transferRecipient" placeholder="vitalik.eth or 0x..."
-                       style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
+                       style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 16px;" />
               </div>
               <div>
                 <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Amount (${symbol})</label>
                 <input type="text" id="transferAmount" placeholder="0.0"
-                       style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
+                       style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 16px;" />
               </div>
             </div>
             <button type="button" onclick="populateTransferProposal('${symbol}', '${address}', ${decimals})"
@@ -7242,42 +7542,39 @@
 
           // Show sale configuration fields
           fieldsDiv.innerHTML = `
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
-              <div>
-                <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Token Type</label>
-                <select id="saleTokenType"
-                        style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;">
-                  <option value="shares">Shares (Voting)</option>
-                  <option value="loot">Loot (Non-Voting)</option>
-                </select>
-              </div>
-              <div>
-                <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">
-                  Price per Token (${symbol}) <span style="color: #ff6b6b;">*</span>
-                </label>
-                <input type="text" id="salePrice" placeholder="1.0"
-                       style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
-              </div>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
-              <div>
-                <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Sale Cap (0 = unlimited)</label>
-                <input type="text" id="saleCap" placeholder="0"
-                       style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
-              </div>
-              <div>
-                <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Status</label>
-                <select id="saleStatus"
-                        style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;">
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </div>
+            <div style="margin-bottom: 0.75rem;">
+              <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Token Type</label>
+              <select id="saleTokenType"
+                      style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 16px; min-height: 44px;">
+                <option value="shares">Shares (Voting)</option>
+                <option value="loot">Loot (Non-Voting)</option>
+              </select>
             </div>
             <div style="margin-bottom: 0.75rem;">
-              <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: rgba(230, 217, 255, 0.8); cursor: pointer;">
+              <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">
+                Price per Token (${symbol}) <span style="color: #ff6b6b;">*</span>
+                <span title="For 1:1 upgrades, use 1.0" style="cursor: help; margin-left: 0.25rem;">ℹ️</span>
+              </label>
+              <input type="text" id="salePrice" placeholder="1.0" inputmode="decimal"
+                     style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 16px;" />
+            </div>
+            <div style="margin-bottom: 0.75rem;">
+              <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Sale Cap (0 = unlimited)</label>
+              <input type="text" id="saleCap" placeholder="0" inputmode="decimal"
+                     style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 16px;" />
+            </div>
+            <div style="margin-bottom: 0.75rem;">
+              <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Status</label>
+              <select id="saleStatus"
+                      style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 16px; min-height: 44px;">
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+            <div style="margin-bottom: 0.75rem;">
+              <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: rgba(230, 217, 255, 0.8); cursor: pointer; min-height: 44px;">
                 <input type="checkbox" id="saleMinting" checked
-                       style="width: 1rem; height: 1rem; cursor: pointer;" />
+                       style="width: 1.25rem; height: 1.25rem; cursor: pointer;" />
                 <span>Mint new tokens (unchecked = sell from treasury)</span>
               </label>
             </div>
@@ -7298,6 +7595,153 @@
       function clearTransferHelper() {
         const helperDiv = document.getElementById('transferHelper');
         if (helperDiv) helperDiv.remove();
+      }
+
+      // Prepare custom token proposal (Send or Sale)
+      async function prepareCustomTokenProposal() {
+        if (!currentDAO || !currentDAO.dao) {
+          showStatus('Please select a DAO first', true);
+          return;
+        }
+
+        // Clear any existing helpers first
+        clearTransferHelper();
+        clearMintHelper();
+        clearFutarchyHelper();
+        clearQuorumHelper();
+        clearRagequitHelper();
+        clearSaleHelper();
+
+        // Scroll to proposal form
+        const proposalForm = document.querySelector('.proposal-form');
+        if (proposalForm) {
+          proposalForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Add custom token helper UI
+        let helperDiv = document.createElement('div');
+        helperDiv.id = 'transferHelper';
+        helperDiv.style.cssText = 'margin-bottom: 1rem; padding: 1rem; background: rgba(157, 123, 255, 0.1); border: 1px solid rgba(157, 123, 255, 0.3); border-radius: 4px;';
+        proposalForm.insertBefore(helperDiv, proposalForm.querySelector('.proposal-form-group'));
+
+        helperDiv.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <div style="font-family: 'Cinzel', serif; font-size: 0.85rem; color: #9d7bff; letter-spacing: 0.1em;">CUSTOM TOKEN</div>
+            <button onclick="clearTransferHelper()" style="background: none; border: none; color: rgba(230, 217, 255, 0.6); cursor: pointer; font-size: 1.2rem; padding: 0; line-height: 1;">&times;</button>
+          </div>
+          <div style="margin-bottom: 0.75rem; padding: 0.75rem; background: rgba(157, 123, 255, 0.05); border-left: 3px solid rgba(157, 123, 255, 0.3); font-size: 0.8rem; color: rgba(230, 217, 255, 0.8); line-height: 1.5;">
+            <strong>Step 1:</strong> Enter token address and click "Fetch" to load token info<br>
+            <strong>Step 2:</strong> Choose "Send" or "Sale" action after token is loaded
+          </div>
+          <div style="margin-bottom: 0.75rem;">
+            <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">
+              Token Address
+              <span title="Enter a custom ERC20 token address. Use for token upgrades, custom sales, or transfers." style="cursor: help; margin-left: 0.25rem;">ℹ️</span>
+            </label>
+            <div style="display: flex; gap: 0.5rem;">
+              <input type="text" id="customTokenAddress" placeholder="0x..."
+                     style="flex: 1; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 16px;" />
+              <button onclick="fetchAndShowCustomToken()"
+                      style="padding: 0.6rem 1rem; background: rgba(157, 123, 255, 0.2); border: 1px solid rgba(157, 123, 255, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.75rem; letter-spacing: 0.1em; cursor: pointer; white-space: nowrap; min-height: 44px;">
+                Fetch Token Info
+              </button>
+            </div>
+            <div id="customTokenInfoDisplay" style="margin-top: 0.5rem; font-size: 0.75rem; color: rgba(230, 217, 255, 0.7);"></div>
+          </div>
+          <div id="customTokenActions" style="display: none;"></div>
+        `;
+
+        setTimeout(() => {
+          const addressInput = document.getElementById('customTokenAddress');
+          if (addressInput) addressInput.focus();
+        }, 100);
+      }
+
+      // Fetch custom token info and show Send/Sale options
+      async function fetchAndShowCustomToken() {
+        try {
+          const tokenAddress = document.getElementById('customTokenAddress').value.trim();
+          const infoDiv = document.getElementById('customTokenInfoDisplay');
+          const actionsDiv = document.getElementById('customTokenActions');
+
+          if (!tokenAddress || !ethers.isAddress(tokenAddress)) {
+            infoDiv.innerHTML = '<span style="color: #ff6b6b;">Invalid address</span>';
+            actionsDiv.style.display = 'none';
+            return;
+          }
+
+          if (!currentDAO || !currentDAO.dao || !currentDAO.dao.dao) {
+            infoDiv.innerHTML = '<span style="color: #ff6b6b;">Please select a DAO first</span>';
+            actionsDiv.style.display = 'none';
+            return;
+          }
+
+          infoDiv.innerHTML = 'Fetching token info...';
+          actionsDiv.style.display = 'none';
+
+          const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+
+          const [name, symbol, decimals, daoBalance] = await Promise.all([
+            tokenContract.name().catch(() => 'Unknown'),
+            tokenContract.symbol().catch(() => 'UNKNOWN'),
+            tokenContract.decimals().catch(() => 18),
+            tokenContract.balanceOf(currentDAO.dao.dao).catch(() => 0n)
+          ]);
+
+          // Cache the result
+          customTokenCache[tokenAddress.toLowerCase()] = { name, symbol, decimals: Number(decimals) };
+
+          const balanceFormatted = parseFloat(ethers.formatUnits(daoBalance, decimals)).toFixed(2);
+
+          infoDiv.innerHTML = `
+            <div style="padding: 0.5rem; background: rgba(157, 123, 255, 0.1); border-left: 3px solid #9d7bff; border-radius: 2px;">
+              <div><strong>${name}</strong> (${symbol})</div>
+              <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.25rem;">${decimals} decimals • DAO Balance: ${balanceFormatted}</div>
+            </div>
+          `;
+
+          // Store token info in the helper div for later use
+          const helperDiv = document.getElementById('transferHelper');
+          if (helperDiv) {
+            helperDiv.dataset.assetSymbol = symbol;
+            helperDiv.dataset.assetAddress = tokenAddress;
+            helperDiv.dataset.assetDecimals = decimals;
+          }
+
+          // Show Send/Sale toggle with clear instructions (Sale only for 18-decimal tokens)
+          actionsDiv.style.display = 'block';
+          const showSaleToggle = Number(decimals) === 18;
+          const saleButtonHTML = showSaleToggle ? `
+                <button id="saleToggle" onclick="toggleProposalMode('sale')"
+                        style="flex: 1; padding: 0.5rem 0.75rem; background: transparent; border: none; color: rgba(230, 217, 255, 0.6); font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.1em; cursor: pointer; text-transform: uppercase; transition: all 0.2s ease; min-height: 44px;">
+                  Sale
+                </button>` : '';
+          const decimalWarning = !showSaleToggle ? `
+              <div style="margin-top: 0.5rem; padding: 0.5rem; background: rgba(255, 193, 7, 0.1); border-left: 3px solid rgba(255, 193, 7, 0.5); font-size: 0.7rem; color: rgba(255, 193, 7, 0.9);">
+                ⚠️ Token sales require 18-decimal tokens. This ${decimals}-decimal token can only be sent.
+              </div>` : '';
+
+          actionsDiv.innerHTML = `
+            <div style="padding: 0.75rem; background: rgba(157, 123, 255, 0.1); border: 1px solid rgba(157, 123, 255, 0.3); border-radius: 4px; margin-bottom: 0.75rem;">
+              <div style="font-size: 0.75rem; color: rgba(230, 217, 255, 0.8); margin-bottom: 0.5rem;">✓ Token loaded! Choose an action:</div>
+              <div style="display: flex; background: rgba(0, 0, 0, 0.3); border-radius: 4px; overflow: hidden;">
+                <button id="sendToggle" onclick="toggleProposalMode('send')"
+                        style="flex: 1; padding: 0.5rem 0.75rem; background: rgba(157, 123, 255, 0.3); border: none; color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.1em; cursor: pointer; text-transform: uppercase; transition: all 0.2s ease; min-height: 44px;">
+                  Send
+                </button>${saleButtonHTML}
+              </div>${decimalWarning}
+            </div>
+            <div id="proposalFields"></div>
+          `;
+
+          // Show send mode by default
+          toggleProposalMode('send');
+
+        } catch (error) {
+          console.error('Error fetching custom token:', error);
+          document.getElementById('customTokenInfoDisplay').innerHTML = '<span style="color: #ff6b6b;">Failed to fetch token info</span>';
+          document.getElementById('customTokenActions').style.display = 'none';
+        }
       }
 
       async function populateTransferProposal(symbol, address, decimals) {
@@ -8020,9 +8464,10 @@
             return;
           }
 
-          // Calculate cost with proper precision handling
-          // pricePerShare is in payToken decimals, shareAmount is in 18 decimals
-          const cost = (shareAmount * sale.pricePerShare) / (10n ** 18n);
+          // Calculate cost
+          // pricePerShare is payToken wei per share wei (no extra scaling)
+          // For 18-dec tokens: pricePerShare=1 means 1:1 (1e18 tokens buys 1e18 shares)
+          const cost = shareAmount * sale.pricePerShare;
           const maxPay = (cost * 105n) / 100n; // 5% slippage
 
           // ERC20 token: check allowance and approve if needed
@@ -8139,7 +8584,15 @@
             return;
           }
 
-          const pricePerShare = ethers.parseUnits(priceInput, decimals);
+          // Price is in "token-wei per share-wei" (simple integer ratio)
+          // For 1:1 with 18-decimal tokens: user enters "1", price = 1 (not 1e18!)
+          // This is because contract does: cost = shareAmount * price (no scaling)
+          const pricePerShare = BigInt(Math.round(parseFloat(priceInput)));
+          if (pricePerShare === 0n) {
+            showStatus('Price must be at least 1 (fractional prices < 1 not supported)', true);
+            return;
+          }
+
           const cap = capInput && parseFloat(capInput) > 0 ? ethers.parseEther(capInput) : 0n;
           const isLoot = tokenType === 'loot';
           const active = status === 'active';
@@ -8166,8 +8619,12 @@
           const capText = cap > 0n ? `${ethers.formatEther(cap)} tokens` : 'unlimited';
           const statusText = active ? 'ACTIVE' : 'INACTIVE';
 
-          document.getElementById('proposalDescription').value =
-            `Configure ${symbol} sale: ${priceInput} ${symbol} per ${tokenTypeText} token, ${capText} cap, ${sourceText}, status: ${statusText}`;
+          let description = `Configure ${symbol} sale: ${priceInput} ${symbol} per ${tokenTypeText} token, ${capText} cap, ${sourceText}, status: ${statusText}`;
+
+          // Always add SALE tag for tracking in UI (treasury, sales section, etc.)
+          description += `\n\n<<<SALE token="${address}" price="${pricePerShare}" decimals="${decimals}" symbol="${symbol}" SALE>>>`;
+
+          document.getElementById('proposalDescription').value = description;
 
           // Update UI hints and translations
           updateTargetAddressHint();
@@ -8214,11 +8671,12 @@
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
             <div>
-              <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Payment Token</label>
+              <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">
+                Payment Token (18-decimal only)
+                <span style="font-size: 0.65rem; opacity: 0.7; font-weight: normal;">(Use + Custom in treasury for other 18-decimal tokens)</span>
+              </label>
               <select id="salePayToken" style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;">
                 <option value="${ethers.ZeroAddress}">ETH</option>
-                <option value="${TOKEN_ADDRESSES.usdc}">USDC</option>
-                <option value="${TOKEN_ADDRESSES.usdt}">USDT</option>
                 <option value="${TOKEN_ADDRESSES.dai}">DAI</option>
                 <option value="${TOKEN_ADDRESSES.wsteth}">wstETH</option>
                 <option value="${TOKEN_ADDRESSES.reth}">rETH</option>
@@ -8234,11 +8692,17 @@
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
             <div>
-              <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Price per Token</label>
+              <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">
+                Price per Token
+                <span title="For 1:1 upgrades with 18 decimal tokens, use 1.0. This sale will be shown as 'Governance Staking/Upgrade' instead of 'Sale'." style="cursor: help; margin-left: 0.25rem;">ℹ️</span>
+              </label>
               <input type="number" id="salePrice" placeholder="0.0" step="any" min="0" style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
             </div>
             <div>
-              <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Cap (0 = unlimited)</label>
+              <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">
+                Cap (0 = unlimited)
+                <span title="For token upgrades, set to 0 for unlimited. Users can go back and forth via ragequit." style="cursor: help; margin-left: 0.25rem;">ℹ️</span>
+              </label>
               <input type="number" id="saleCap" placeholder="0" step="any" min="0" style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
             </div>
           </div>
@@ -8258,6 +8722,9 @@
               </select>
             </div>
           </div>
+          <div style="margin-bottom: 0.75rem; padding: 0.75rem; background: rgba(157, 123, 255, 0.05); border-left: 3px solid rgba(157, 123, 255, 0.3); font-size: 0.8rem; color: rgba(230, 217, 255, 0.8); line-height: 1.5;">
+            <strong>Token Upgrade Path:</strong> With ragequit enabled, users can upgrade their tokens to DAO shares, then burn shares to reclaim tokens if desired, lowering risk.
+          </div>
           <button onclick="populateSaleProposal('${currentDAO.dao.dao}')"
                   onmouseover="this.style.background='rgba(157, 123, 255, 0.35)'; this.style.borderColor='#9d7bff';"
                   onmouseout="this.style.background='rgba(157, 123, 255, 0.2)'; this.style.borderColor='rgba(157, 123, 255, 0.4)';"
@@ -8271,6 +8738,9 @@
         const helperDiv = document.getElementById('saleHelper');
         if (helperDiv) helperDiv.remove();
       }
+
+      // Custom token cache for info fetching
+      let customTokenCache = {};
 
       async function populateSaleProposal(daoAddress) {
         try {
@@ -8286,6 +8756,7 @@
             return;
           }
 
+          // Standard tokens only (custom tokens use "+ Custom" in treasury)
           const tokenNames = {
             [ethers.ZeroAddress]: 'ETH',
             [TOKEN_ADDRESSES.usdc]: 'USDC',
@@ -8307,7 +8778,15 @@
           const tokenName = tokenNames[payToken];
           const decimals = tokenDecimals[payToken];
 
-          const pricePerShare = ethers.parseUnits(priceInput, decimals);
+          // Price is in "token-wei per share-wei" (simple integer ratio)
+          // For 1:1 with 18-decimal tokens: user enters "1", price = 1 (not 1e18!)
+          // This is because contract does: cost = shareAmount * price (no scaling)
+          const pricePerShare = BigInt(Math.round(parseFloat(priceInput)));
+          if (pricePerShare === 0n) {
+            showStatus('Price must be at least 1 (fractional prices < 1 not supported)', true);
+            return;
+          }
+
           const cap = capInput && parseFloat(capInput) > 0 ? ethers.parseEther(capInput) : 0n;
 
           const saleCalldata = INTERFACES.setSale.encodeFunctionData('setSale', [payToken, pricePerShare, cap, minting, active, isLoot]);
@@ -8316,7 +8795,10 @@
           const statusText = active ? 'Enable' : 'Disable';
           const sourceText = minting ? 'mint new' : 'sell from treasury';
           const capText = cap > 0n ? `, cap ${ethers.formatEther(cap)}` : ', unlimited';
-          const description = `${statusText} ${tokenType} sale: ${priceInput} ${tokenName} per token (${sourceText}${capText})`;
+          let description = `${statusText} ${tokenType} sale: ${priceInput} ${tokenName} per token (${sourceText}${capText})`;
+
+          // Always add SALE tag for tracking in UI (treasury, sales section, etc.)
+          description += `\n\n<<<SALE token="${payToken}" price="${pricePerShare}" decimals="${decimals}" symbol="${tokenName}" SALE>>>`;
 
           document.getElementById('proposalTo').value = daoAddress;
           document.getElementById('proposalValue').value = '0';
@@ -9274,36 +9756,41 @@
           let isVerified = false;
           let verificationBadge = '';
           let proposalCalldata = null;
+          let hasMessages = currentDAO.dao.messages && currentDAO.dao.messages.length > 0;
 
-          currentDAO.dao.messages.forEach(msg => {
-            const propData = decodeProposalMessage(msg.text);
-            if (propData) {
-              try {
-                // Recompute the proposal ID from the tagged data
-                const recomputedId = computeProposalId(
-                  currentDAO.dao.dao,
-                  propData.op,
-                  propData.to,
-                  BigInt(propData.value),
-                  propData.data,
-                  propData.nonce,
-                  daoConfig
-                );
+          if (hasMessages) {
+            for (const msg of currentDAO.dao.messages) {
+              const propData = decodeProposalMessage(msg.text);
+              if (propData) {
+                try {
+                  // Recompute the proposal ID from the tagged data
+                  const recomputedId = computeProposalId(
+                    currentDAO.dao.dao,
+                    propData.op,
+                    propData.to,
+                    BigInt(propData.value),
+                    propData.data,
+                    propData.nonce,
+                    daoConfig
+                  );
 
-                // Check if it matches this proposal's ID
-                if (recomputedId.toString() === proposal.id.toString()) {
-                  description = propData.description || description;
-                  isVerified = true;
-                  proposalCalldata = propData.data;
+                  // Check if it matches this proposal's ID
+                  if (recomputedId.toString() === proposal.id.toString()) {
+                    description = propData.description || description;
+                    isVerified = true;
+                    proposalCalldata = propData.data;
+                    break; // Found it, stop searching
+                  }
+                } catch (e) {
+                  console.error('Error verifying proposal:', e);
                 }
-              } catch (e) {
-                console.error('Error verifying proposal:', e);
               }
             }
-          });
+          }
 
-          // Only show badge if NOT verified (warning flag)
-          if (!isVerified) {
+          // Only show unverified badge if we have messages but couldn't verify
+          // Don't show badge if messages haven't loaded yet (prevents false negatives)
+          if (hasMessages && !isVerified) {
             verificationBadge = '<span style="color: #ff6b6b; font-size: 0.9rem; margin-left: 0.5rem;" title="⚠ Proposal data not found in messages - cannot verify integrity">⚠ Unverified</span>';
           }
 
@@ -9813,9 +10300,21 @@
               [TOKEN_ADDRESSES.reth.toLowerCase()]: 18
             };
 
-            const tokenName = tokenNames[payToken.toLowerCase()] || 'Unknown';
-            const decimals = tokenDecimals[payToken.toLowerCase()] || 18;
-            const price = ethers.formatUnits(pricePerShare, decimals);
+            // Check customTokenCache for custom tokens
+            let tokenName = tokenNames[payToken.toLowerCase()];
+            let decimals = tokenDecimals[payToken.toLowerCase()];
+
+            if (!tokenName && customTokenCache[payToken.toLowerCase()]) {
+              tokenName = customTokenCache[payToken.toLowerCase()].symbol;
+              decimals = customTokenCache[payToken.toLowerCase()].decimals;
+            }
+
+            tokenName = tokenName || 'Unknown';
+            decimals = decimals || 18;
+
+            // pricePerShare is a simple integer ratio (token-wei per share-wei)
+            // For display, just show the raw number (e.g., "1" for 1:1, "2" for 2:1)
+            const price = pricePerShare.toString();
             const tokenType = isLoot ? 'LOOT' : 'SHARES';
             const statusText = active ? 'Enable' : 'Disable';
             const capText = cap > 0n ? `${ethers.formatEther(cap)} cap` : 'unlimited';
@@ -9823,7 +10322,7 @@
 
             translation = `
               <div style="opacity: 0.8; margin-bottom: 0.35rem; font-size: 0.8rem;">Configure ${tokenType} Sale</div>
-              <div>${statusText}: <strong>${price} ${tokenName}</strong> per token</div>
+              <div>${statusText}: <strong>${price}:1 ratio</strong> (${price} ${tokenName} per ${tokenType} token)</div>
               <div style="margin-top: 0.25rem; font-size: 0.75rem; opacity: 0.7;">${sourceText}, ${capText}</div>
             `;
           }
@@ -10086,6 +10585,7 @@
           // Refresh with loading feedback
           await refreshCurrentDAO(true);
           await renderProposals();
+          await renderSalesInfo(); // Refresh sales in case it was a sale proposal
         } catch (error) {
           console.error('Error executing proposal:', error);
 
@@ -10164,6 +10664,39 @@
           if (showLoading) {
             showStatus('Error refreshing DAO', true);
           }
+        }
+      }
+
+      // Manual refresh with button animation
+      async function manualRefreshDAO() {
+        const refreshBtn = document.getElementById('refreshButton');
+        if (!refreshBtn || !currentDAO) return;
+
+        // Add spinning animation
+        const svg = refreshBtn.querySelector('svg');
+        svg.style.animation = 'spin 1s linear infinite';
+        refreshBtn.disabled = true;
+        refreshBtn.style.cursor = 'not-allowed';
+
+        try {
+          // Refresh DAO data
+          await refreshCurrentDAO(true);
+
+          // Re-render all views
+          renderDaoStats();
+          renderChatroom();
+          await renderProposals();
+          await renderSalesInfo();
+          await renderMembership();
+          await renderMembersList();
+        } catch (error) {
+          console.error('Error during manual refresh:', error);
+          showStatus('Failed to refresh DAO', true);
+        } finally {
+          // Remove spinning animation
+          svg.style.animation = '';
+          refreshBtn.disabled = false;
+          refreshBtn.style.cursor = 'pointer';
         }
       }
 
@@ -10763,24 +11296,25 @@
             const minting = document.getElementById('saleMinting').checked;
 
             if (priceInput && parseFloat(priceInput) > 0) {
-              // Map token selection to addresses
+              // Map token selection to addresses (18-decimal only)
               const tokenAddresses = {
                 'eth': ethers.ZeroAddress,
-                'usdc': TOKEN_ADDRESSES.usdc,
-                'usdt': TOKEN_ADDRESSES.usdt,
                 'dai': TOKEN_ADDRESSES.dai,
                 'wsteth': TOKEN_ADDRESSES.wsteth,
                 'reth': TOKEN_ADDRESSES.reth
               };
 
-              const tokenDecimals = {
-                'eth': 18, 'usdc': 6, 'usdt': 6,
-                'dai': 18, 'wsteth': 18, 'reth': 18
-              };
-
               const payToken = tokenAddresses[paymentToken];
-              const decimals = tokenDecimals[paymentToken];
-              const pricePerShare = ethers.parseUnits(priceInput, decimals);
+
+              // Price is in "token-wei per share-wei" (simple integer ratio)
+              // For 1:1 with 18-decimal tokens: user enters "1", price = 1 (not 1e18!)
+              // This is because contract does: cost = shareAmount * price (no scaling)
+              const pricePerShare = BigInt(Math.round(parseFloat(priceInput)));
+              if (pricePerShare === 0n) {
+                showStatus('Sale price must be at least 1 (fractional prices < 1 not supported)', true);
+                throw new Error('Invalid sale price');
+              }
+
               const cap = capInput && parseFloat(capInput) > 0 ? ethers.parseEther(capInput) : 0n;
               const isLoot = tokenType === 'loot';
 
