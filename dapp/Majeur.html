@@ -1093,6 +1093,7 @@
       }
 
       .feature-page {
+        position: relative;
         min-height: 100vh;
         display: flex;
         align-items: center;
@@ -5330,6 +5331,24 @@
             </svg>
           </div>
         </div>
+
+        <!-- Floating badge card teaser -->
+        <div class="card-teaser" data-card="badge" style="
+          position: absolute;
+          right: 5%;
+          top: 20%;
+          width: 120px;
+          opacity: 0.5;
+          pointer-events: none;
+          transform: rotate(8deg);
+          z-index: 10;
+          background: rgba(0, 0, 0, 0.8);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          border-radius: 8px;
+          padding: 3px;
+        ">
+          <img src="/assets/badge-card.svg" alt="Badge Card" style="width: 100%; height: auto; display: block;" />
+        </div>
       </section>
 
       <!-- 02: SPLIT (weighted delegation) -->
@@ -5542,6 +5561,24 @@
             </svg>
           </div>
         </div>
+
+        <!-- Floating permit card teaser -->
+        <div class="card-teaser" data-card="permit" style="
+          position: absolute;
+          left: 5%;
+          bottom: 15%;
+          width: 110px;
+          opacity: 0.45;
+          pointer-events: none;
+          transform: rotate(-12deg);
+          z-index: 10;
+          background: rgba(0, 0, 0, 0.8);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          border-radius: 8px;
+          padding: 3px;
+        ">
+          <img src="/assets/permit-card.svg" alt="Permit Card" style="width: 100%; height: auto; display: block;" />
+        </div>
       </section>
 
       <!-- 04: FUTARCHY -->
@@ -5638,6 +5675,40 @@
               />
             </svg>
           </div>
+        </div>
+
+        <!-- Floating vote receipt cards teaser -->
+        <div class="card-teaser" data-card="vote-yes" style="
+          position: absolute;
+          right: 8%;
+          top: 15%;
+          width: 100px;
+          opacity: 0.55;
+          pointer-events: none;
+          transform: rotate(15deg);
+          z-index: 10;
+          background: rgba(0, 0, 0, 0.8);
+          border: 1px solid rgba(0, 255, 0, 0.3);
+          border-radius: 8px;
+          padding: 3px;
+        ">
+          <img src="/assets/vote-receipt-cards.svg" alt="YES Vote" style="width: 100%; height: auto; display: block; clip-path: inset(0 66% 0 0);" />
+        </div>
+        <div class="card-teaser" data-card="vote-no" style="
+          position: absolute;
+          left: 10%;
+          bottom: 18%;
+          width: 95px;
+          opacity: 0.5;
+          pointer-events: none;
+          transform: rotate(-10deg);
+          z-index: 10;
+          background: rgba(0, 0, 0, 0.8);
+          border: 1px solid rgba(255, 0, 0, 0.3);
+          border-radius: 8px;
+          padding: 3px;
+        ">
+          <img src="/assets/vote-receipt-cards.svg" alt="NO Vote" style="width: 100%; height: auto; display: block; clip-path: inset(0 33% 0 33%);" />
         </div>
       </section>
 
@@ -6916,6 +6987,7 @@
 
           const summonerRect = summonerSection.getBoundingClientRect();
           const summonerTop = window.pageYOffset + summonerRect.top;
+          const summonerBottom = summonerTop + summonerRect.height;
 
           // Radial convergence: fade out radials as we scroll past intro
           const introProgress = Math.max(0, Math.min(1, (scrollY - introPanelTop) / introPanelRect.height));
@@ -6923,8 +6995,11 @@
             radialGroup.style.opacity = Math.max(0, 0.8 * (1 - introProgress * 1.2));
           }
 
-          // Show journey line when past intro
-          if (scrollY >= introPanelBottom - windowHeight) {
+          // Check if summoner is in viewport (hide line when form is visible)
+          const summonerInView = summonerRect.top < windowHeight && summonerRect.bottom > 0;
+
+          // Show journey line when past intro but before summoner
+          if (scrollY >= introPanelBottom - windowHeight && !summonerInView) {
             journeyLineContainer.style.opacity = '1';
 
             // Calculate progress from intro bottom to summoner top
@@ -6940,7 +7015,7 @@
             journeyLine.style.height = `${lineProgress * 100}%`;
 
             // Show endpoint when approaching summoner (last 20% of journey)
-            if (lineProgress > 0.8) {
+            if (lineProgress > 0.8 && !summonerInView) {
               const endpointProgress = (lineProgress - 0.8) / 0.2;
               journeyEndpoint.style.opacity = endpointProgress;
 
@@ -6951,13 +7026,16 @@
             } else {
               journeyEndpoint.style.opacity = '0';
             }
-
-            // Fade out after summoner
-            if (scrollY > summonerTop + windowHeight) {
-              journeyLineContainer.style.opacity = '0.3';
-            }
-          } else {
-            // Before intro: hide journey line, show radials
+          }
+          // Fade out when summoner comes into view
+          else if (summonerInView) {
+            // Calculate fade based on how far summoner has scrolled into view
+            const summonerProgress = Math.max(0, Math.min(1, (windowHeight - summonerRect.top) / (windowHeight * 0.3)));
+            journeyLineContainer.style.opacity = Math.max(0, 1 - summonerProgress);
+            journeyEndpoint.style.opacity = '0';
+          }
+          // Before intro: hide journey line, show radials
+          else {
             journeyLineContainer.style.opacity = '0';
             journeyLine.style.height = '0%';
             journeyEndpoint.style.opacity = '0';
@@ -6996,6 +7074,106 @@
         window.addEventListener('beforeunload', () => {
           if (rafId) cancelAnimationFrame(rafId);
         });
+      })();
+
+      // Card Teaser Parallax Animation
+      (function initCardTeasers() {
+        const cardTeasers = document.querySelectorAll('.card-teaser');
+        if (cardTeasers.length === 0) return;
+
+        // Store initial opacity for each card
+        const initialOpacities = new Map();
+        cardTeasers.forEach(card => {
+          const computedStyle = window.getComputedStyle(card);
+          initialOpacities.set(card, parseFloat(computedStyle.opacity) || 0.4);
+        });
+
+        function updateCardPositions() {
+          cardTeasers.forEach(card => {
+            const cardType = card.getAttribute('data-card');
+            const featurePage = card.closest('.feature-page');
+            if (!featurePage) return;
+
+            const rect = featurePage.getBoundingClientRect();
+            const windowHeight = window.innerHeight;
+
+            // Check if feature page is in viewport
+            if (rect.top < windowHeight && rect.bottom > 0) {
+              // Calculate progress (0 to 1) as page scrolls through viewport
+              const progress = Math.max(0, Math.min(1,
+                (windowHeight - rect.top) / (windowHeight + rect.height)
+              ));
+
+              // Different movement patterns based on card type
+              let translateY = 0;
+              let translateX = 0;
+              let rotation = 0;
+              let scale = 1;
+
+              switch(cardType) {
+                case 'badge':
+                  // Gentle downward drift with slight rotation
+                  translateY = progress * 40;
+                  translateX = Math.sin(progress * Math.PI) * 15;
+                  rotation = 8 + progress * 12;
+                  scale = 1 + progress * 0.08;
+                  break;
+
+                case 'permit':
+                  // Upward float with swing
+                  translateY = -progress * 35;
+                  translateX = Math.sin(progress * Math.PI * 2) * 12;
+                  rotation = -12 + Math.sin(progress * Math.PI) * 10;
+                  scale = 1 + progress * 0.05;
+                  break;
+
+                case 'vote-yes':
+                  // Diagonal drift down-right
+                  translateY = progress * 45;
+                  translateX = progress * 25;
+                  rotation = 15 - progress * 10;
+                  scale = 1 + progress * 0.12;
+                  break;
+
+                case 'vote-no':
+                  // Diagonal drift up-left
+                  translateY = -progress * 40;
+                  translateX = -progress * 20;
+                  rotation = -10 + progress * 15;
+                  scale = 1 + progress * 0.08;
+                  break;
+              }
+
+              // Apply transforms
+              card.style.transform = `
+                translate(${translateX}px, ${translateY}px)
+                rotate(${rotation}deg)
+                scale(${scale})
+              `;
+
+              // Fade in/out based on progress
+              const fadeInProgress = Math.min(1, progress * 3);
+              const fadeOutProgress = Math.max(0, 1 - (progress - 0.65) * 3);
+              const baseOpacity = initialOpacities.get(card) || 0.4;
+              card.style.opacity = baseOpacity * fadeInProgress * fadeOutProgress;
+            }
+          });
+        }
+
+        // Update on scroll with throttle
+        let scrollTicking = false;
+        window.addEventListener('scroll', () => {
+          if (!scrollTicking) {
+            window.requestAnimationFrame(() => {
+              updateCardPositions();
+              scrollTicking = false;
+            });
+            scrollTicking = true;
+          }
+        }, { passive: true });
+
+        // Initial update
+        updateCardPositions();
       })();
 
       // Auto-save form data to prevent loss
