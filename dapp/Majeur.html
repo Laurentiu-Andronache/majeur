@@ -1551,7 +1551,7 @@
         object-fit: cover;
       }
 
-      /* Special GIF for DAO index 0 */
+      /* Special GIF for DAO index 0 and 1 */
       .dao-special-gif {
         position: absolute;
         top: 50%;
@@ -6161,33 +6161,21 @@
                   <div id="salePaymentTokenDisplay" onclick="toggleSalePaymentTokenDropdown()"
                        style="width: 100%; padding: 0.7rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.9rem; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
                     <div style="width: 24px; height: 24px; flex-shrink: 0;" id="salePaymentTokenIcon"></div>
-                    <span id="salePaymentTokenLabel">ETH</span>
+                    <span id="salePaymentTokenLabel">DAI</span>
                   </div>
                   <div id="salePaymentTokenDropdown" class="custom-dropdown" style="display: none; position: absolute; top: 100%; left: 0; right: 0; margin-top: 0.25rem; background: rgba(10, 0, 21, 0.95); border: 1px solid rgba(157, 123, 255, 0.4); border-radius: 4px; z-index: 1000; backdrop-filter: blur(10px);">
-                    <div onclick="selectSalePaymentToken('eth')" style="padding: 0.7rem; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(157, 123, 255, 0.2)'" onmouseout="this.style.background='transparent'">
-                      <div style="width: 24px; height: 24px; flex-shrink: 0;" class="token-dropdown-icon" data-token="eth"></div>
-                      <span style="color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.9rem;">ETH</span>
-                    </div>
                     <div onclick="selectSalePaymentToken('dai')" style="padding: 0.7rem; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(157, 123, 255, 0.2)'" onmouseout="this.style.background='transparent'">
                       <div style="width: 24px; height: 24px; flex-shrink: 0;" class="token-dropdown-icon" data-token="dai"></div>
                       <span style="color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.9rem;">DAI</span>
-                    </div>
-                    <div onclick="selectSalePaymentToken('wsteth')" style="padding: 0.7rem; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(157, 123, 255, 0.2)'" onmouseout="this.style.background='transparent'">
-                      <div style="width: 24px; height: 24px; flex-shrink: 0;" class="token-dropdown-icon" data-token="wsteth"></div>
-                      <span style="color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.9rem;">wstETH</span>
-                    </div>
-                    <div onclick="selectSalePaymentToken('reth')" style="padding: 0.7rem; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(157, 123, 255, 0.2)'" onmouseout="this.style.background='transparent'">
-                      <div style="width: 24px; height: 24px; flex-shrink: 0;" class="token-dropdown-icon" data-token="reth"></div>
-                      <span style="color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.9rem;">rETH</span>
                     </div>
                     <div onclick="selectSalePaymentToken('custom')" style="padding: 0.7rem; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; transition: background 0.2s; border-top: 1px solid rgba(157, 123, 255, 0.2);" onmouseover="this.style.background='rgba(157, 123, 255, 0.2)'" onmouseout="this.style.background='transparent'">
                       <div style="width: 24px; height: 24px; flex-shrink: 0;" class="token-dropdown-icon" data-token="defaultCoin"></div>
                       <span style="color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.9rem;">Custom Token</span>
                     </div>
                   </div>
-                  <input type="hidden" class="form-input" id="salePaymentToken" value="eth">
+                  <input type="hidden" class="form-input" id="salePaymentToken" value="dai">
                 </div>
-                <small style="color: rgba(230, 217, 255, 0.5); font-size: 0.8rem;">Token sales require 18-decimal tokens for simple pricing math</small>
+                <small style="color: rgba(230, 217, 255, 0.5); font-size: 0.8rem;">Use DAI for simple 1:1 pricing (1 DAI = 1 Share at cheapest). Custom token for upgrade paths.</small>
               </div>
 
               <div class="form-group" id="customTokenFields" style="display: none;">
@@ -6205,9 +6193,9 @@
               </div>
 
               <div class="form-group">
-                <label class="form-label">Price Ratio</label>
+                <label class="form-label">Price Ratio (DAI per Share/Loot)</label>
                 <input type="number" class="form-input" id="salePrice" placeholder="1" step="1" min="1">
-                <small style="color: rgba(230, 217, 255, 0.5); font-size: 0.8rem;">Simple integer ratio (e.g., "1" for 1:1, "2" for 2:1). Fractional prices not supported.</small>
+                <small style="color: rgba(230, 217, 255, 0.5); font-size: 0.8rem;">Simple integer pricing: "1" means 1 DAI = 1 Share (or custom token). Use "2" for 2 DAI per Share, etc.</small>
               </div>
 
               <div class="form-group">
@@ -9267,10 +9255,12 @@
 
           allDaosTiles.appendChild(tile);
 
-          // Add special gif for index 0
-          if (index === 0) {
+          // Add special gif for index 0 and 1
+          if (index === 0 || index === 1) {
             const gifImg = document.createElement('img');
-            gifImg.src = 'https://content.wrappr.wtf/ipfs/bafybeidc4tl6ysvwhwbpql7xk5ol5cd22dvpmlyy76zjun4ikhrb43oqb4';
+            gifImg.src = index === 0
+              ? 'https://content.wrappr.wtf/ipfs/bafybeidc4tl6ysvwhwbpql7xk5ol5cd22dvpmlyy76zjun4ikhrb43oqb4'
+              : 'https://content.wrappr.wtf/ipfs/bafybeibgfu4gh7miouopugf7tclpt4os2zr2rznhlomnletfbj5amdw4gu';
             gifImg.className = 'dao-special-gif';
             gifImg.alt = 'Special DAO Animation';
             tile.appendChild(gifImg);
@@ -9436,10 +9426,12 @@
 
           daoTiles.appendChild(tile);
 
-          // Add special gif for index 0
-          if (index === 0) {
+          // Add special gif for index 0 and 1
+          if (index === 0 || index === 1) {
             const gifImg = document.createElement('img');
-            gifImg.src = 'https://content.wrappr.wtf/ipfs/bafybeidc4tl6ysvwhwbpql7xk5ol5cd22dvpmlyy76zjun4ikhrb43oqb4';
+            gifImg.src = index === 0
+              ? 'https://content.wrappr.wtf/ipfs/bafybeidc4tl6ysvwhwbpql7xk5ol5cd22dvpmlyy76zjun4ikhrb43oqb4'
+              : 'https://content.wrappr.wtf/ipfs/bafybeibgfu4gh7miouopugf7tclpt4os2zr2rznhlomnletfbj5amdw4gu';
             gifImg.className = 'dao-special-gif';
             gifImg.alt = 'Special DAO Animation';
             tile.appendChild(gifImg);
@@ -9987,8 +9979,9 @@
         helperDiv.dataset.assetAddress = asset.address;
         helperDiv.dataset.assetDecimals = asset.decimals;
 
-        // Show transfer helper with Send/Sale toggle (Sale only for 18-decimal tokens)
-        const showSaleToggle = asset.decimals === 18;
+        // Show transfer helper with Send/Sale toggle (Sale only for DAI and custom 18-decimal tokens)
+        const isDaiOrCustom = asset.address?.toLowerCase() === TOKEN_ADDRESSES.dai.toLowerCase() || asset.isCustomSale === true;
+        const showSaleToggle = asset.decimals === 18 && isDaiOrCustom;
         const saleButtonHTML = showSaleToggle ? `
                 <button id="saleToggle" onclick="toggleProposalMode('sale')"
                         style="padding: 0.35rem 0.75rem; background: transparent; border: none; color: rgba(230, 217, 255, 0.6); font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.1em; cursor: pointer; text-transform: uppercase; transition: all 0.2s ease;">
@@ -10161,27 +10154,36 @@
         const price = parseFloat(priceInput);
         const cap = parseFloat(capInput);
 
-        // Only show hint if price is valid
+        const tokenTypeText = tokenType === 'loot' ? 'Loot' : 'Share';
+
+        // Show hint even without price - guide the user
         if (!priceInput || isNaN(price) || price <= 0) {
-          hint.style.display = 'none';
+          hintText.innerHTML = `<span style="opacity: 0.6;">Enter price to see sale preview (e.g., "1 ${tokenSymbol} for 1 ${tokenTypeText}")</span>`;
+          hint.style.display = 'block';
           return;
         }
 
-        const tokenTypeText = tokenType === 'loot' ? 'LOOT' : 'SHARE';
+        // Detect 1:1 upgrade path
+        const is1to1 = price === 1;
 
-        // Build the hint text
-        let text = `1 ${tokenTypeText} for ${price} ${tokenSymbol}`;
+        // Build the hint text - more natural word order: "1 DAI for 1 Share"
+        let text = `<strong>${price} ${tokenSymbol}</strong> for <strong>1 ${tokenTypeText}</strong>`;
 
         if (cap && !isNaN(cap) && cap > 0) {
-          text += ` up to ${cap.toLocaleString()} ${tokenTypeText}${cap !== 1 ? 'S' : ''}`;
+          text += ` up to <strong>${cap.toLocaleString()} ${tokenTypeText}${cap !== 1 ? 's' : ''}</strong>`;
         } else {
-          text += ` (unlimited)`;
+          text += ` <span style="opacity: 0.7;">(unlimited)</span>`;
         }
 
-        // Add cost example
-        const exampleAmount = 100;
-        const exampleCost = exampleAmount * price;
-        text += ` <span style="opacity: 0.7; font-size: 0.9em;">(e.g., ${exampleAmount} ${tokenTypeText}S = ${exampleCost.toLocaleString()} ${tokenSymbol})</span>`;
+        // Add 1:1 upgrade path hint or cost example
+        if (is1to1) {
+          text += ` <span style="color: #9d7bff; font-weight: 600; margin-left: 0.5rem;">• 1:1 Upgrade Path</span>`;
+        } else {
+          // Add cost example
+          const exampleAmount = 100;
+          const exampleCost = exampleAmount * price;
+          text += `<br><span style="opacity: 0.6; font-size: 0.85em;">Example: ${exampleCost.toLocaleString()} ${tokenSymbol} buys ${exampleAmount} ${tokenTypeText}s</span>`;
+        }
 
         hintText.innerHTML = text;
         hint.style.display = 'block';
@@ -11274,27 +11276,25 @@
                 <div id="proposalPayTokenDisplay" onclick="toggleProposalPayTokenDropdown()"
                      style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
                   <div style="width: 20px; height: 20px; flex-shrink: 0;" id="proposalPayTokenIcon"></div>
-                  <span id="proposalPayTokenLabel">ETH</span>
+                  <span id="proposalPayTokenLabel">DAI</span>
                 </div>
                 <div id="proposalPayTokenDropdown" class="custom-dropdown" style="display: none; position: absolute; top: 100%; left: 0; right: 0; margin-top: 0.25rem; background: rgba(10, 0, 21, 0.95); border: 1px solid rgba(157, 123, 255, 0.4); border-radius: 4px; z-index: 1000; backdrop-filter: blur(10px);">
-                  <div onclick="selectProposalPayToken('eth', '${ethers.ZeroAddress}')" style="padding: 0.6rem; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(157, 123, 255, 0.2)'" onmouseout="this.style.background='transparent'">
-                    <div style="width: 20px; height: 20px; flex-shrink: 0;" class="proposal-token-icon" data-token="eth"></div>
-                    <span style="color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;">ETH</span>
-                  </div>
                   <div onclick="selectProposalPayToken('dai', '${TOKEN_ADDRESSES.dai}')" style="padding: 0.6rem; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(157, 123, 255, 0.2)'" onmouseout="this.style.background='transparent'">
                     <div style="width: 20px; height: 20px; flex-shrink: 0;" class="proposal-token-icon" data-token="dai"></div>
                     <span style="color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;">DAI</span>
                   </div>
-                  <div onclick="selectProposalPayToken('wsteth', '${TOKEN_ADDRESSES.wsteth}')" style="padding: 0.6rem; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(157, 123, 255, 0.2)'" onmouseout="this.style.background='transparent'">
-                    <div style="width: 20px; height: 20px; flex-shrink: 0;" class="proposal-token-icon" data-token="wsteth"></div>
-                    <span style="color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;">wstETH</span>
-                  </div>
-                  <div onclick="selectProposalPayToken('reth', '${TOKEN_ADDRESSES.reth}')" style="padding: 0.6rem; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(157, 123, 255, 0.2)'" onmouseout="this.style.background='transparent'">
-                    <div style="width: 20px; height: 20px; flex-shrink: 0;" class="proposal-token-icon" data-token="reth"></div>
-                    <span style="color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;">rETH</span>
+                  <div onclick="selectProposalPayToken('custom', 'custom')" style="padding: 0.6rem; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; transition: background 0.2s; border-top: 1px solid rgba(157, 123, 255, 0.2);" onmouseover="this.style.background='rgba(157, 123, 255, 0.2)'" onmouseout="this.style.background='transparent'">
+                    <div style="width: 20px; height: 20px; flex-shrink: 0;" class="proposal-token-icon" data-token="defaultCoin"></div>
+                    <span style="color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;">Custom Token</span>
                   </div>
                 </div>
-                <input type="hidden" id="salePayToken" value="${ethers.ZeroAddress}">
+                <input type="hidden" id="salePayToken" value="${TOKEN_ADDRESSES.dai}">
+              </div>
+              <div id="customSaleTokenFields" style="display: none; margin-top: 0.5rem;">
+                <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Custom Token Address</label>
+                <input type="text" id="customSaleTokenAddress" placeholder="0x..."
+                       style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
+                <small style="display: block; margin-top: 0.25rem; font-size: 0.7rem; color: rgba(230, 217, 255, 0.5);">Must be an 18-decimal ERC20 token</small>
               </div>
             </div>
             <div>
@@ -11385,34 +11385,45 @@
         const price = parseFloat(priceInput);
         const cap = parseFloat(capInput);
 
-        // Only show hint if price is valid
+        let payToken;
+        if (paymentToken === 'custom') {
+          payToken = 'TOKEN';
+        } else {
+          const tokenNames = {
+            [TOKEN_ADDRESSES.dai]: 'DAI'
+          };
+          payToken = tokenNames[paymentToken] || 'TOKEN';
+        }
+        const tokenTypeText = tokenType === 'loot' ? 'Loot' : 'Share';
+
+        // Show hint even without price - guide the user
         if (!priceInput || isNaN(price) || price <= 0) {
-          hint.style.display = 'none';
+          hintText.innerHTML = `<span style="opacity: 0.6;">Enter price to see sale preview (e.g., "1 ${payToken} for 1 ${tokenTypeText}")</span>`;
+          hint.style.display = 'block';
           return;
         }
 
-        const tokenNames = {
-          [ethers.ZeroAddress]: 'ETH',
-          [TOKEN_ADDRESSES.dai]: 'DAI',
-          [TOKEN_ADDRESSES.wsteth]: 'wstETH',
-          [TOKEN_ADDRESSES.reth]: 'rETH'
-        };
-        const payToken = tokenNames[paymentToken] || 'TOKEN';
-        const tokenTypeText = tokenType === 'loot' ? 'LOOT' : 'SHARE';
+        // Detect 1:1 upgrade path
+        const is1to1 = price === 1;
 
-        // Build the hint text
-        let text = `1 ${tokenTypeText} for ${price} ${payToken}`;
+        // Build the hint text - more natural word order: "1 DAI for 1 Share"
+        let text = `<strong>${price} ${payToken}</strong> for <strong>1 ${tokenTypeText}</strong>`;
 
         if (cap && !isNaN(cap) && cap > 0) {
-          text += ` up to ${cap.toLocaleString()} ${tokenTypeText}${cap !== 1 ? 'S' : ''}`;
+          text += ` up to <strong>${cap.toLocaleString()} ${tokenTypeText}${cap !== 1 ? 's' : ''}</strong>`;
         } else {
-          text += ` (unlimited)`;
+          text += ` <span style="opacity: 0.7;">(unlimited)</span>`;
         }
 
-        // Add cost example
-        const exampleAmount = 100;
-        const exampleCost = exampleAmount * price;
-        text += ` <span style="opacity: 0.7; font-size: 0.9em;">(e.g., ${exampleAmount} ${tokenTypeText}S = ${exampleCost.toLocaleString()} ${payToken})</span>`;
+        // Add 1:1 upgrade path hint or cost example
+        if (is1to1) {
+          text += ` <span style="color: #9d7bff; font-weight: 600; margin-left: 0.5rem;">• 1:1 Upgrade Path</span>`;
+        } else {
+          // Add cost example
+          const exampleAmount = 100;
+          const exampleCost = exampleAmount * price;
+          text += `<br><span style="opacity: 0.6; font-size: 0.85em;">Example: ${exampleCost.toLocaleString()} ${payToken} buys ${exampleAmount} ${tokenTypeText}s</span>`;
+        }
 
         hintText.innerHTML = text;
         hint.style.display = 'block';
@@ -11424,7 +11435,7 @@
       }
 
       // Proposal payment token dropdown functions
-      let selectedProposalPayToken = ethers.ZeroAddress;
+      let selectedProposalPayToken = TOKEN_ADDRESSES.dai;
 
       function toggleProposalPayTokenDropdown() {
         const dropdown = document.getElementById('proposalPayTokenDropdown');
@@ -11440,12 +11451,23 @@
           hiddenInput.value = tokenAddress;
         }
 
+        // Show/hide custom token fields
+        const customTokenFields = document.getElementById('customSaleTokenFields');
+        if (customTokenFields) {
+          customTokenFields.style.display = tokenName === 'custom' ? 'block' : 'none';
+        }
+
         // Update display
         const iconEl = document.getElementById('proposalPayTokenIcon');
         const labelEl = document.getElementById('proposalPayTokenLabel');
-        if (iconEl && labelEl && salePaymentTokenIcons[tokenName]) {
-          iconEl.innerHTML = salePaymentTokenIcons[tokenName];
-          labelEl.textContent = tokenName.toUpperCase();
+        if (iconEl && labelEl) {
+          if (tokenName === 'custom') {
+            iconEl.innerHTML = TOKEN_ICONS.defaultCoin || salePaymentTokenIcons.defaultCoin;
+            labelEl.textContent = 'CUSTOM TOKEN';
+          } else if (salePaymentTokenIcons[tokenName]) {
+            iconEl.innerHTML = salePaymentTokenIcons[tokenName];
+            labelEl.textContent = tokenName.toUpperCase();
+          }
         }
 
         // Close dropdown
@@ -11461,8 +11483,8 @@
       function initializeProposalPayTokenIcons() {
         // Initialize display icon
         const displayIcon = document.getElementById('proposalPayTokenIcon');
-        if (displayIcon && salePaymentTokenIcons.eth) {
-          displayIcon.innerHTML = salePaymentTokenIcons.eth;
+        if (displayIcon && salePaymentTokenIcons.dai) {
+          displayIcon.innerHTML = salePaymentTokenIcons.dai;
         }
 
         // Initialize dropdown icons
@@ -11471,6 +11493,8 @@
           const token = iconEl.getAttribute('data-token');
           if (token && salePaymentTokenIcons[token]) {
             iconEl.innerHTML = salePaymentTokenIcons[token];
+          } else if (token === 'defaultCoin' && TOKEN_ICONS.defaultCoin) {
+            iconEl.innerHTML = TOKEN_ICONS.defaultCoin;
           }
         });
       }
@@ -11483,7 +11507,7 @@
 
       async function populateSaleProposal(daoAddress) {
         try {
-          const payToken = document.getElementById('salePayToken').value;
+          let payToken = document.getElementById('salePayToken').value;
           const priceInput = document.getElementById('salePrice').value.trim();
           const capInput = document.getElementById('saleCap').value.trim();
           const minting = document.getElementById('saleMinting').value === 'true';
@@ -11495,27 +11519,44 @@
             return;
           }
 
-          // Standard tokens only (custom tokens use "+ Custom" in treasury)
-          const tokenNames = {
-            [ethers.ZeroAddress]: 'ETH',
-            [TOKEN_ADDRESSES.usdc]: 'USDC',
-            [TOKEN_ADDRESSES.usdt]: 'USDT',
-            [TOKEN_ADDRESSES.dai]: 'DAI',
-            [TOKEN_ADDRESSES.wsteth]: 'wstETH',
-            [TOKEN_ADDRESSES.reth]: 'rETH'
-          };
+          // Handle custom token
+          let tokenName, decimals;
+          if (payToken === 'custom') {
+            const customTokenAddress = document.getElementById('customSaleTokenAddress')?.value?.trim();
+            if (!customTokenAddress || !ethers.isAddress(customTokenAddress)) {
+              showStatus('Please enter a valid custom token address', true);
+              return;
+            }
 
-          const tokenDecimals = {
-            [ethers.ZeroAddress]: 18,
-            [TOKEN_ADDRESSES.usdc]: 6,
-            [TOKEN_ADDRESSES.usdt]: 6,
-            [TOKEN_ADDRESSES.dai]: 18,
-            [TOKEN_ADDRESSES.wsteth]: 18,
-            [TOKEN_ADDRESSES.reth]: 18
-          };
+            // Fetch token info
+            try {
+              const tokenContract = new ethers.Contract(customTokenAddress, ERC20_ABI, provider);
+              tokenName = await tokenContract.symbol().catch(() => 'TOKEN');
+              decimals = await tokenContract.decimals().catch(() => 18);
 
-          const tokenName = tokenNames[payToken];
-          const decimals = tokenDecimals[payToken];
+              if (Number(decimals) !== 18) {
+                showStatus('Custom token must have 18 decimals', true);
+                return;
+              }
+
+              payToken = customTokenAddress;
+            } catch (error) {
+              showStatus('Failed to fetch custom token info', true);
+              return;
+            }
+          } else {
+            // Standard tokens only (DAI)
+            const tokenNames = {
+              [TOKEN_ADDRESSES.dai]: 'DAI'
+            };
+
+            const tokenDecimals = {
+              [TOKEN_ADDRESSES.dai]: 18
+            };
+
+            tokenName = tokenNames[payToken];
+            decimals = tokenDecimals[payToken];
+          }
 
           // Price is in "token-wei per share-wei" (simple integer ratio)
           // For 1:1 with 18-decimal tokens: user enters "1", price = 1 (not 1e18!)
@@ -11613,19 +11654,28 @@
         // Hide navigation buttons when viewing DAO
         document.body.classList.add('hide-nav-buttons');
 
-        // Add special gif for index 0 DAOs
+        // Hide center journey line when viewing DAO dashboard
+        const journeyLineContainer = document.getElementById('journey-line-container');
+        if (journeyLineContainer) {
+          journeyLineContainer.style.display = 'none';
+        }
+
+        // Add special gif for index 0 and 1 DAOs
         let existingGif = document.getElementById('dashboardGif');
-        if (daoIndex === 0) {
+        if (daoIndex === 0 || daoIndex === 1) {
+          const gifUrl = daoIndex === 0
+            ? 'https://content.wrappr.wtf/ipfs/bafybeidc4tl6ysvwhwbpql7xk5ol5cd22dvpmlyy76zjun4ikhrb43oqb4'
+            : 'https://content.wrappr.wtf/ipfs/bafybeibgfu4gh7miouopugf7tclpt4os2zr2rznhlomnletfbj5amdw4gu';
+
           if (!existingGif) {
             existingGif = document.createElement('img');
             existingGif.id = 'dashboardGif';
-            existingGif.src = 'https://content.wrappr.wtf/ipfs/bafybeidc4tl6ysvwhwbpql7xk5ol5cd22dvpmlyy76zjun4ikhrb43oqb4';
             existingGif.className = 'dao-dashboard-gif';
             existingGif.alt = 'Special DAO Animation';
             document.body.appendChild(existingGif);
-          } else {
-            existingGif.style.display = 'block';
           }
+          existingGif.src = gifUrl;
+          existingGif.style.display = 'block';
         } else {
           if (existingGif) {
             existingGif.style.display = 'none';
@@ -11648,6 +11698,12 @@
 
         // Show navigation buttons when back to gallery
         document.body.classList.remove('hide-nav-buttons');
+
+        // Show center journey line when back to gallery
+        const journeyLineContainer = document.getElementById('journey-line-container');
+        if (journeyLineContainer) {
+          journeyLineContainer.style.display = '';
+        }
 
         // Reset to DAO view
         switchDaoView('dao');
@@ -13866,12 +13922,10 @@
       }
 
       // Sale payment token dropdown functions
-      let selectedSalePaymentToken = 'eth';
+      let selectedSalePaymentToken = 'dai';
       const salePaymentTokenIcons = {
-        eth: TOKEN_ICONS.eth,
         dai: TOKEN_ICONS.dai,
-        wsteth: TOKEN_ICONS.wsteth,
-        reth: TOKEN_ICONS.reth
+        defaultCoin: TOKEN_ICONS.defaultCoin
       };
 
       function toggleSalePaymentTokenDropdown() {
@@ -13916,7 +13970,7 @@
         // Initialize display icon
         const displayIcon = document.getElementById('salePaymentTokenIcon');
         if (displayIcon) {
-          displayIcon.innerHTML = salePaymentTokenIcons.eth;
+          displayIcon.innerHTML = salePaymentTokenIcons.dai;
         }
 
         // Initialize dropdown icons
@@ -13964,7 +14018,7 @@
         const priceInput = document.getElementById('salePrice')?.value?.trim();
         const capInput = document.getElementById('saleCap')?.value?.trim();
         const tokenType = document.getElementById('saleTokenType')?.value || 'shares';
-        const paymentToken = document.getElementById('salePaymentToken')?.value || 'eth';
+        const paymentToken = document.getElementById('salePaymentToken')?.value || 'dai';
 
         const hint = document.getElementById('summonerSaleHint');
         const hintText = document.getElementById('summonerSaleHintText');
@@ -13974,42 +14028,45 @@
         const price = parseFloat(priceInput);
         const cap = parseFloat(capInput);
 
-        // Only show hint if price is valid
-        if (!priceInput || isNaN(price) || price <= 0) {
-          hint.style.display = 'none';
-          return;
-        }
-
         const tokenNames = {
-          'eth': 'ETH',
           'dai': 'DAI',
-          'wsteth': 'wstETH',
-          'reth': 'rETH',
           'custom': 'TOKEN'
         };
         const payToken = tokenNames[paymentToken] || 'TOKEN';
-        const tokenTypeText = tokenType === 'loot' ? 'LOOT' : 'SHARE';
+        const tokenTypeText = tokenType === 'loot' ? 'Loot' : 'Share';
+
+        // Show hint even without price - guide the user
+        if (!priceInput || isNaN(price) || price <= 0) {
+          hintText.innerHTML = `<span style="opacity: 0.6;">Enter price to see sale preview (e.g., "1 ${payToken} for 1 ${tokenTypeText}")</span>`;
+          hint.style.display = 'block';
+
+          const upgradePathHint = document.getElementById('upgradePathHint');
+          if (upgradePathHint) {
+            upgradePathHint.style.display = 'none';
+          }
+          return;
+        }
 
         // Detect 1:1 upgrade path
         const is1to1 = price === 1;
 
-        // Build the hint text
-        let text = `1 ${tokenTypeText} for ${price} ${payToken}`;
+        // Build the hint text - more natural word order: "1 DAI for 1 Share"
+        let text = `<strong>${price} ${payToken}</strong> for <strong>1 ${tokenTypeText}</strong>`;
 
         if (cap && !isNaN(cap) && cap > 0) {
-          text += ` up to ${cap.toLocaleString()} ${tokenTypeText}${cap !== 1 ? 'S' : ''}`;
+          text += ` up to <strong>${cap.toLocaleString()} ${tokenTypeText}${cap !== 1 ? 's' : ''}</strong>`;
         } else {
-          text += ` (unlimited)`;
+          text += ` <span style="opacity: 0.7;">(unlimited)</span>`;
         }
 
         // Add 1:1 upgrade path hint
         if (is1to1) {
-          text += ` <span style="color: #9d7bff; font-weight: 600;">• 1:1 Upgrade Path</span>`;
+          text += ` <span style="color: #9d7bff; font-weight: 600; margin-left: 0.5rem;">• 1:1 Upgrade Path</span>`;
         } else {
           // Add cost example
           const exampleAmount = 100;
           const exampleCost = exampleAmount * price;
-          text += ` <span style="opacity: 0.7; font-size: 0.9em;">(e.g., ${exampleAmount} ${tokenTypeText}S = ${exampleCost.toLocaleString()} ${payToken})</span>`;
+          text += `<br><span style="opacity: 0.6; font-size: 0.85em;">Example: ${exampleCost.toLocaleString()} ${payToken} buys ${exampleAmount} ${tokenTypeText}s</span>`;
         }
 
         hintText.innerHTML = text;
@@ -14307,10 +14364,7 @@
               } else {
                 // Map token selection to addresses (18-decimal only)
                 const tokenAddresses = {
-                  'eth': ethers.ZeroAddress,
-                  'dai': TOKEN_ADDRESSES.dai,
-                  'wsteth': TOKEN_ADDRESSES.wsteth,
-                  'reth': TOKEN_ADDRESSES.reth
+                  'dai': TOKEN_ADDRESSES.dai
                 };
                 payToken = tokenAddresses[paymentToken];
               }
