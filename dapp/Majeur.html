@@ -76,6 +76,9 @@
         /* Transitions */
         --transition-fast: 0.2s ease;
         --transition-normal: 0.3s ease;
+
+        /* Mobile viewport height (set by JS to handle mobile browser chrome) */
+        --vh: 1vh;
       }
 
       * {
@@ -91,12 +94,38 @@
         scroll-behavior: smooth;
       }
 
+      /* Respect reduced motion preference */
+      @media (prefers-reduced-motion: reduce) {
+        html,
+        body {
+          scroll-behavior: auto;
+        }
+
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+
       body {
         background: var(--pure-black);
         color: var(--light-text);
         font-family: var(--font-serif);
         overflow-x: hidden;
         overflow-y: auto;
+        /* Improve touch scrolling on iOS */
+        -webkit-overflow-scrolling: touch;
+      }
+
+      /* Global input styles for mobile optimization */
+      input, textarea, select {
+        font-size: 16px; /* Prevent zoom on iOS when focusing inputs */
+        -webkit-appearance: none; /* Remove default iOS styling */
+        appearance: none; /* Remove default styling */
+        border-radius: 0; /* Prevent iOS from adding rounded corners */
       }
 
       /* STARRY BACKGROUND PATTERN */
@@ -187,9 +216,38 @@
         box-shadow: 0 0 15px rgba(157, 123, 255, 0.3);
       }
 
+      /* GITHUB LINK */
+      .github-link {
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        z-index: 1000;
+        padding: 8px 14px;
+        background: rgba(10, 0, 21, 0.7);
+        border: 1px solid rgba(157, 123, 255, 0.2);
+        color: rgba(230, 217, 255, 0.6);
+        font-family: "EB Garamond", serif;
+        font-size: 0.75rem;
+        letter-spacing: 0.1em;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+        text-transform: uppercase;
+        backdrop-filter: blur(10px);
+      }
+
+      .github-link:hover {
+        border-color: rgba(157, 123, 255, 0.5);
+        color: rgba(230, 217, 255, 0.9);
+        background: rgba(10, 0, 21, 0.9);
+        box-shadow: 0 0 15px rgba(157, 123, 255, 0.3);
+      }
+
       /* Hide fixed nav buttons when in DAO view */
       .hide-nav-buttons .summon-link,
       .hide-nav-buttons .litepaper-link,
+      .hide-nav-buttons .github-link,
       .hide-nav-buttons .wallet-button {
         opacity: 0;
         pointer-events: none;
@@ -210,6 +268,7 @@
         letter-spacing: 0.1em;
         cursor: pointer;
         transition: all 0.3s ease;
+        will-change: transform, opacity;
       }
 
       .wallet-button:hover {
@@ -676,13 +735,57 @@
       .checkbox-group {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.75rem;
+        cursor: pointer;
+        padding: 0.75rem 1rem;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(157, 123, 255, 0.15);
+        margin: 0.5rem 0;
+      }
+
+      .checkbox-group:hover {
+        background: rgba(157, 123, 255, 0.08);
+        border-color: rgba(157, 123, 255, 0.3);
       }
 
       .checkbox-group input[type="checkbox"] {
-        width: 18px;
-        height: 18px;
+        width: 20px;
+        height: 20px;
         accent-color: #9d7bff;
+        cursor: pointer;
+        flex-shrink: 0;
+        position: relative;
+      }
+
+      /* Enhanced visual feedback for checked state */
+      .checkbox-group:has(input[type="checkbox"]:checked) {
+        background: rgba(157, 123, 255, 0.12);
+        border-color: rgba(157, 123, 255, 0.4);
+      }
+
+      .checkbox-group:has(input[type="checkbox"]:checked):hover {
+        background: rgba(157, 123, 255, 0.18);
+        border-color: rgba(157, 123, 255, 0.6);
+      }
+
+      .checkbox-group span {
+        color: rgba(230, 217, 255, 0.85);
+        font-family: "EB Garamond", serif;
+        font-size: 1rem;
+        user-select: none;
+        cursor: pointer;
+        transition: color 0.2s ease;
+      }
+
+      .checkbox-group:hover span {
+        color: #e6d9ff;
+      }
+
+      .checkbox-group:has(input[type="checkbox"]:checked) span {
+        color: #e6d9ff;
+        font-weight: 500;
       }
 
       .status-message {
@@ -1263,6 +1366,13 @@
           bottom: 15px;
           right: 15px;
         }
+
+        .github-link {
+          font-size: 0.7rem;
+          padding: 7px 12px;
+          bottom: 15px;
+          left: 15px;
+        }
       }
 
       @media (max-width: 400px) {
@@ -1291,6 +1401,13 @@
           padding: 6px 10px;
           bottom: 12px;
           right: 12px;
+        }
+
+        .github-link {
+          font-size: 0.65rem;
+          padding: 6px 10px;
+          bottom: 12px;
+          left: 12px;
         }
       }
 
@@ -1321,7 +1438,7 @@
         padding: 2rem;
         position: relative;
         box-shadow: 0 0 40px rgba(157, 123, 255, 0.3);
-        max-height: 90vh;
+        max-height: calc(var(--vh, 1vh) * 90);
         display: flex;
         flex-direction: column;
       }
@@ -1534,6 +1651,12 @@
         transition: all 0.3s ease;
       }
 
+      /* Light background for URL-imported images in tiles */
+      .dao-tile-emblem.url-image {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(245, 245, 250, 0.95) 100%);
+        padding: 2px;
+      }
+
       /* For all DAOs view, position emblem below member badge */
       .all-dao-tile .dao-tile-emblem {
         top: 3.5rem;
@@ -1545,10 +1668,19 @@
         border-color: rgba(157, 123, 255, 0.4);
       }
 
+      .dao-tile:hover .dao-tile-emblem.url-image {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(250, 250, 255, 1) 100%);
+      }
+
       .dao-tile-emblem img {
         width: 100%;
         height: 100%;
         object-fit: cover;
+      }
+
+      .dao-tile-emblem.url-image img {
+        object-fit: contain;
+        border-radius: 2px;
       }
 
       /* Special GIF for DAO index 0 and 1 */
@@ -2223,6 +2355,8 @@
         border: 1px solid rgba(157, 123, 255, 0.3);
         padding: 2rem;
         backdrop-filter: blur(10px);
+        /* Performance: CSS containment for better rendering */
+        contain: layout style paint;
       }
 
       .dao-panel-title {
@@ -3080,7 +3214,7 @@
           width: 95%;
           padding: 1.25rem;
           margin: 0.5rem;
-          max-height: 95vh;
+          max-height: calc(var(--vh, 1vh) * 95);
         }
 
         .wallet-modal-header {
@@ -3179,7 +3313,7 @@
       @media (max-width: 400px) {
         .wallet-modal {
           padding: 1rem;
-          max-height: 97vh;
+          max-height: calc(var(--vh, 1vh) * 97);
         }
 
         #ragequitModal .wallet-modal-content > div {
@@ -3438,6 +3572,370 @@
         }
       }
 
+      /* ENHANCED MOBILE OPTIMIZATIONS */
+      @media (max-width: 768px) {
+        /* Modal optimizations for mobile */
+        .wallet-modal,
+        .modal {
+          width: 95%;
+          max-width: 95vw;
+          padding: 1.5rem 1rem;
+          max-height: 85vh;
+        }
+
+        .wallet-modal-title,
+        .modal-title {
+          font-size: 1rem;
+          letter-spacing: 0.15em;
+        }
+
+        .wallet-modal-close,
+        .modal-close {
+          width: 36px;
+          height: 36px;
+          font-size: 1.3rem;
+        }
+
+        .wallet-option {
+          padding: 0.85rem;
+          min-height: 60px;
+        }
+
+        .wallet-icon {
+          width: 36px;
+          height: 36px;
+          margin-right: 0.85rem;
+        }
+
+        .wallet-name {
+          font-size: 0.9rem;
+        }
+
+        .wallet-status {
+          font-size: 0.7rem;
+        }
+
+        /* Smooth scrolling with momentum for all scrollable areas */
+        .chatroom-messages,
+        #proposalsList,
+        .dao-members-list,
+        .receipts-grid,
+        .wallet-modal-content {
+          -webkit-overflow-scrolling: touch;
+          scroll-behavior: smooth;
+        }
+
+        /* Better touch targets - minimum 44px height */
+        .chatroom-button,
+        .proposal-button,
+        .view-toggle-btn,
+        .back-button,
+        button {
+          min-height: 44px;
+          touch-action: manipulation;
+        }
+
+        /* Improve input touch targets */
+        input,
+        textarea,
+        select {
+          min-height: 44px;
+          font-size: 16px; /* Prevents zoom on iOS */
+        }
+
+        /* Better address display - ensure truncation works */
+        .dao-etherscan-link,
+        .chatroom-message-header span,
+        .proposal-meta span {
+          word-break: break-all;
+          overflow-wrap: break-word;
+        }
+
+        /* Improved modal sizing on mobile */
+        .modal {
+          max-height: 90vh;
+          max-width: 95vw;
+          margin: auto;
+        }
+
+        /* Better scrollbar for mobile webkit */
+        .chatroom-messages::-webkit-scrollbar,
+        #proposalsList::-webkit-scrollbar {
+          width: 4px;
+        }
+
+        /* Ensure proper spacing for touch */
+        .dao-panel {
+          margin-bottom: 1.5rem;
+        }
+
+        /* Improve treasury grid responsiveness */
+        .treasury-assets {
+          grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        }
+
+        /* Better spacing for stats on mobile */
+        .dao-stats-bar {
+          width: 100%;
+        }
+
+        /* Improve proposal actions stacking */
+        .proposal-actions {
+          width: 100%;
+        }
+
+        .proposal-button {
+          width: 100%;
+        }
+
+        /* Better handling of long descriptions */
+        .proposal-description,
+        .chatroom-message-text {
+          word-break: break-word;
+          overflow-wrap: break-word;
+          hyphens: auto;
+        }
+
+        /* Improve header stacking on mobile */
+        .dao-dashboard-header > div:first-child {
+          gap: 0.75rem;
+        }
+
+        /* Better emblem sizing */
+        .dao-emblem {
+          flex-shrink: 0;
+        }
+
+        /* Improve treasury asset readability */
+        .treasury-asset-symbol {
+          font-weight: 600;
+        }
+
+        .treasury-asset-balance {
+          opacity: 0.9;
+        }
+
+        /* DAO Gallery mobile improvements */
+        .dao-gallery-section {
+          padding: 3rem 1.5rem;
+        }
+
+        .dao-gallery-title {
+          font-size: 1.5rem;
+          letter-spacing: 0.2em;
+        }
+
+        .dao-gallery-subtitle {
+          font-size: 1rem;
+        }
+
+        .dao-tiles {
+          grid-template-columns: 1fr;
+          gap: 1.5rem;
+        }
+
+        .dao-tile {
+          padding: 1.5rem 1.25rem;
+        }
+
+        .dao-tile-name {
+          font-size: 1.1rem;
+        }
+
+        .dao-tile-stats {
+          flex-wrap: wrap;
+          gap: 0.75rem;
+        }
+
+        /* Forms mobile improvements */
+        .form-group {
+          margin-bottom: 1.25rem;
+        }
+
+        .form-label {
+          font-size: 0.75rem;
+          margin-bottom: 0.5rem;
+        }
+
+        .form-input,
+        .form-select {
+          padding: 0.75rem 1rem;
+          font-size: 16px; /* Prevent zoom */
+          min-height: 44px;
+        }
+
+        .members-container {
+          gap: 1rem;
+        }
+
+        .member-row {
+          flex-direction: column;
+          gap: 0.75rem;
+        }
+
+        .member-input-group {
+          width: 100%;
+        }
+
+        .add-member-btn,
+        .remove-member-btn {
+          width: 100%;
+          min-height: 44px;
+          padding: 0.65rem;
+        }
+
+        /* Improve governance param inputs */
+        .governance-params {
+          grid-template-columns: 1fr;
+          gap: 1rem;
+        }
+
+        /* Better checkbox sizing for mobile */
+        .checkbox-group {
+          padding: 0.85rem 0.75rem;
+          margin: 0.5rem 0;
+          align-items: flex-start;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+          width: 24px;
+          height: 24px;
+          min-width: 24px;
+          min-height: 24px;
+          margin-top: 0.1rem;
+        }
+
+        .checkbox-group span {
+          font-size: 0.95rem;
+          line-height: 1.4;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+        }
+
+        /* More obvious checked state on mobile */
+        .checkbox-group:has(input[type="checkbox"]:checked) {
+          background: rgba(157, 123, 255, 0.15);
+          border-color: rgba(157, 123, 255, 0.5);
+        }
+      }
+
+      /* Extra small mobile improvements */
+      @media (max-width: 375px) {
+        /* Further reduce padding on very small screens */
+        .dao-dashboard {
+          padding: 1rem 0.5rem;
+        }
+
+        .dao-panel {
+          padding: 1rem 0.65rem;
+        }
+
+        /* Smaller title for tiny screens */
+        .dao-dashboard-title {
+          font-size: 1rem;
+          letter-spacing: 0.1em;
+        }
+
+        /* Better checkbox wrapping for very small screens */
+        .checkbox-group span {
+          font-size: 0.9rem;
+          line-height: 1.3;
+        }
+
+        /* DAO Gallery tiny screen */
+        .dao-gallery-section {
+          padding: 2rem 1rem;
+        }
+
+        .dao-gallery-title {
+          font-size: 1.2rem;
+        }
+
+        .dao-tiles {
+          gap: 1.25rem;
+        }
+
+        .dao-tile {
+          padding: 1.25rem 1rem;
+        }
+
+        /* Improve treasury grid for small screens */
+        .treasury-assets {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 0.5rem;
+        }
+
+        /* Stack view toggle buttons more tightly */
+        .view-toggle-btn {
+          padding: 0.5rem 0.85rem;
+          font-size: 0.7rem;
+        }
+
+        /* Smaller chat messages */
+        .chatroom-message {
+          padding: 0.65rem;
+        }
+
+        .chatroom-message-text {
+          font-size: 0.85rem;
+        }
+
+        /* Compact proposal cards */
+        .proposal-card {
+          padding: 0.85rem 0.65rem;
+        }
+
+        /* Better button sizing */
+        .chatroom-button,
+        .proposal-button {
+          padding: 0.6rem 0.85rem;
+          font-size: 0.65rem;
+        }
+      }
+
+      /* Landscape mobile optimizations */
+      @media (max-width: 896px) and (orientation: landscape) {
+        /* Reduce vertical padding in landscape */
+        .dao-dashboard {
+          padding: 1.5rem 1rem;
+        }
+
+        /* Compact header in landscape */
+        .dao-dashboard-header {
+          margin-bottom: 1rem;
+        }
+
+        /* Shorter chat area in landscape */
+        .chatroom-messages {
+          max-height: 200px;
+        }
+
+        /* Shorter proposals list in landscape */
+        #proposalsList {
+          max-height: 250px;
+        }
+
+        /* Two-column layout for treasury in landscape */
+        .treasury-assets {
+          grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        }
+      }
+
+      /* Safe area insets for notched devices (iPhone X, etc.) */
+      @supports (padding: max(0px)) {
+        @media (max-width: 768px) {
+          .dao-dashboard {
+            padding-left: max(1rem, env(safe-area-inset-left));
+            padding-right: max(1rem, env(safe-area-inset-right));
+          }
+
+          .dao-dashboard-header {
+            padding-left: max(0, env(safe-area-inset-left));
+            padding-right: max(0, env(safe-area-inset-right));
+          }
+        }
+      }
+
       /* MEMBERS LIST */
       .dao-members-content {
         display: none;
@@ -3649,16 +4147,32 @@
         flex-shrink: 0;
       }
 
+      /* Light background for URL-imported images */
+      .dao-emblem.url-image {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(245, 245, 250, 0.95) 100%);
+        padding: 3px;
+      }
+
       .dao-emblem:hover {
         border-color: #9d7bff;
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(157, 123, 255, 0.2);
       }
 
+      .dao-emblem.url-image:hover {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(250, 250, 255, 1) 100%);
+        box-shadow: 0 4px 12px rgba(157, 123, 255, 0.3);
+      }
+
       .dao-emblem img {
         width: 100%;
         height: 100%;
         object-fit: cover;
+      }
+
+      .dao-emblem.url-image img {
+        object-fit: contain;
+        border-radius: 3px;
       }
 
       /* NFT MODAL */
@@ -3739,6 +4253,13 @@
         border-radius: 8px;
         border: 1px solid rgba(157, 123, 255, 0.3);
         margin-bottom: 1.5rem;
+      }
+
+      /* Light background for URL-imported images in modal */
+      .nft-modal-image.url-image {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(245, 245, 250, 0.95) 100%);
+        padding: 1rem;
+        object-fit: contain;
       }
 
       .nft-modal-title {
@@ -3867,6 +4388,11 @@
     <!-- Lite Paper Link (bottom right) -->
     <a href="https://wp.majeurdao.eth.limo" target="_blank" rel="noopener noreferrer" class="litepaper-link" title="Read the Majeur lite paper">
       Lite Paper
+    </a>
+
+    <!-- GitHub Link (bottom left) -->
+    <a href="https://github.com/z0r0z/majeur" target="_blank" rel="noopener noreferrer" class="github-link" title="View on GitHub">
+      GitHub
     </a>
 
     <!-- Wallet Selection Modal -->
@@ -6197,8 +6723,9 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">URI (optional)</label>
-              <input type="text" class="form-input" id="daoURI" placeholder="https://ipfs.io/ipfs/...">
+              <label class="form-label">Contract URI (optional)</label>
+              <input type="text" class="form-input" id="daoURI" placeholder="https://example.com/metadata.json or https://example.com/logo.svg">
+              <small style="color: rgba(230, 217, 255, 0.5); font-size: 0.8rem;">JSON metadata URL or direct image URL (SVG, PNG, JPG, etc.)</small>
             </div>
 
             <div class="form-group">
@@ -6208,7 +6735,7 @@
             </div>
 
             <div class="form-group">
-              <label class="checkbox-container">
+              <label class="form-label checkbox-group">
                 <input type="checkbox" id="enableSharesTransfer">
                 <span>Enable Shares Transferability</span>
               </label>
@@ -6216,7 +6743,7 @@
             </div>
 
             <div class="form-group">
-              <label class="checkbox-container">
+              <label class="form-label checkbox-group">
                 <input type="checkbox" id="enableLootTransfer">
                 <span>Enable Loot Transferability</span>
               </label>
@@ -6302,7 +6829,7 @@
               </div>
 
               <div class="form-group">
-                <label class="checkbox-container">
+                <label class="form-label checkbox-group">
                   <input type="checkbox" id="saleMinting" checked>
                   <span>Mint New Tokens</span>
                 </label>
@@ -6633,6 +7160,29 @@
           .replace(/'/g, '&#039;');
       }
 
+      // Mobile viewport height fix for handling browser chrome
+      function setVhProperty() {
+        const vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+      }
+
+      // Set on load
+      setVhProperty();
+
+      // Debounced resize handler for performance
+      let resizeTimeout;
+      window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+          setVhProperty();
+          // Dispatch resize event for other components that need it
+          window.dispatchEvent(new Event('optimizedResize'));
+        }, 150);
+      }, { passive: true });
+
+      // Check for reduced motion preference
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
       // Lazy loading for images
       if ('IntersectionObserver' in window) {
         const imageObserver = new IntersectionObserver((entries) => {
@@ -6649,6 +7199,9 @@
 
       // Scroll-synced SVG animations for feature pages
       (function initFeatureAnimations() {
+        // Skip animations if user prefers reduced motion
+        if (prefersReducedMotion) return;
+
         const featurePages = document.querySelectorAll('.feature-page');
         let scrollProgress = new Map();
         let animationFrameId = null;
@@ -7169,6 +7722,9 @@
 
       // Card Teaser Parallax Animation
       (function initCardTeasers() {
+        // Skip animations if user prefers reduced motion
+        if (prefersReducedMotion) return;
+
         const cardTeasers = document.querySelectorAll('.card-teaser');
         if (cardTeasers.length === 0) return;
 
@@ -8102,6 +8658,56 @@
       let allDAOs = [];
       let currentDAO = null;
 
+      // Connection state management
+      let isConnecting = false;
+      let connectionTimeout = null;
+      let eip6963Providers = new Map();
+
+      // Transaction state management (prevent double-submission race conditions)
+      let isSendingMessage = false;
+      let isVoting = false;
+      let isCancellingVote = false;
+      let isCreatingProposal = false;
+      let isExecutingProposal = false;
+
+      // ENS lookup cache (prevents repeated network calls for same addresses)
+      const ensCache = new Map(); // address => { name: string, timestamp: number }
+      const ENS_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+      // Cached ENS lookup with TTL
+      async function lookupENS(address) {
+        if (!address || !provider) return null;
+
+        const cached = ensCache.get(address.toLowerCase());
+        const now = Date.now();
+
+        // Return cached value if still valid
+        if (cached && (now - cached.timestamp) < ENS_CACHE_TTL) {
+          return cached.name;
+        }
+
+        // Perform lookup
+        try {
+          const ensName = await provider.lookupAddress(address);
+          // Cache the result (even if null)
+          ensCache.set(address.toLowerCase(), {
+            name: ensName,
+            timestamp: now
+          });
+          return ensName;
+        } catch (error) {
+          // Cache null result to avoid repeated failed lookups
+          ensCache.set(address.toLowerCase(), {
+            name: null,
+            timestamp: now
+          });
+          return null;
+        }
+      }
+
+      // Event listener cleanup
+      let walletEventListeners = [];
+
       // Utility function to check if error is user rejection
       function isUserRejection(error) {
         if (!error) return false;
@@ -8150,6 +8756,12 @@
           detect: () => window.ethereum?.isCoinbaseWallet || window.coinbaseWalletExtension,
           getProvider: () => window.ethereum?.isCoinbaseWallet ? window.ethereum : window.coinbaseWalletExtension
         },
+        rabby: {
+          name: 'Rabby Wallet',
+          icon: '🐰',
+          detect: () => window.ethereum?.isRabby,
+          getProvider: () => window.ethereum
+        },
         brave: {
           name: 'Brave Wallet',
           icon: '🦁',
@@ -8162,10 +8774,28 @@
           detect: () => window.ethereum?.isTrust,
           getProvider: () => window.ethereum
         },
+        okx: {
+          name: 'OKX Wallet',
+          icon: '⚫',
+          detect: () => window.okxwallet || window.ethereum?.isOkxWallet,
+          getProvider: () => window.okxwallet || window.ethereum
+        },
+        bitget: {
+          name: 'Bitget Wallet',
+          icon: '💼',
+          detect: () => window.bitkeep?.ethereum || window.ethereum?.isBitKeep || window.ethereum?.isBitget,
+          getProvider: () => window.bitkeep?.ethereum || window.ethereum
+        },
         rainbow: {
           name: 'Rainbow',
           icon: '🌈',
           detect: () => window.ethereum?.isRainbow,
+          getProvider: () => window.ethereum
+        },
+        frame: {
+          name: 'Frame',
+          icon: '🖼️',
+          detect: () => window.ethereum?.isFrame,
           getProvider: () => window.ethereum
         },
         zerion: {
@@ -8173,17 +8803,82 @@
           icon: '💎',
           detect: () => window.ethereum?.isZerion,
           getProvider: () => window.ethereum
+        },
+        phantom: {
+          name: 'Phantom',
+          icon: '👻',
+          detect: () => window.phantom?.ethereum,
+          getProvider: () => window.phantom?.ethereum
         }
       };
 
+      // EIP-6963: Multi-injector wallet detection
+      function initEIP6963() {
+        if (typeof window === 'undefined') return;
+
+        window.addEventListener('eip6963:announceProvider', (event) => {
+          const { info, provider } = event.detail;
+          eip6963Providers.set(info.uuid, { info, provider });
+        });
+
+        window.dispatchEvent(new Event('eip6963:requestProvider'));
+      }
+
       function detectWallets() {
         const detected = [];
+        const seenNames = new Set();
+
+        // First, detect legacy injected wallets
         for (const [key, wallet] of Object.entries(WALLET_CONFIG)) {
           if (wallet.detect()) {
             detected.push({ key, ...wallet });
+            seenNames.add(wallet.name.toLowerCase());
           }
         }
+
+        // Then, add EIP-6963 detected wallets that weren't already found
+        for (const [uuid, { info, provider }] of eip6963Providers.entries()) {
+          const nameLower = info.name.toLowerCase();
+          if (!seenNames.has(nameLower)) {
+            detected.push({
+              key: `eip6963_${uuid}`,
+              name: info.name,
+              icon: info.icon ? `<img src="${info.icon}" style="width: 1.2rem; height: 1.2rem;" alt="${info.name}"/>` : '🔌',
+              detect: () => true,
+              getProvider: () => provider,
+              isEIP6963: true
+            });
+            seenNames.add(nameLower);
+          }
+        }
+
         return detected;
+      }
+
+      // LocalStorage helpers
+      function saveWalletPreference(walletKey) {
+        try {
+          localStorage.setItem('preferredWallet', walletKey);
+        } catch (e) {
+          console.warn('Failed to save wallet preference:', e);
+        }
+      }
+
+      function getWalletPreference() {
+        try {
+          return localStorage.getItem('preferredWallet');
+        } catch (e) {
+          console.warn('Failed to get wallet preference:', e);
+          return null;
+        }
+      }
+
+      function clearWalletPreference() {
+        try {
+          localStorage.removeItem('preferredWallet');
+        } catch (e) {
+          console.warn('Failed to clear wallet preference:', e);
+        }
       }
 
       function showWalletModal() {
@@ -8192,24 +8887,40 @@
 
         // If already connected, show disconnect option
         if (connectedWallet && connectedAddress) {
-          const wallet = WALLET_CONFIG[connectedWallet];
-          walletOptions.innerHTML = `
-            <div style="padding: 1rem; background: rgba(157, 123, 255, 0.1); border: 1px solid rgba(157, 123, 255, 0.3); margin-bottom: 1rem;">
-              <div style="display: flex; align-items: center; margin-bottom: 0.75rem;">
-                <div class="wallet-icon" style="margin-right: 1rem;">${wallet.icon}</div>
-                <div>
-                  <div class="wallet-name">${wallet.name}</div>
-                  <div class="wallet-status installed">Connected</div>
+          // Get wallet info - support both legacy and EIP-6963 wallets
+          let wallet;
+          if (connectedWallet.startsWith('eip6963_')) {
+            const uuid = connectedWallet.replace('eip6963_', '');
+            const eip6963Wallet = eip6963Providers.get(uuid);
+            if (eip6963Wallet) {
+              wallet = {
+                name: eip6963Wallet.info.name,
+                icon: eip6963Wallet.info.icon ? `<img src="${eip6963Wallet.info.icon}" style="width: 1.2rem; height: 1.2rem;" alt="${eip6963Wallet.info.name}"/>` : '🔌'
+              };
+            }
+          } else {
+            wallet = WALLET_CONFIG[connectedWallet];
+          }
+
+          if (wallet) {
+            walletOptions.innerHTML = `
+              <div style="padding: 1rem; background: rgba(157, 123, 255, 0.1); border: 1px solid rgba(157, 123, 255, 0.3); margin-bottom: 1rem;">
+                <div style="display: flex; align-items: center; margin-bottom: 0.75rem;">
+                  <div class="wallet-icon" style="margin-right: 1rem;">${wallet.icon}</div>
+                  <div>
+                    <div class="wallet-name">${wallet.name}</div>
+                    <div class="wallet-status installed">Connected</div>
+                  </div>
+                </div>
+                <div style="font-family: 'EB Garamond', serif; color: rgba(230, 217, 255, 0.8); font-size: 0.9rem; word-break: break-all;">
+                  ${connectedAddress}
                 </div>
               </div>
-              <div style="font-family: 'EB Garamond', serif; color: rgba(230, 217, 255, 0.8); font-size: 0.9rem; word-break: break-all;">
-                ${connectedAddress}
+              <div class="wallet-option" onclick="disconnectWallet()" style="background: rgba(157, 123, 255, 0.1); border-color: rgba(157, 123, 255, 0.5); justify-content: center;">
+                <div class="wallet-name" style="margin: 0;">Disconnect Wallet</div>
               </div>
-            </div>
-            <div class="wallet-option" onclick="disconnectWallet()" style="background: rgba(157, 123, 255, 0.1); border-color: rgba(157, 123, 255, 0.5); justify-content: center;">
-              <div class="wallet-name" style="margin: 0;">Disconnect Wallet</div>
-            </div>
-          `;
+            `;
+          }
         } else {
           // Show wallet selection
           const wallets = detectWallets();
@@ -8269,9 +8980,30 @@
       });
 
       async function connectWithWallet(walletKey) {
+        // Prevent concurrent connection attempts
+        if (isConnecting) {
+          showStatus('Connection already in progress', false);
+          return;
+        }
+
         closeWalletModal();
 
-        const wallet = WALLET_CONFIG[walletKey];
+        // Get wallet config - support both legacy and EIP-6963 wallets
+        let wallet;
+        if (walletKey.startsWith('eip6963_')) {
+          const uuid = walletKey.replace('eip6963_', '');
+          const eip6963Wallet = eip6963Providers.get(uuid);
+          if (eip6963Wallet) {
+            wallet = {
+              name: eip6963Wallet.info.name,
+              icon: eip6963Wallet.info.icon ? `<img src="${eip6963Wallet.info.icon}" style="width: 1.2rem; height: 1.2rem;"/>` : '🔌',
+              getProvider: () => eip6963Wallet.provider
+            };
+          }
+        } else {
+          wallet = WALLET_CONFIG[walletKey];
+        }
+
         if (!wallet) {
           console.error('Unknown wallet:', walletKey);
           return;
@@ -8283,9 +9015,26 @@
           return;
         }
 
+        isConnecting = true;
+        showStatus(`Connecting to ${wallet.name}...`, false);
+
         try {
-          // Request accounts
-          await walletProvider.request({ method: 'eth_requestAccounts' });
+          // Set connection timeout (30 seconds)
+          const timeoutPromise = new Promise((_, reject) => {
+            connectionTimeout = setTimeout(() => {
+              reject(new Error('Connection timeout - please try again'));
+            }, 30000);
+          });
+
+          // Request accounts with timeout
+          const accountsPromise = walletProvider.request({ method: 'eth_requestAccounts' });
+          await Promise.race([accountsPromise, timeoutPromise]);
+
+          // Clear timeout
+          if (connectionTimeout) {
+            clearTimeout(connectionTimeout);
+            connectionTimeout = null;
+          }
 
           // ethers v6 setup
           provider = new ethers.BrowserProvider(walletProvider);
@@ -8294,20 +9043,23 @@
           const address = await signer.getAddress();
           const shortAddress = address.slice(0, 6) + '...' + address.slice(-4);
 
+          // Check network early
+          const network = await provider.getNetwork();
+          if (network.chainId !== 1n) {
+            showStatus('Please switch to Ethereum Mainnet', true);
+          }
+
           // Store connected wallet info
           connectedWallet = walletKey;
           connectedAddress = address;
+
+          // Save preference to localStorage
+          saveWalletPreference(walletKey);
 
           document.getElementById('walletBtn').textContent = shortAddress;
           document.getElementById('walletBtn').classList.add('connected');
           document.getElementById('summonBtn').disabled = false;
           document.getElementById('summonBtn').textContent = 'SUMMON DAO';
-
-          // Check network
-          const network = await provider.getNetwork();
-          if (network.chainId !== 1n) {
-            showStatus('Please switch to Ethereum Mainnet', true);
-          }
 
           // Initialize first member with connected wallet
           if (document.getElementById('foundingMembersList').children.length === 0) {
@@ -8316,6 +9068,9 @@
             updateLootInputs();
           }
 
+          // Setup event listeners
+          setupWalletEventListeners(walletProvider);
+
           // Fetch user's DAOs
           showStatus('Fetching your DAOs...', false);
           await fetchUserDAOs();
@@ -8323,6 +9078,12 @@
           showStatus(`Connected to ${wallet.name}`, false);
         } catch (error) {
           console.error(error);
+
+          // Clear timeout on error
+          if (connectionTimeout) {
+            clearTimeout(connectionTimeout);
+            connectionTimeout = null;
+          }
 
           if (isUserRejection(error)) {
             showStatus('Connection cancelled', false);
@@ -8333,6 +9094,8 @@
 
           if (error.code === -32002) {
             errorMessage = `Please check ${wallet.name} - a connection request is pending`;
+          } else if (error.message?.includes('timeout')) {
+            errorMessage = 'Connection timeout - please try again';
           } else if (error.shortMessage) {
             errorMessage = error.shortMessage;
           } else if (error.reason) {
@@ -8345,12 +9108,88 @@
           }
 
           showStatus(errorMessage, true);
+        } finally {
+          isConnecting = false;
         }
       }
 
       async function connectWallet() {
         // Show the wallet selection modal
         showWalletModal();
+      }
+
+      // Setup wallet event listeners with proper cleanup tracking
+      function setupWalletEventListeners(walletProvider) {
+        // Clean up old listeners first
+        cleanupWalletEventListeners();
+
+        if (!walletProvider || !walletProvider.on) return;
+
+        const accountsChangedHandler = async (accounts) => {
+          try {
+            if (accounts.length === 0) {
+              // User disconnected from wallet
+              disconnectWallet();
+            } else {
+              // Account switched - reconnect with the same wallet
+              if (connectedWallet && !isConnecting) {
+                await connectWithWallet(connectedWallet);
+              }
+            }
+          } catch (error) {
+            console.error('Error handling account change:', error);
+            showStatus('Error updating account', true);
+          }
+        };
+
+        const chainChangedHandler = async (chainId) => {
+          try {
+            const network = await provider?.getNetwork();
+            if (network && network.chainId !== 1n) {
+              showStatus('Please switch to Ethereum Mainnet', true);
+            } else if (network) {
+              showStatus('Network changed - refreshing data...', false);
+              // Refresh DAOs instead of reloading page
+              await fetchUserDAOs();
+              await fetchAllDAOs();
+              showStatus('Network updated', false);
+            }
+          } catch (error) {
+            console.error('Error handling chain change:', error);
+            // Fallback to page reload if handling fails
+            window.location.reload();
+          }
+        };
+
+        const disconnectHandler = () => {
+          disconnectWallet();
+        };
+
+        // Add listeners
+        walletProvider.on('accountsChanged', accountsChangedHandler);
+        walletProvider.on('chainChanged', chainChangedHandler);
+        walletProvider.on('disconnect', disconnectHandler);
+
+        // Track for cleanup
+        walletEventListeners.push({
+          provider: walletProvider,
+          events: [
+            { name: 'accountsChanged', handler: accountsChangedHandler },
+            { name: 'chainChanged', handler: chainChangedHandler },
+            { name: 'disconnect', handler: disconnectHandler }
+          ]
+        });
+      }
+
+      function cleanupWalletEventListeners() {
+        for (const { provider, events } of walletEventListeners) {
+          if (provider && provider.removeListener) {
+            for (const { name, handler } of events) {
+              provider.removeListener(name, handler);
+            }
+          }
+        }
+        walletEventListeners = [];
       }
 
       function disconnectWallet() {
@@ -8362,6 +9201,19 @@
         userDAOs = [];
         allDAOs = [];
         currentDAO = null;
+
+        // Clear connection state
+        isConnecting = false;
+        if (connectionTimeout) {
+          clearTimeout(connectionTimeout);
+          connectionTimeout = null;
+        }
+
+        // Clean up event listeners
+        cleanupWalletEventListeners();
+
+        // Clear wallet preference
+        clearWalletPreference();
 
         // Reset UI
         const walletBtn = document.getElementById('walletBtn');
@@ -9282,10 +10134,6 @@
 
           userDAOs = result;
 
-          if (userDAOs.length > 0) {
-            renderDAOGallery();
-          }
-
           return userDAOs;
         } catch (error) {
           console.error('Error fetching user DAOs:', error);
@@ -9344,12 +10192,17 @@
 
           allDaosTiles.appendChild(tile);
 
-          // Add special gif for index 0 and 1
-          if (index === 0 || index === 1) {
+          // Add special gif for index 0, 1, 2, 3, and 4
+          if (index >= 0 && index <= 4) {
             const gifImg = document.createElement('img');
-            gifImg.src = index === 0
-              ? 'https://content.wrappr.wtf/ipfs/bafybeidc4tl6ysvwhwbpql7xk5ol5cd22dvpmlyy76zjun4ikhrb43oqb4'
-              : 'https://content.wrappr.wtf/ipfs/bafybeibgfu4gh7miouopugf7tclpt4os2zr2rznhlomnletfbj5amdw4gu';
+            const gifUrls = [
+              'https://content.wrappr.wtf/ipfs/bafybeidc4tl6ysvwhwbpql7xk5ol5cd22dvpmlyy76zjun4ikhrb43oqb4', // Index 0
+              'https://content.wrappr.wtf/ipfs/bafybeibgfu4gh7miouopugf7tclpt4os2zr2rznhlomnletfbj5amdw4gu',   // Index 1
+              'https://content.wrappr.wtf/ipfs/bafybeieemrl6ip5w7tgrpdsitw4ry2in3bko7c3oxqa7vr3lisozjbfhra',   // Index 2
+              'https://content.wrappr.wtf/ipfs/bafybeiefycihryp3uybt3f3g5dr6tjonxzl6p5mq6ato74ewvf22i4p3zi',   // Index 3
+              'https://content.wrappr.wtf/ipfs/bafybeiet7oxnshiv6agrmnhgdpfpmmnhfmw5px2wpozd62jhdvorzdp4fq'    // Index 4
+            ];
+            gifImg.src = gifUrls[index];
             gifImg.className = 'dao-special-gif';
             gifImg.alt = 'Special DAO Animation';
             tile.appendChild(gifImg);
@@ -9382,9 +10235,20 @@
           allDAOs = result;
           renderAllDAOsGallery();
 
+          // Render user DAOs gallery after allDAOs is loaded for proper GIF matching
+          if (userDAOs.length > 0) {
+            renderDAOGallery();
+          }
+
           return allDAOs;
         } catch (error) {
           console.error('Error fetching all DAOs:', error);
+
+          // Still render user DAOs even if allDAOs fetch fails
+          if (userDAOs.length > 0) {
+            renderDAOGallery();
+          }
+
           return [];
         }
       }
@@ -9515,12 +10379,22 @@
 
           daoTiles.appendChild(tile);
 
-          // Add special gif for index 0 and 1
-          if (index === 0 || index === 1) {
+          // Find global index by matching DAO address
+          const globalIndex = allDAOs.findIndex(globalDao =>
+            globalDao.dao.toLowerCase() === dao.dao.toLowerCase()
+          );
+
+          // Add special gif for global index 0, 1, 2, 3, and 4
+          if (globalIndex >= 0 && globalIndex <= 4) {
             const gifImg = document.createElement('img');
-            gifImg.src = index === 0
-              ? 'https://content.wrappr.wtf/ipfs/bafybeidc4tl6ysvwhwbpql7xk5ol5cd22dvpmlyy76zjun4ikhrb43oqb4'
-              : 'https://content.wrappr.wtf/ipfs/bafybeibgfu4gh7miouopugf7tclpt4os2zr2rznhlomnletfbj5amdw4gu';
+            const gifUrls = [
+              'https://content.wrappr.wtf/ipfs/bafybeidc4tl6ysvwhwbpql7xk5ol5cd22dvpmlyy76zjun4ikhrb43oqb4', // Index 0
+              'https://content.wrappr.wtf/ipfs/bafybeibgfu4gh7miouopugf7tclpt4os2zr2rznhlomnletfbj5amdw4gu',   // Index 1
+              'https://content.wrappr.wtf/ipfs/bafybeieemrl6ip5w7tgrpdsitw4ry2in3bko7c3oxqa7vr3lisozjbfhra',   // Index 2
+              'https://content.wrappr.wtf/ipfs/bafybeiefycihryp3uybt3f3g5dr6tjonxzl6p5mq6ato74ewvf22i4p3zi',   // Index 3
+              'https://content.wrappr.wtf/ipfs/bafybeiet7oxnshiv6agrmnhgdpfpmmnhfmw5px2wpozd62jhdvorzdp4fq'    // Index 4
+            ];
+            gifImg.src = gifUrls[globalIndex];
             gifImg.className = 'dao-special-gif';
             gifImg.alt = 'Special DAO Animation';
             tile.appendChild(gifImg);
@@ -10125,10 +10999,14 @@
 
         // Update toggle button states
         if (mode === 'send') {
-          sendToggle.style.background = 'rgba(157, 123, 255, 0.3)';
-          sendToggle.style.color = '#e6d9ff';
-          saleToggle.style.background = 'transparent';
-          saleToggle.style.color = 'rgba(230, 217, 255, 0.6)';
+          if (sendToggle) {
+            sendToggle.style.background = 'rgba(157, 123, 255, 0.3)';
+            sendToggle.style.color = '#e6d9ff';
+          }
+          if (saleToggle) {
+            saleToggle.style.background = 'transparent';
+            saleToggle.style.color = 'rgba(230, 217, 255, 0.6)';
+          }
 
           // Show send fields
           fieldsDiv.innerHTML = `
@@ -10157,16 +11035,20 @@
           }, 100);
 
         } else if (mode === 'sale') {
-          sendToggle.style.background = 'transparent';
-          sendToggle.style.color = 'rgba(230, 217, 255, 0.6)';
-          saleToggle.style.background = 'rgba(157, 123, 255, 0.3)';
-          saleToggle.style.color = '#e6d9ff';
+          if (sendToggle) {
+            sendToggle.style.background = 'transparent';
+            sendToggle.style.color = 'rgba(230, 217, 255, 0.6)';
+          }
+          if (saleToggle) {
+            saleToggle.style.background = 'rgba(157, 123, 255, 0.3)';
+            saleToggle.style.color = '#e6d9ff';
+          }
 
           // Show sale configuration fields
           fieldsDiv.innerHTML = `
             <div style="margin-bottom: 0.75rem;">
               <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Token Type</label>
-              <select id="saleTokenType"
+              <select id="modalSaleTokenType"
                       style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 16px; min-height: 44px;">
                 <option value="shares">Shares (Voting)</option>
                 <option value="loot">Loot (Non-Voting)</option>
@@ -10177,17 +11059,17 @@
                 Price per Token (${symbol}) <span style="color: #ff6b6b;">*</span>
                 <span title="For 1:1 upgrades, use 1.0" style="cursor: help; margin-left: 0.25rem;">ℹ️</span>
               </label>
-              <input type="text" id="salePrice" placeholder="1.0" inputmode="decimal"
+              <input type="text" id="modalSalePrice" placeholder="1.0" inputmode="decimal"
                      style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 16px;" />
             </div>
             <div style="margin-bottom: 0.75rem;">
               <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Sale Cap (0 = unlimited)</label>
-              <input type="text" id="saleCap" placeholder="0" inputmode="decimal"
+              <input type="text" id="modalSaleCap" placeholder="0" inputmode="decimal"
                      style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 16px;" />
             </div>
             <div style="margin-bottom: 0.75rem;">
               <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Status</label>
-              <select id="saleStatus"
+              <select id="modalSaleStatus"
                       style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 16px; min-height: 44px;">
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
@@ -10195,8 +11077,8 @@
             </div>
             <div style="margin-bottom: 0.75rem;">
               <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: rgba(230, 217, 255, 0.8); cursor: pointer; min-height: 44px;">
-                <input type="checkbox" id="saleMinting" checked
-                       style="width: 1.25rem; height: 1.25rem; cursor: pointer;" />
+                <input type="checkbox" id="modalSaleMinting" checked
+                       style="width: 1.25rem; height: 1.25rem; cursor: pointer; accent-color: #9d7bff;" />
                 <span>Mint new tokens (unchecked = sell from treasury)</span>
               </label>
             </div>
@@ -10220,6 +11102,13 @@
 
             if (priceInput && capInput) {
               const updateHint = () => updateCustomTokenSaleHint(symbol);
+
+              // Remove old listeners before adding new ones to prevent memory leaks
+              priceInput.removeEventListener('input', updateHint);
+              capInput.removeEventListener('input', updateHint);
+              typeInput.removeEventListener('change', updateHint);
+
+              // Add fresh listeners
               priceInput.addEventListener('input', updateHint);
               capInput.addEventListener('input', updateHint);
               typeInput.addEventListener('change', updateHint);
@@ -10325,20 +11214,21 @@
               <span title="Enter a custom ERC20 token address. Use for token upgrades, custom sales, or transfers." style="cursor: help; margin-left: 0.25rem;">ℹ️</span>
             </label>
             <div style="display: flex; gap: 0.5rem;">
-              <input type="text" id="customTokenAddress" placeholder="0x..."
+              <input type="text" id="proposalCustomTokenAddress" placeholder="0x..." autocomplete="off"
+                     onkeydown="if(event.key==='Enter'){event.preventDefault();fetchAndShowCustomToken();}"
                      style="flex: 1; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 16px;" />
-              <button onclick="fetchAndShowCustomToken()"
+              <button type="button" onclick="fetchAndShowCustomToken()"
                       style="padding: 0.6rem 1rem; background: rgba(157, 123, 255, 0.2); border: 1px solid rgba(157, 123, 255, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.75rem; letter-spacing: 0.1em; cursor: pointer; white-space: nowrap; min-height: 44px;">
                 Fetch Token Info
               </button>
             </div>
-            <div id="customTokenInfoDisplay" style="margin-top: 0.5rem; font-size: 0.75rem; color: rgba(230, 217, 255, 0.7);"></div>
+            <div id="proposalCustomTokenInfoDisplay" style="margin-top: 0.5rem; font-size: 0.75rem; color: rgba(230, 217, 255, 0.7);"></div>
           </div>
           <div id="customTokenActions" style="display: none;"></div>
         `;
 
         setTimeout(() => {
-          const addressInput = document.getElementById('customTokenAddress');
+          const addressInput = document.getElementById('proposalCustomTokenAddress');
           if (addressInput) addressInput.focus();
         }, 100);
       }
@@ -10346,15 +11236,37 @@
       // Fetch custom token info and show Send/Sale options
       async function fetchAndShowCustomToken() {
         try {
-          const tokenAddress = document.getElementById('customTokenAddress').value.trim();
-          const infoDiv = document.getElementById('customTokenInfoDisplay');
+          const inputEl = document.getElementById('proposalCustomTokenAddress');
+          const infoDiv = document.getElementById('proposalCustomTokenInfoDisplay');
           const actionsDiv = document.getElementById('customTokenActions');
 
-          if (!tokenAddress || !ethers.isAddress(tokenAddress)) {
-            infoDiv.innerHTML = '<span style="color: #ff6b6b;">Invalid address</span>';
+          if (!infoDiv || !actionsDiv) {
+            return;
+          }
+
+          if (!inputEl) {
+            infoDiv.innerHTML = '<span style="color: #ff6b6b;">Input field not found - try reopening the form</span>';
             actionsDiv.style.display = 'none';
             return;
           }
+
+          const tokenAddress = inputEl.value?.trim();
+
+          if (!tokenAddress || tokenAddress.length === 0) {
+            infoDiv.innerHTML = '<span style="color: #ff6b6b;">Please enter a token address</span>';
+            actionsDiv.style.display = 'none';
+            return;
+          }
+
+          // Validate Ethereum address format
+          if (!ethers.isAddress(tokenAddress)) {
+            infoDiv.innerHTML = '<span style="color: #ff6b6b;">Invalid Ethereum address format</span>';
+            actionsDiv.style.display = 'none';
+            return;
+          }
+
+          // Normalize to checksummed address
+          const checksummedAddress = ethers.getAddress(tokenAddress);
 
           if (!currentDAO || !currentDAO.dao || !currentDAO.dao.dao) {
             infoDiv.innerHTML = '<span style="color: #ff6b6b;">Please select a DAO first</span>';
@@ -10362,20 +11274,51 @@
             return;
           }
 
+          if (!provider) {
+            infoDiv.innerHTML = '<span style="color: #ff6b6b;">Wallet not connected</span>';
+            actionsDiv.style.display = 'none';
+            showStatus('Please connect your wallet first', true);
+            return;
+          }
+
           infoDiv.innerHTML = 'Fetching token info...';
           actionsDiv.style.display = 'none';
 
-          const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+          const tokenContract = new ethers.Contract(checksummedAddress, ERC20_ABI, provider);
 
-          const [name, symbol, decimals, daoBalance] = await Promise.all([
-            tokenContract.name().catch(() => 'Unknown'),
-            tokenContract.symbol().catch(() => 'UNKNOWN'),
-            tokenContract.decimals().catch(() => 18),
-            tokenContract.balanceOf(currentDAO.dao.dao).catch(() => 0n)
-          ]);
+          // Fetch token info with individual error handling for better diagnostics
+          let name, symbol, decimals, daoBalance;
+
+          try {
+            name = await tokenContract.name();
+          } catch (e) {
+            console.warn('Failed to fetch token name:', e);
+            name = 'Unknown';
+          }
+
+          try {
+            symbol = await tokenContract.symbol();
+          } catch (e) {
+            console.warn('Failed to fetch token symbol:', e);
+            symbol = 'UNKNOWN';
+          }
+
+          try {
+            decimals = await tokenContract.decimals();
+          } catch (e) {
+            console.warn('Failed to fetch token decimals:', e);
+            decimals = 18;
+          }
+
+          try {
+            daoBalance = await tokenContract.balanceOf(currentDAO.dao.dao);
+          } catch (e) {
+            console.warn('Failed to fetch DAO balance:', e);
+            daoBalance = 0n;
+          }
 
           // Cache the result
-          customTokenCache[tokenAddress.toLowerCase()] = { name, symbol, decimals: Number(decimals) };
+          customTokenCache[checksummedAddress.toLowerCase()] = { name, symbol, decimals: Number(decimals) };
 
           const balanceFormatted = parseFloat(ethers.formatUnits(daoBalance, decimals)).toFixed(2);
 
@@ -10383,6 +11326,7 @@
             <div style="padding: 0.5rem; background: rgba(157, 123, 255, 0.1); border-left: 3px solid #9d7bff; border-radius: 2px;">
               <div><strong>${name}</strong> (${symbol})</div>
               <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.25rem;">${decimals} decimals • DAO Balance: ${balanceFormatted}</div>
+              <div style="font-size: 0.65rem; opacity: 0.6; margin-top: 0.25rem; font-family: monospace;">${checksummedAddress}</div>
             </div>
           `;
 
@@ -10390,7 +11334,7 @@
           const helperDiv = document.getElementById('transferHelper');
           if (helperDiv) {
             helperDiv.dataset.assetSymbol = symbol;
-            helperDiv.dataset.assetAddress = tokenAddress;
+            helperDiv.dataset.assetAddress = checksummedAddress;
             helperDiv.dataset.assetDecimals = decimals;
           }
 
@@ -10425,8 +11369,26 @@
 
         } catch (error) {
           console.error('Error fetching custom token:', error);
-          document.getElementById('customTokenInfoDisplay').innerHTML = '<span style="color: #ff6b6b;">Failed to fetch token info</span>';
-          document.getElementById('customTokenActions').style.display = 'none';
+          const infoDiv = document.getElementById('proposalCustomTokenInfoDisplay');
+          const actionsDiv = document.getElementById('customTokenActions');
+
+          let errorMsg = 'Failed to fetch token info';
+          if (error.message) {
+            if (error.message.includes('network') || error.message.includes('connection')) {
+              errorMsg = 'Network error - check your connection';
+            } else if (error.message.includes('invalid') || error.message.includes('not a contract')) {
+              errorMsg = 'Invalid token address - not an ERC20 contract';
+            } else {
+              errorMsg = `Error: ${error.message.slice(0, 100)}`;
+            }
+          }
+
+          if (infoDiv) {
+            infoDiv.innerHTML = `<span style="color: #ff6b6b;">${errorMsg}</span>`;
+          }
+          if (actionsDiv) {
+            actionsDiv.style.display = 'none';
+          }
         }
       }
 
@@ -11240,11 +12202,11 @@
             return;
           }
 
-          const tokenTypeEl = helperDiv.querySelector('#saleTokenType');
-          const priceEl = helperDiv.querySelector('#salePrice');
-          const capEl = helperDiv.querySelector('#saleCap');
-          const mintingEl = helperDiv.querySelector('#saleMinting');
-          const statusEl = helperDiv.querySelector('#saleStatus');
+          const tokenTypeEl = helperDiv.querySelector('#modalSaleTokenType');
+          const priceEl = helperDiv.querySelector('#modalSalePrice');
+          const capEl = helperDiv.querySelector('#modalSaleCap');
+          const mintingEl = helperDiv.querySelector('#modalSaleMinting');
+          const statusEl = helperDiv.querySelector('#modalSaleStatus');
 
           if (!priceEl) {
             showStatus('Form elements not found - please try again', true);
@@ -11381,14 +12343,22 @@
               </div>
               <div id="customSaleTokenFields" style="display: none; margin-top: 0.5rem;">
                 <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Custom Token Address</label>
-                <input type="text" id="customSaleTokenAddress" placeholder="0x..."
-                       style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
+                <div style="display: flex; gap: 0.5rem;">
+                  <input type="text" id="customSaleTokenAddress" placeholder="0x..."
+                         onkeydown="if(event.key==='Enter'){event.preventDefault();validateCustomSaleToken();}"
+                         style="flex: 1; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
+                  <button onclick="validateCustomSaleToken()" type="button"
+                          style="padding: 0.6rem 1rem; background: rgba(157, 123, 255, 0.2); border: 1px solid rgba(157, 123, 255, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.75rem; letter-spacing: 0.1em; cursor: pointer; white-space: nowrap; min-height: 44px;">
+                    Validate
+                  </button>
+                </div>
+                <div id="customSaleTokenInfo" style="margin-top: 0.5rem; font-size: 0.75rem; color: rgba(230, 217, 255, 0.7);"></div>
                 <small style="display: block; margin-top: 0.25rem; font-size: 0.7rem; color: rgba(230, 217, 255, 0.5);">Must be an 18-decimal ERC20 token</small>
               </div>
             </div>
             <div>
               <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Token Type</label>
-              <select id="saleTokenType" style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;">
+              <select id="proposalSaleTokenType" style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;">
                 <option value="false">Shares</option>
                 <option value="true">Loot</option>
               </select>
@@ -11400,27 +12370,27 @@
                 Price per Token
                 <span title="For 1:1 upgrades with 18 decimal tokens, use 1.0. This sale will be shown as 'Governance Staking/Upgrade' instead of 'Sale'." style="cursor: help; margin-left: 0.25rem;">ℹ️</span>
               </label>
-              <input type="number" id="salePrice" placeholder="0.0" step="any" min="0" style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
+              <input type="number" id="proposalSalePrice" placeholder="0.0" step="any" min="0" style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
             </div>
             <div>
               <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">
                 Cap (0 = unlimited)
                 <span title="For token upgrades, set to 0 for unlimited. Users can go back and forth via ragequit." style="cursor: help; margin-left: 0.25rem;">ℹ️</span>
               </label>
-              <input type="number" id="saleCap" placeholder="0" step="any" min="0" style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
+              <input type="number" id="proposalSaleCap" placeholder="0" step="any" min="0" style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
             </div>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
             <div>
               <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Source</label>
-              <select id="saleMinting" style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;">
+              <select id="proposalSaleMinting" style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;">
                 <option value="true">Mint new</option>
                 <option value="false">From treasury</option>
               </select>
             </div>
             <div>
               <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Status</label>
-              <select id="saleActive" style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;">
+              <select id="proposalSaleActive" style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;">
                 <option value="true">Active</option>
                 <option value="false">Inactive</option>
               </select>
@@ -11450,6 +12420,13 @@
           const typeInput = document.getElementById('saleTokenType');
 
           if (priceInput && capInput) {
+            // Remove old listeners before adding new ones to prevent memory leaks
+            priceInput.removeEventListener('input', updateProposalSaleHint);
+            capInput.removeEventListener('input', updateProposalSaleHint);
+            tokenInput.removeEventListener('change', updateProposalSaleHint);
+            typeInput.removeEventListener('change', updateProposalSaleHint);
+
+            // Add fresh listeners
             priceInput.addEventListener('input', updateProposalSaleHint);
             capInput.addEventListener('input', updateProposalSaleHint);
             tokenInput.addEventListener('change', updateProposalSaleHint);
@@ -11597,11 +12574,11 @@
       async function populateSaleProposal(daoAddress) {
         try {
           let payToken = document.getElementById('salePayToken').value;
-          const priceInput = document.getElementById('salePrice').value.trim();
-          const capInput = document.getElementById('saleCap').value.trim();
-          const minting = document.getElementById('saleMinting').value === 'true';
-          const active = document.getElementById('saleActive').value === 'true';
-          const isLoot = document.getElementById('saleTokenType').value === 'true';
+          const priceInput = document.getElementById('proposalSalePrice').value.trim();
+          const capInput = document.getElementById('proposalSaleCap').value.trim();
+          const minting = document.getElementById('proposalSaleMinting').value === 'true';
+          const active = document.getElementById('proposalSaleActive').value === 'true';
+          const isLoot = document.getElementById('proposalSaleTokenType').value === 'true';
 
           if (!priceInput || parseFloat(priceInput) <= 0) {
             showStatus('Please enter a valid price', true);
@@ -11749,12 +12726,21 @@
           journeyLineContainer.style.display = 'none';
         }
 
-        // Add special gif for index 0 and 1 DAOs
+        // Add special gif for index 0, 1, 2, 3, and 4 DAOs
+        // Find global index by matching DAO address to ensure correct GIF assignment
+        const globalIndex = allDAOs.findIndex(globalDao =>
+          globalDao.dao.toLowerCase() === currentDAO.dao.dao.toLowerCase()
+        );
+
         let existingGif = document.getElementById('dashboardGif');
-        if (daoIndex === 0 || daoIndex === 1) {
-          const gifUrl = daoIndex === 0
-            ? 'https://content.wrappr.wtf/ipfs/bafybeidc4tl6ysvwhwbpql7xk5ol5cd22dvpmlyy76zjun4ikhrb43oqb4'
-            : 'https://content.wrappr.wtf/ipfs/bafybeibgfu4gh7miouopugf7tclpt4os2zr2rznhlomnletfbj5amdw4gu';
+        if (globalIndex >= 0 && globalIndex <= 4) {
+          const gifUrls = [
+            'https://content.wrappr.wtf/ipfs/bafybeidc4tl6ysvwhwbpql7xk5ol5cd22dvpmlyy76zjun4ikhrb43oqb4', // Index 0
+            'https://content.wrappr.wtf/ipfs/bafybeibgfu4gh7miouopugf7tclpt4os2zr2rznhlomnletfbj5amdw4gu',   // Index 1
+            'https://content.wrappr.wtf/ipfs/bafybeieemrl6ip5w7tgrpdsitw4ry2in3bko7c3oxqa7vr3lisozjbfhra',   // Index 2
+            'https://content.wrappr.wtf/ipfs/bafybeiefycihryp3uybt3f3g5dr6tjonxzl6p5mq6ato74ewvf22i4p3zi',   // Index 3
+            'https://content.wrappr.wtf/ipfs/bafybeiet7oxnshiv6agrmnhgdpfpmmnhfmw5px2wpozd62jhdvorzdp4fq'    // Index 4
+          ];
 
           if (!existingGif) {
             existingGif = document.createElement('img');
@@ -11763,7 +12749,7 @@
             existingGif.alt = 'Special DAO Animation';
             document.body.appendChild(existingGif);
           }
-          existingGif.src = gifUrl;
+          existingGif.src = gifUrls[globalIndex];
           existingGif.style.display = 'block';
         } else {
           if (existingGif) {
@@ -12200,6 +13186,9 @@
         if (!emblem) return;
 
         try {
+          // Clear any previous url-image class
+          emblem.classList.remove('url-image');
+
           const molochContract = new ethers.Contract(daoAddress, MOLOCH_ABI, provider);
           const contractURI = await molochContract.contractURI();
 
@@ -12208,20 +13197,55 @@
             return;
           }
 
-          // Parse metadata
+          // Check if contractURI is a direct image URL (by file extension)
+          const isDirectImageURL = /\.(svg|png|jpg|jpeg|gif|webp|avif)(\?.*)?$/i.test(contractURI);
+
+          // If it's a direct image URL, use it directly
+          if (isDirectImageURL) {
+            emblem.innerHTML = `<img src="${contractURI}" alt="DAO Emblem" />`;
+            emblem.classList.add('url-image');
+            emblem.style.display = 'block';
+            emblem.onclick = () => openNFTModal({ image: contractURI }, 'DAO Contract');
+            return;
+          }
+
+          // Parse metadata (JSON format)
           let metadata;
           if (contractURI.startsWith('data:application/json;base64,')) {
             const json = atob(contractURI.slice(29));
             metadata = JSON.parse(json);
           } else if (contractURI.startsWith('data:application/json,')) {
             metadata = JSON.parse(decodeURIComponent(contractURI.slice(22)));
+          } else if (contractURI.startsWith('data:image/')) {
+            // Direct data URI image (e.g., data:image/svg+xml,...)
+            emblem.innerHTML = `<img src="${contractURI}" alt="DAO Emblem" />`;
+            emblem.style.display = 'block';
+            emblem.onclick = () => openNFTModal({ image: contractURI }, 'DAO Contract');
+            return;
           } else {
+            // Try to fetch as JSON
             const response = await fetch(contractURI);
+            const contentType = response.headers.get('content-type');
+
+            // Check if response is an image
+            if (contentType && contentType.startsWith('image/')) {
+              emblem.innerHTML = `<img src="${contractURI}" alt="DAO Emblem" />`;
+              emblem.classList.add('url-image');
+              emblem.style.display = 'block';
+              emblem.onclick = () => openNFTModal({ image: contractURI }, 'DAO Contract');
+              return;
+            }
+
+            // Otherwise parse as JSON metadata
             metadata = await response.json();
           }
 
           if (metadata && metadata.image) {
             emblem.innerHTML = `<img src="${metadata.image}" alt="DAO Emblem" />`;
+            // Check if image URL is external (not data URI)
+            if (!metadata.image.startsWith('data:')) {
+              emblem.classList.add('url-image');
+            }
             emblem.style.display = 'block';
             emblem.onclick = () => openNFTModal(metadata, 'DAO Contract');
           } else {
@@ -12242,7 +13266,9 @@
 
         let imageHTML = '';
         if (metadata.image) {
-          imageHTML = `<img src="${metadata.image}" class="nft-modal-image" alt="${title}" />`;
+          // Add url-image class for external URLs (not data URIs)
+          const urlImageClass = metadata.image.startsWith('data:') ? '' : ' url-image';
+          imageHTML = `<img src="${metadata.image}" class="nft-modal-image${urlImageClass}" alt="${title}" />`;
         }
 
         let attributesHTML = '';
@@ -12327,25 +13353,57 @@
         if (!emblem) return;
 
         try {
+          // Clear any previous url-image class
+          emblem.classList.remove('url-image');
+
           const molochContract = new ethers.Contract(daoAddress, MOLOCH_ABI, provider);
           const contractURI = await molochContract.contractURI();
 
           if (!contractURI) return;
 
-          // Parse metadata
+          // Check if contractURI is a direct image URL (by file extension)
+          const isDirectImageURL = /\.(svg|png|jpg|jpeg|gif|webp|avif)(\?.*)?$/i.test(contractURI);
+
+          // If it's a direct image URL, use it directly
+          if (isDirectImageURL) {
+            emblem.innerHTML = `<img src="${contractURI}" alt="DAO Emblem" />`;
+            emblem.classList.add('url-image');
+            return;
+          }
+
+          // Parse metadata (JSON format)
           let metadata;
           if (contractURI.startsWith('data:application/json;base64,')) {
             const json = atob(contractURI.slice(29));
             metadata = JSON.parse(json);
           } else if (contractURI.startsWith('data:application/json,')) {
             metadata = JSON.parse(decodeURIComponent(contractURI.slice(22)));
+          } else if (contractURI.startsWith('data:image/')) {
+            // Direct data URI image (e.g., data:image/svg+xml,...)
+            emblem.innerHTML = `<img src="${contractURI}" alt="DAO Emblem" />`;
+            return;
           } else {
+            // Try to fetch as JSON
             const response = await fetch(contractURI);
+            const contentType = response.headers.get('content-type');
+
+            // Check if response is an image
+            if (contentType && contentType.startsWith('image/')) {
+              emblem.innerHTML = `<img src="${contractURI}" alt="DAO Emblem" />`;
+              emblem.classList.add('url-image');
+              return;
+            }
+
+            // Otherwise parse as JSON metadata
             metadata = await response.json();
           }
 
           if (metadata && metadata.image) {
             emblem.innerHTML = `<img src="${metadata.image}" alt="DAO Emblem" />`;
+            // Check if image URL is external (not data URI)
+            if (!metadata.image.startsWith('data:')) {
+              emblem.classList.add('url-image');
+            }
           }
         } catch (error) {
           console.error('Error rendering tile emblem:', error);
@@ -12385,19 +13443,12 @@
         const totalLoot = currentDAO.dao.supplies.lootTotalSupply;
         const totalSupply = totalShares + totalLoot;
 
-        // Reverse ENS resolution for each member
+        // Reverse ENS resolution for each member (with caching)
         const membersWithENS = await Promise.all(
           members.map(async (member) => {
-            let ensName = null;
             // Member structure uses numeric indices: [0] = address
             const memberAddress = member[0];
-            if (memberAddress) {
-              try {
-                ensName = await provider.lookupAddress(memberAddress);
-              } catch (error) {
-                // ENS lookup failed, continue without it
-              }
-            }
+            const ensName = memberAddress ? await lookupENS(memberAddress) : null;
             return { ...member, ensName };
           })
         );
@@ -12580,18 +13631,22 @@
       async function sendChatMessage() {
         if (!currentDAO || !signer) return;
 
+        // Prevent race condition: don't allow multiple simultaneous messages
+        if (isSendingMessage) return;
+
         const chatInput = document.getElementById('chatInput');
         const message = chatInput.value.trim();
 
         if (!message) return;
 
+        isSendingMessage = true;
         try {
           const molochContract = new ethers.Contract(currentDAO.dao.dao, MOLOCH_ABI, signer);
 
-          const tx = await molochContract.chat(message);
           chatInput.value = 'Sending...';
           chatInput.disabled = true;
 
+          const tx = await molochContract.chat(message);
           await tx.wait();
 
           chatInput.value = '';
@@ -12623,6 +13678,8 @@
           }
 
           showStatus(errorMessage, true);
+        } finally {
+          isSendingMessage = false;
         }
       }
 
@@ -12688,7 +13745,8 @@
           proposalDiv.className = 'proposal-item';
 
           // Convert state to number for comparison (might be BigInt)
-          const state = Number(proposal.state);
+          // Default to 0 if invalid to prevent NaN
+          const state = proposal.state !== undefined && proposal.state !== null ? Number(proposal.state) : 0;
           const stateText = PROPOSAL_STATES[state] || `State ${state}`;
           const stateClass = stateText.toLowerCase();
 
@@ -12889,6 +13947,16 @@
           return;
         }
 
+        // Prevent race condition: don't allow multiple simultaneous votes
+        if (isVoting) return;
+
+        // Validate proposalId before converting to BigInt
+        if (!proposalId || proposalId === '' || (typeof proposalId === 'string' && !/^\d+$/.test(proposalId))) {
+          showStatus('Invalid proposal ID', true);
+          return;
+        }
+
+        isVoting = true;
         try {
           const molochContract = new ethers.Contract(currentDAO.dao.dao, MOLOCH_ABI, signer);
 
@@ -12936,6 +14004,8 @@
           }
 
           showStatus(errorMessage, true);
+        } finally {
+          isVoting = false;
         }
       }
 
@@ -12950,6 +14020,16 @@
           return;
         }
 
+        // Validate proposalId before converting to BigInt
+        if (!proposalId || proposalId === '' || (typeof proposalId === 'string' && !/^\d+$/.test(proposalId))) {
+          showStatus('Invalid proposal ID', true);
+          return;
+        }
+
+        // Prevent race condition: don't allow multiple simultaneous vote cancellations
+        if (isCancellingVote) return;
+
+        isCancellingVote = true;
         try {
           const molochContract = new ethers.Contract(currentDAO.dao.dao, MOLOCH_ABI, signer);
 
@@ -12993,6 +14073,8 @@
           }
 
           showStatus(errorMessage, true);
+        } finally {
+          isCancellingVote = false;
         }
       }
 
@@ -13000,6 +14082,16 @@
       async function claimFutarchyReward(proposalId, amountStr) {
         if (!currentDAO || !signer) {
           showStatus('Please connect wallet and select a DAO', true);
+          return;
+        }
+
+        // Validate inputs before converting to BigInt
+        if (!proposalId || proposalId === '' || (typeof proposalId === 'string' && !/^\d+$/.test(proposalId))) {
+          showStatus('Invalid proposal ID', true);
+          return;
+        }
+        if (!amountStr || amountStr === '' || (typeof amountStr === 'string' && !/^\d+$/.test(amountStr))) {
+          showStatus('Invalid amount', true);
           return;
         }
 
@@ -13372,6 +14464,9 @@
           return;
         }
 
+        // Prevent race condition: don't allow multiple simultaneous proposal creations
+        if (isCreatingProposal) return;
+
         const op = parseInt(document.getElementById('proposalOp').value);
         const to = document.getElementById('proposalTo').value;
         const value = document.getElementById('proposalValue').value;
@@ -13405,6 +14500,7 @@
         // Generate random nonce (32 bytes)
         const nonce = ethers.hexlify(ethers.randomBytes(32));
 
+        isCreatingProposal = true;
         try {
           const molochContract = new ethers.Contract(currentDAO.dao.dao, MOLOCH_ABI, signer);
 
@@ -13479,14 +14575,26 @@
           }
 
           showStatus(errorMessage, true);
+        } finally {
+          isCreatingProposal = false;
         }
       }
 
       // Execute proposal by extracting parameters from tagged message
       async function executeProposalFromData(proposalId) {
+        // Prevent race condition: don't allow multiple simultaneous executions
+        if (isExecutingProposal) return;
+
+        // Validate proposalId before converting to BigInt
+        if (!proposalId || proposalId === '' || (typeof proposalId === 'string' && !/^\d+$/.test(proposalId))) {
+          showStatus('Invalid proposal ID', true);
+          return;
+        }
+
         // Convert string to BigInt (passed as string to avoid overflow in onclick)
         const proposalIdBigInt = BigInt(proposalId);
 
+        isExecutingProposal = true;
         try {
           const molochContract = new ethers.Contract(currentDAO.dao.dao, MOLOCH_ABI, signer);
           const config = await molochContract.config();
@@ -13574,6 +14682,8 @@
           }
 
           showStatus(errorMessage, true);
+        } finally {
+          isExecutingProposal = false;
         }
       }
 
@@ -13629,9 +14739,14 @@
 
       // Manual refresh with button animation + rate limiting
       let lastRefreshTime = 0;
+      let isRefreshing = false;
+
       async function manualRefreshDAO() {
         const refreshBtn = document.getElementById('refreshButton');
         if (!refreshBtn || !currentDAO) return;
+
+        // Prevent race condition: don't allow multiple simultaneous refreshes
+        if (isRefreshing) return;
 
         // Rate limiting check
         const now = Date.now();
@@ -13642,7 +14757,7 @@
           return;
         }
 
-        lastRefreshTime = now;
+        isRefreshing = true;
 
         // Add spinning animation
         const svg = refreshBtn.querySelector('svg');
@@ -13661,6 +14776,9 @@
           await renderSalesInfo();
           await renderMembership();
           await renderMembers();
+
+          // Only update lastRefreshTime after successful completion
+          lastRefreshTime = Date.now();
         } catch (error) {
           console.error('Error during manual refresh:', error);
           showStatus('Failed to refresh DAO', true);
@@ -13669,6 +14787,7 @@
           svg.style.animation = '';
           refreshBtn.disabled = false;
           refreshBtn.style.cursor = 'pointer';
+          isRefreshing = false;
         }
       }
 
@@ -14054,6 +15173,105 @@
         }
       }
 
+      // Validate custom sale token in summoning form
+      async function validateCustomSaleToken() {
+        try {
+          const inputEl = document.getElementById('customSaleTokenAddress');
+          const tokenAddress = inputEl?.value?.trim();
+          const infoDiv = document.getElementById('customSaleTokenInfo');
+
+          if (!infoDiv) {
+            return;
+          }
+
+          if (!tokenAddress || tokenAddress.length === 0) {
+            infoDiv.innerHTML = '<span style="color: #ff6b6b;">Please enter a token address</span>';
+            return;
+          }
+
+          if (!ethers.isAddress(tokenAddress)) {
+            infoDiv.innerHTML = '<span style="color: #ff6b6b;">Invalid Ethereum address format</span>';
+            return;
+          }
+
+          // Normalize to checksummed address
+          const checksummedAddress = ethers.getAddress(tokenAddress);
+
+          if (!provider) {
+            infoDiv.innerHTML = '<span style="color: #ff6b6b;">Wallet not connected</span>';
+            showStatus('Please connect your wallet first', true);
+            return;
+          }
+
+          infoDiv.innerHTML = 'Validating token...';
+
+          const tokenContract = new ethers.Contract(checksummedAddress, ERC20_ABI, provider);
+
+          // Fetch token info with individual error handling
+          let name, symbol, decimals;
+
+          try {
+            name = await tokenContract.name();
+          } catch (e) {
+            console.warn('Failed to fetch token name:', e);
+            name = 'Unknown';
+          }
+
+          try {
+            symbol = await tokenContract.symbol();
+          } catch (e) {
+            console.warn('Failed to fetch token symbol:', e);
+            symbol = 'UNKNOWN';
+          }
+
+          try {
+            decimals = await tokenContract.decimals();
+          } catch (e) {
+            console.warn('Failed to fetch token decimals:', e);
+            infoDiv.innerHTML = '<span style="color: #ff6b6b;">Failed to fetch decimals - not a valid ERC20 token</span>';
+            return;
+          }
+
+          // Validate it's 18 decimals (required for sales)
+          const decimalsNum = Number(decimals);
+          if (decimalsNum !== 18) {
+            infoDiv.innerHTML = `<span style="color: #ff6b6b;">❌ Invalid: Token has ${decimalsNum} decimals (must be 18)</span>`;
+            return;
+          }
+
+          // Success - show token info
+          infoDiv.innerHTML = `
+            <div style="padding: 0.5rem; background: rgba(76, 175, 80, 0.1); border-left: 3px solid #4caf50; border-radius: 2px;">
+              <div>✓ <strong>${name}</strong> (${symbol})</div>
+              <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.25rem;">${decimals} decimals - Valid for sale</div>
+              <div style="font-size: 0.65rem; opacity: 0.6; margin-top: 0.25rem; font-family: monospace;">${checksummedAddress}</div>
+            </div>
+          `;
+
+          // Cache the result
+          customTokenCache[checksummedAddress.toLowerCase()] = { name, symbol, decimals: decimalsNum };
+
+        } catch (error) {
+          console.error('Error validating custom sale token:', error);
+          const infoDiv = document.getElementById('customSaleTokenInfo');
+
+          let errorMsg = 'Failed to validate token';
+          if (error.message) {
+            if (error.message.includes('network') || error.message.includes('connection')) {
+              errorMsg = 'Network error - check your connection';
+            } else if (error.message.includes('invalid') || error.message.includes('not a contract')) {
+              errorMsg = 'Invalid token address - not an ERC20 contract';
+            } else {
+              errorMsg = `Error: ${error.message.slice(0, 100)}`;
+            }
+          }
+
+          if (infoDiv) {
+            infoDiv.innerHTML = `<span style="color: #ff6b6b;">${errorMsg}</span>`;
+          }
+        }
+      }
+
       // Initialize token icons in summoning form dropdown
       function initializeSalePaymentTokenIcons() {
         // Initialize display icon
@@ -14089,6 +15307,16 @@
             const customTokenInput = document.getElementById('customTokenAddress');
 
             if (priceInput && capInput) {
+              // Remove old listeners before adding new ones to prevent memory leaks
+              priceInput.removeEventListener('input', updateSummonerSaleHint);
+              capInput.removeEventListener('input', updateSummonerSaleHint);
+              tokenInput.removeEventListener('change', updateSummonerSaleHint);
+              typeInput.removeEventListener('change', updateSummonerSaleHint);
+              if (customTokenInput) {
+                customTokenInput.removeEventListener('input', updateSummonerSaleHint);
+              }
+
+              // Add fresh listeners
               priceInput.addEventListener('input', updateSummonerSaleHint);
               capInput.addEventListener('input', updateSummonerSaleHint);
               tokenInput.addEventListener('change', updateSummonerSaleHint);
@@ -14502,7 +15730,7 @@
             salt,
             initHolders,
             initShares,
-            initCalls, // Now passing actual initCalls
+            initCalls, 
             { value: initialEthDeposit }
           );
 
@@ -14590,36 +15818,36 @@
         // Initialize DOM cache for performance
         DOMCache.init();
 
+        // Initialize EIP-6963 support for modern wallet detection
+        initEIP6963();
+
+        // Small delay to allow EIP-6963 providers to announce themselves
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Auto-reconnect logic with improved wallet preference handling
         if (window.ethereum) {
-          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-          if (accounts.length > 0) {
-            // Auto-connect with the first detected wallet
-            const wallets = detectWallets();
-            if (wallets.length > 0) {
-              await connectWithWallet(wallets[0].key);
+          try {
+            const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+            if (accounts.length > 0) {
+              // Try to reconnect with the user's preferred wallet
+              const preferredWallet = getWalletPreference();
+              const wallets = detectWallets();
+
+              if (preferredWallet && wallets.some(w => w.key === preferredWallet)) {
+                // Reconnect with preferred wallet
+                await connectWithWallet(preferredWallet);
+              } else if (wallets.length > 0) {
+                // Fallback: connect with first detected wallet
+                await connectWithWallet(wallets[0].key);
+              }
             }
+          } catch (error) {
+            console.error('Auto-reconnect failed:', error);
+            // Silently fail auto-reconnect, user can manually connect
           }
         }
       });
 
-      // Handle account changes
-      if (window.ethereum) {
-        window.ethereum.on('accountsChanged', async (accounts) => {
-          if (accounts.length === 0) {
-            // User disconnected from wallet
-            disconnectWallet();
-          } else {
-            // Account switched - reconnect with the same wallet
-            if (connectedWallet) {
-              await connectWithWallet(connectedWallet);
-            }
-          }
-        });
-
-        window.ethereum.on('chainChanged', () => {
-          window.location.reload();
-        });
-      }
     </script>
   </body>
 </html>
