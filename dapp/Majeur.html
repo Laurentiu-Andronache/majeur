@@ -7025,6 +7025,15 @@
               <label class="proposal-form-label">Description</label>
               <textarea id="proposalDescription" class="proposal-form-input proposal-form-textarea" placeholder="Describe the proposal..."></textarea>
             </div>
+            <div id="proposalTTLInfo" style="margin-bottom: 0.75rem; padding: 0.65rem; background: rgba(157, 123, 255, 0.08); border-left: 3px solid rgba(157, 123, 255, 0.4); border-radius: 2px; display: none;">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity: 0.7; flex-shrink: 0;">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                <span id="proposalTTLInfoText" style="font-size: 0.8rem; color: rgba(230, 217, 255, 0.75); line-height: 1.4;"></span>
+              </div>
+            </div>
             <button class="chatroom-button" onclick="createProposal()">Create & Publish</button>
           </div>
 
@@ -9322,9 +9331,7 @@
           const formattedBalance = parseFloat(ethers.formatUnits(token.balance, token.decimals)).toFixed(4);
 
           const tokenDiv = document.createElement('div');
-          tokenDiv.style.cssText = 'display: flex; align-items: center; padding: 0.7rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.2); cursor: pointer; transition: all 0.3s ease; border-radius: 4px;';
-          tokenDiv.onmouseover = () => tokenDiv.style.borderColor = 'rgba(157, 123, 255, 0.4)';
-          tokenDiv.onmouseout = () => tokenDiv.style.borderColor = 'rgba(157, 123, 255, 0.2)';
+          tokenDiv.style.cssText = 'display: flex; align-items: center; padding: 0.7rem; background: rgba(157, 123, 255, 0.15); border: 2px solid rgba(157, 123, 255, 0.5); cursor: pointer; transition: all 0.2s ease; border-radius: 4px;';
 
           // Add sale badge for custom sale tokens
           const saleBadge = token.isCustomSale
@@ -9333,7 +9340,7 @@
 
           tokenDiv.innerHTML = `
             <input type="checkbox" id="token_${token.symbol}" value="${token.address}"
-                   style="margin-right: 1rem; width: 20px; height: 20px; cursor: pointer;" checked>
+                   style="margin-right: 1rem; width: 20px; height: 20px; cursor: pointer; accent-color: #9d7bff;" checked>
             <div class="token-icon" style="width: 28px; height: 28px; margin-right: 1rem; flex-shrink: 0;">${token.icon}</div>
             <div style="flex: 1;">
               <div style="font-family: 'Cinzel', serif; font-size: 0.8rem; color: #9d7bff; margin-bottom: 0.2rem; line-height: 1.3;">${token.symbol}${saleBadge}</div>
@@ -9343,12 +9350,47 @@
 
           tokenList.appendChild(tokenDiv);
 
+          const checkbox = tokenDiv.querySelector('input[type="checkbox"]');
+
+          // Function to update visual state
+          const updateVisualState = () => {
+            if (checkbox.checked) {
+              tokenDiv.style.background = 'rgba(157, 123, 255, 0.15)';
+              tokenDiv.style.borderColor = 'rgba(157, 123, 255, 0.5)';
+              tokenDiv.style.borderWidth = '2px';
+            } else {
+              tokenDiv.style.background = 'rgba(0, 0, 0, 0.2)';
+              tokenDiv.style.borderColor = 'rgba(157, 123, 255, 0.2)';
+              tokenDiv.style.borderWidth = '1px';
+            }
+          };
+
+          // Hover effects
+          tokenDiv.onmouseover = () => {
+            if (checkbox.checked) {
+              tokenDiv.style.borderColor = 'rgba(157, 123, 255, 0.7)';
+              tokenDiv.style.background = 'rgba(157, 123, 255, 0.2)';
+            } else {
+              tokenDiv.style.borderColor = 'rgba(157, 123, 255, 0.3)';
+              tokenDiv.style.background = 'rgba(0, 0, 0, 0.3)';
+            }
+          };
+
+          tokenDiv.onmouseout = () => {
+            updateVisualState();
+          };
+
           // Make the whole div clickable to toggle checkbox
           tokenDiv.onclick = (e) => {
             if (e.target.tagName !== 'INPUT') {
-              const checkbox = tokenDiv.querySelector('input[type="checkbox"]');
               checkbox.checked = !checkbox.checked;
             }
+            updateVisualState();
+          };
+
+          // Listen for checkbox changes
+          checkbox.onchange = () => {
+            updateVisualState();
           };
         });
 
@@ -10528,6 +10570,56 @@
       }
 
       // Render governance info
+      // Format seconds into human-readable time
+      function formatDuration(seconds) {
+        const secs = Number(seconds);
+        if (secs === 0) return 'No limit';
+
+        const days = Math.floor(secs / 86400);
+        const hours = Math.floor((secs % 86400) / 3600);
+        const minutes = Math.floor((secs % 3600) / 60);
+
+        if (days > 0) {
+          return hours > 0 ? `${days}d ${hours}h` : `${days} day${days !== 1 ? 's' : ''}`;
+        } else if (hours > 0) {
+          return minutes > 0 ? `${hours}h ${minutes}m` : `${hours} hour${hours !== 1 ? 's' : ''}`;
+        } else if (minutes > 0) {
+          return `${minutes} minute${minutes !== 1 ? 's' : ''}`;
+        } else {
+          return `${secs} second${secs !== 1 ? 's' : ''}`;
+        }
+      }
+
+      // Update proposal TTL info in the proposal form
+      function updateProposalTTLInfo() {
+        const ttlInfoDiv = document.getElementById('proposalTTLInfo');
+        const ttlInfoText = document.getElementById('proposalTTLInfoText');
+
+        if (!ttlInfoDiv || !ttlInfoText || !currentDAO) {
+          if (ttlInfoDiv) ttlInfoDiv.style.display = 'none';
+          return;
+        }
+
+        const ttlSeconds = Number(currentDAO.dao.gov.proposalTTL || 0);
+
+        if (ttlSeconds === 0) {
+          ttlInfoDiv.style.display = 'none';
+          return;
+        }
+
+        const ttlFormatted = formatDuration(ttlSeconds);
+        const now = new Date();
+        const expiryDate = new Date(now.getTime() + ttlSeconds * 1000);
+
+        const dateOptions = { month: 'short', day: 'numeric', year: 'numeric' };
+        const timeOptions = { hour: 'numeric', minute: '2-digit', hour12: true };
+        const expiryDateStr = expiryDate.toLocaleDateString('en-US', dateOptions);
+        const expiryTimeStr = expiryDate.toLocaleTimeString('en-US', timeOptions);
+
+        ttlInfoText.innerHTML = `Proposal will expire in <strong>${ttlFormatted}</strong> (${expiryDateStr} at ${expiryTimeStr})`;
+        ttlInfoDiv.style.display = 'block';
+      }
+
       function renderGovernanceInfo() {
         const governanceInfo = document.getElementById('governanceInfo');
         if (!governanceInfo || !currentDAO) return;
@@ -10541,6 +10633,18 @@
 
         // Format ragequittable
         const ragequittable = gov.ragequittable ? 'Enabled' : 'Disabled';
+
+        // Format proposal TTL
+        const proposalTTL = formatDuration(gov.proposalTTL || 0);
+
+        // Format proposal threshold
+        const proposalThreshold = BigInt(gov.proposalThreshold || 0);
+        const proposalThresholdFormatted = proposalThreshold > 0n
+          ? parseFloat(ethers.formatUnits(proposalThreshold, 18)).toFixed(2)
+          : '0';
+
+        // Update proposal form TTL info
+        updateProposalTTLInfo();
 
         // Decode futarchy settings
         let futarchyText = 'Disabled';
@@ -10585,6 +10689,38 @@
                 </a>
               </div>
               <div style="font-size: 0.95rem; color: #e6d9ff;">${ragequittable}</div>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.5rem;">
+            <div>
+              <div style="font-size: 0.7rem; color: rgba(230, 217, 255, 0.5); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.35rem;">
+                Proposal TTL
+                <a href="#" onclick="event.preventDefault(); prepareTTLProposal(); switchDaoView('dao');"
+                   title="Create proposal to change proposal TTL"
+                   style="color: #9d7bff; opacity: 0.5; line-height: 1;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="16"></line>
+                    <line x1="8" y1="12" x2="16" y2="12"></line>
+                  </svg>
+                </a>
+              </div>
+              <div style="font-size: 0.95rem; color: #e6d9ff;">${proposalTTL}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.7rem; color: rgba(230, 217, 255, 0.5); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.35rem;">
+                Proposal Threshold
+                <a href="#" onclick="event.preventDefault(); prepareThresholdProposal(); switchDaoView('dao');"
+                   title="Create proposal to change proposal threshold"
+                   style="color: #9d7bff; opacity: 0.5; line-height: 1;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="16"></line>
+                    <line x1="8" y1="12" x2="16" y2="12"></line>
+                  </svg>
+                </a>
+              </div>
+              <div style="font-size: 0.95rem; color: #e6d9ff;">${proposalThresholdFormatted} shares</div>
             </div>
           </div>
           <div>
@@ -11964,6 +12100,257 @@
 
         } catch (error) {
           console.error('Error populating quorum proposal:', error);
+          showStatus('Failed to populate form: ' + error.message, true);
+        }
+      }
+
+      // TTL proposal helper
+      async function prepareTTLProposal() {
+        if (!currentDAO || !currentDAO.dao) {
+          showStatus('Please select a DAO first', true);
+          return;
+        }
+
+        const dao = currentDAO.dao;
+        const daoAddress = dao.dao;
+        const currentTTL = Number(dao.gov.proposalTTL || 0);
+
+        // Scroll to proposal form
+        const proposalForm = document.querySelector('.proposal-form');
+        if (proposalForm) {
+          proposalForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Add TTL helper UI if not already present
+        let helperDiv = document.getElementById('ttlHelper');
+        if (!helperDiv) {
+          helperDiv = document.createElement('div');
+          helperDiv.id = 'ttlHelper';
+          helperDiv.style.cssText = 'margin-bottom: 1rem; padding: 1rem; background: rgba(157, 123, 255, 0.1); border: 1px solid rgba(157, 123, 255, 0.3); border-radius: 4px;';
+          proposalForm.insertBefore(helperDiv, proposalForm.querySelector('.proposal-form-group'));
+        }
+
+        // Convert current TTL to most appropriate unit
+        let defaultValue, defaultUnit;
+        if (currentTTL % 86400 === 0 && currentTTL > 0) {
+          defaultValue = currentTTL / 86400;
+          defaultUnit = '86400';
+        } else if (currentTTL % 3600 === 0 && currentTTL > 0) {
+          defaultValue = currentTTL / 3600;
+          defaultUnit = '3600';
+        } else if (currentTTL % 60 === 0 && currentTTL > 0) {
+          defaultValue = currentTTL / 60;
+          defaultUnit = '60';
+        } else {
+          defaultValue = currentTTL;
+          defaultUnit = '1';
+        }
+
+        // Show TTL helper
+        helperDiv.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <div style="font-family: 'Cinzel', serif; font-size: 0.85rem; color: #9d7bff; letter-spacing: 0.1em;">
+              CHANGE PROPOSAL TTL
+            </div>
+            <button onclick="clearTTLHelper()" style="background: none; border: none; color: rgba(230, 217, 255, 0.6); cursor: pointer; font-size: 1.2rem; padding: 0; line-height: 1;">&times;</button>
+          </div>
+          <div style="margin-bottom: 0.75rem;">
+            <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">New Proposal TTL</label>
+            <div style="display: flex; gap: 0.5rem;">
+              <input type="number" id="ttlValue" placeholder="${defaultValue}" value="${defaultValue}"
+                     style="flex: 1; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
+              <select id="ttlUnit" style="padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;">
+                <option value="86400" ${defaultUnit === '86400' ? 'selected' : ''}>Days</option>
+                <option value="3600" ${defaultUnit === '3600' ? 'selected' : ''}>Hours</option>
+                <option value="60" ${defaultUnit === '60' ? 'selected' : ''}>Minutes</option>
+                <option value="1" ${defaultUnit === '1' ? 'selected' : ''}>Seconds</option>
+              </select>
+            </div>
+            <div style="margin-top: 0.5rem; font-size: 0.75rem; color: rgba(230, 217, 255, 0.5);">
+              Current: ${formatDuration(currentTTL)}. TTL determines how long proposals remain active before expiring.
+            </div>
+          </div>
+          <button onclick="populateTTLProposal('${daoAddress}')"
+                  onmouseover="this.style.background='rgba(157, 123, 255, 0.35)'; this.style.borderColor='#9d7bff'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(157, 123, 255, 0.3)';"
+                  onmouseout="this.style.background='rgba(157, 123, 255, 0.2)'; this.style.borderColor='rgba(157, 123, 255, 0.4)'; this.style.transform='translateY(0)'; this.style.boxShadow='none';"
+                  style="width: 100%; padding: 0.75rem; background: rgba(157, 123, 255, 0.2); border: 1px solid rgba(157, 123, 255, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.75rem; letter-spacing: 0.15em; cursor: pointer; text-transform: uppercase; transition: all 0.2s ease; font-weight: 600;">
+            Populate Proposal Form
+          </button>
+        `;
+
+        // Focus on input
+        setTimeout(() => {
+          const input = document.getElementById('ttlValue');
+          if (input) {
+            input.select();
+            input.focus();
+          }
+        }, 100);
+      }
+
+      function clearTTLHelper() {
+        const helperDiv = document.getElementById('ttlHelper');
+        if (helperDiv) helperDiv.remove();
+      }
+
+      async function populateTTLProposal(daoAddress) {
+        try {
+          const valueInput = document.getElementById('ttlValue').value.trim();
+          const unitMultiplier = parseInt(document.getElementById('ttlUnit').value);
+
+          if (!valueInput || isNaN(valueInput) || parseFloat(valueInput) < 0) {
+            showStatus('Please enter a valid positive number', true);
+            return;
+          }
+
+          const ttlSeconds = Math.floor(parseFloat(valueInput) * unitMultiplier);
+
+          // Encode setProposalTTL(uint64)
+          const calldata = INTERFACES.setProposalTTL.encodeFunctionData('setProposalTTL', [ttlSeconds]);
+
+          document.getElementById('proposalTo').value = daoAddress;
+          document.getElementById('proposalValue').value = '0';
+          document.getElementById('proposalData').value = calldata;
+          document.getElementById('proposalDescription').value = `Change proposal TTL to ${formatDuration(ttlSeconds)}`;
+
+          // Update UI hints and translations
+          updateTargetAddressHint();
+          updateCalldataTranslation();
+          updateCalldataPreview();
+
+          showStatus('Proposal form populated!', false);
+          clearTTLHelper();
+
+          // Scroll to show the populated form
+          setTimeout(() => {
+            document.getElementById('proposalDescription').scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 300);
+
+        } catch (error) {
+          console.error('Error populating TTL proposal:', error);
+          showStatus('Failed to populate form: ' + error.message, true);
+        }
+      }
+
+      // Proposal Threshold helper
+      async function prepareThresholdProposal() {
+        if (!currentDAO || !currentDAO.dao) {
+          showStatus('Please select a DAO first', true);
+          return;
+        }
+
+        const dao = currentDAO.dao;
+        const daoAddress = dao.dao;
+        const currentThreshold = BigInt(dao.gov.proposalThreshold || 0);
+        const currentThresholdFormatted = parseFloat(ethers.formatUnits(currentThreshold, 18)).toFixed(2);
+
+        // Get current total share supply (not including shares held by DAO)
+        const totalShares = BigInt(dao.supplies.sharesTotalSupply || 0);
+        const sharesHeldByDAO = BigInt(dao.supplies.sharesHeldByDAO || 0);
+        const circulatingShares = totalShares - sharesHeldByDAO;
+        const maxThreshold = parseFloat(ethers.formatUnits(circulatingShares, 18)).toFixed(2);
+
+        // Scroll to proposal form
+        const proposalForm = document.querySelector('.proposal-form');
+        if (proposalForm) {
+          proposalForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Add threshold helper UI if not already present
+        let helperDiv = document.getElementById('thresholdHelper');
+        if (!helperDiv) {
+          helperDiv = document.createElement('div');
+          helperDiv.id = 'thresholdHelper';
+          helperDiv.style.cssText = 'margin-bottom: 1rem; padding: 1rem; background: rgba(157, 123, 255, 0.1); border: 1px solid rgba(157, 123, 255, 0.3); border-radius: 4px;';
+          proposalForm.insertBefore(helperDiv, proposalForm.querySelector('.proposal-form-group'));
+        }
+
+        // Show threshold helper
+        helperDiv.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <div style="font-family: 'Cinzel', serif; font-size: 0.85rem; color: #9d7bff; letter-spacing: 0.1em;">
+              CHANGE PROPOSAL THRESHOLD
+            </div>
+            <button onclick="clearThresholdHelper()" style="background: none; border: none; color: rgba(230, 217, 255, 0.6); cursor: pointer; font-size: 1.2rem; padding: 0; line-height: 1;">&times;</button>
+          </div>
+          <div style="margin-bottom: 0.75rem;">
+            <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">New Proposal Threshold (shares)</label>
+            <input type="number" id="thresholdValue" placeholder="${currentThresholdFormatted}" value="${currentThresholdFormatted}" step="0.01" min="0" max="${maxThreshold}"
+                   style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
+            <div style="margin-top: 0.5rem; font-size: 0.75rem; color: rgba(230, 217, 255, 0.5);">
+              Current: <strong>${currentThresholdFormatted}</strong> shares. Max allowed: <strong>${maxThreshold}</strong> shares (total circulating supply).
+            </div>
+            <div style="margin-top: 0.35rem; font-size: 0.7rem; color: rgba(230, 217, 255, 0.4);">
+              💡 Minimum shares required to create proposals. Cannot exceed current share supply.
+            </div>
+          </div>
+          <button onclick="populateThresholdProposal('${daoAddress}', '${maxThreshold}')"
+                  onmouseover="this.style.background='rgba(157, 123, 255, 0.35)'; this.style.borderColor='#9d7bff'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(157, 123, 255, 0.3)';"
+                  onmouseout="this.style.background='rgba(157, 123, 255, 0.2)'; this.style.borderColor='rgba(157, 123, 255, 0.4)'; this.style.transform='translateY(0)'; this.style.boxShadow='none';"
+                  style="width: 100%; padding: 0.75rem; background: rgba(157, 123, 255, 0.2); border: 1px solid rgba(157, 123, 255, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.75rem; letter-spacing: 0.15em; cursor: pointer; text-transform: uppercase; transition: all 0.2s ease; font-weight: 600;">
+            Populate Proposal Form
+          </button>
+        `;
+
+        // Focus on input
+        setTimeout(() => {
+          const input = document.getElementById('thresholdValue');
+          if (input) {
+            input.select();
+            input.focus();
+          }
+        }, 100);
+      }
+
+      function clearThresholdHelper() {
+        const helperDiv = document.getElementById('thresholdHelper');
+        if (helperDiv) helperDiv.remove();
+      }
+
+      async function populateThresholdProposal(daoAddress, maxThresholdStr) {
+        try {
+          const thresholdInput = document.getElementById('thresholdValue').value.trim();
+          const maxThreshold = parseFloat(maxThresholdStr);
+
+          if (!thresholdInput || isNaN(thresholdInput) || parseFloat(thresholdInput) < 0) {
+            showStatus('Please enter a valid positive number', true);
+            return;
+          }
+
+          const thresholdValue = parseFloat(thresholdInput);
+
+          // Validate against max supply
+          if (thresholdValue > maxThreshold) {
+            showStatus(`Threshold cannot exceed total share supply (${maxThreshold} shares)`, true);
+            return;
+          }
+
+          // Convert to wei (uint96)
+          const thresholdWei = ethers.parseUnits(thresholdValue.toString(), 18);
+
+          // Encode setProposalThreshold(uint96)
+          const calldata = INTERFACES.setProposalThreshold.encodeFunctionData('setProposalThreshold', [thresholdWei]);
+
+          document.getElementById('proposalTo').value = daoAddress;
+          document.getElementById('proposalValue').value = '0';
+          document.getElementById('proposalData').value = calldata;
+          document.getElementById('proposalDescription').value = `Change proposal threshold to ${thresholdValue} shares`;
+
+          // Update UI hints and translations
+          updateTargetAddressHint();
+          updateCalldataTranslation();
+          updateCalldataPreview();
+
+          showStatus('Proposal form populated!', false);
+          clearThresholdHelper();
+
+          // Scroll to show the populated form
+          setTimeout(() => {
+            document.getElementById('proposalDescription').scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 300);
+
+        } catch (error) {
+          console.error('Error populating threshold proposal:', error);
           showStatus('Failed to populate form: ' + error.message, true);
         }
       }
@@ -14321,6 +14708,30 @@
             translation = `
               <div style="opacity: 0.8; margin-bottom: 0.35rem; font-size: 0.8rem;">Toggle Ragequit</div>
               <div><strong>${status}</strong> ragequit functionality</div>
+              <div style="margin-top: 0.25rem; font-size: 0.75rem; opacity: 0.7;">DAO self-call (governance)</div>
+            `;
+          }
+          // setProposalTTL(uint64) - 0xff391467
+          else if (isDaoSelfCall && functionSelector === '0xff391467' && calldata.length >= 74) {
+            const decoded = abiCoder.decode(['uint64'], '0x' + calldata.slice(10));
+            const ttlSeconds = Number(decoded[0]);
+            const ttlFormatted = formatDuration(ttlSeconds);
+
+            translation = `
+              <div style="opacity: 0.8; margin-bottom: 0.35rem; font-size: 0.8rem;">Change Proposal TTL</div>
+              <div>Set proposal expiration to: <strong>${ttlFormatted}</strong></div>
+              <div style="margin-top: 0.25rem; font-size: 0.75rem; opacity: 0.7;">DAO self-call (governance)</div>
+            `;
+          }
+          // setProposalThreshold(uint96) - 0x80ca42a1
+          else if (isDaoSelfCall && functionSelector === '0x80ca42a1' && calldata.length >= 74) {
+            const decoded = abiCoder.decode(['uint96'], '0x' + calldata.slice(10));
+            const thresholdWei = decoded[0];
+            const thresholdFormatted = parseFloat(ethers.formatUnits(thresholdWei, 18)).toFixed(2);
+
+            translation = `
+              <div style="opacity: 0.8; margin-bottom: 0.35rem; font-size: 0.8rem;">Change Proposal Threshold</div>
+              <div>Set minimum shares to: <strong>${thresholdFormatted}</strong></div>
               <div style="margin-top: 0.25rem; font-size: 0.75rem; opacity: 0.7;">DAO self-call (governance)</div>
             `;
           }
