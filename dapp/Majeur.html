@@ -7687,6 +7687,22 @@
               <div id="splitDelegateSection" style="display: none;">
                 <div id="delegateInputs"></div>
                 <button class="add-delegate-btn" onclick="addDelegateInput()" id="addDelegateBtn">+ Add Delegate</button>
+                <div id="delegationTotalDisplay" style="margin-top: 1rem; padding: 0.75rem; background: rgba(157, 123, 255, 0.1); border-radius: 4px; font-family: 'EB Garamond', serif;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <span style="color: rgba(230, 217, 255, 0.8);">Total Delegated:</span>
+                    <span id="totalDelegatedPercent" style="color: #9d7bff; font-weight: 600; font-size: 1.1rem;">0.00%</span>
+                  </div>
+                  <div id="selfDelegationInfo" style="display: flex; justify-content: space-between; align-items: center; padding-top: 0.5rem; border-top: 1px solid rgba(157, 123, 255, 0.2);">
+                    <span style="color: rgba(230, 217, 255, 0.6); font-size: 0.9rem;">Remaining (self):</span>
+                    <span id="selfDelegatedPercent" style="color: #66ff66; font-weight: 600;">100.00%</span>
+                  </div>
+                  <div id="delegationWarning" style="display: none; margin-top: 0.5rem; padding: 0.5rem; background: rgba(255, 107, 107, 0.15); border: 1px solid rgba(255, 107, 107, 0.3); border-radius: 4px; color: #ff6b6b; font-size: 0.85rem; text-align: center;">
+                    ⚠️ Total exceeds 100%
+                  </div>
+                  <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(157, 123, 255, 0.2); font-size: 0.75rem; color: rgba(230, 217, 255, 0.5); font-style: italic;">
+                    💡 If total is less than 100%, the remaining % will be self-delegated
+                  </div>
+                </div>
               </div>
 
               <div class="delegation-actions">
@@ -15026,22 +15042,32 @@
           return;
         }
 
-        const confirmed = confirm(
-          '⚠️ EMERGENCY ACTION CONFIRMATION\n\n' +
-          'You are about to execute bumpConfig(), which will:\n\n' +
-          '• Invalidate ALL pending proposals\n' +
-          '• Invalidate ALL existing permits\n' +
-          '• Reset the governance state\n\n' +
-          'This action is IRREVERSIBLE.\n\n' +
-          'Are you absolutely sure you want to proceed?'
-        );
-
-        if (!confirmed) return;
-
         try {
+          // Check if user holds the permit before attempting to spend
+          const molochContract = new ethers.Contract(currentDAO.dao.dao, MOLOCH_ABI, signer);
+          const userAddress = await signer.getAddress();
+          const permitBalance = await molochContract.balanceOf(userAddress, permitIdStr);
+
+          if (permitBalance === 0n || permitBalance === 0) {
+            showStatus('You do not hold this emergency permit. Cannot execute.', true);
+            return;
+          }
+
+          const confirmed = confirm(
+            '⚠️ EMERGENCY ACTION CONFIRMATION\n\n' +
+            'You are about to execute bumpConfig(), which will:\n\n' +
+            '• Invalidate ALL pending proposals\n' +
+            '• Invalidate ALL existing permits\n' +
+            '• Reset the governance state\n\n' +
+            'This action is IRREVERSIBLE.\n\n' +
+            `You have ${permitBalance} permit(s) remaining.\n\n` +
+            'Are you absolutely sure you want to proceed?'
+          );
+
+          if (!confirmed) return;
+
           showStatus('Executing emergency permit...', false);
 
-          const molochContract = new ethers.Contract(currentDAO.dao.dao, MOLOCH_ABI, signer);
           const bumpConfigCalldata = INTERFACES.bumpConfig.encodeFunctionData('bumpConfig', []);
           const emergencyNonce = ethers.id("EMERGENCY_CONFIG_BUMP");
 
@@ -15404,6 +15430,7 @@
         const container = document.getElementById('delegateInputs');
         container.innerHTML = '';
         addDelegateInput(); // Start with one input
+        updateDelegationTotal(); // Initialize the total display
       }
 
       // Add a delegate input row
@@ -15440,6 +15467,7 @@
               max="100"
               step="0.01"
               data-input-id="${inputId}"
+              oninput="updateDelegationTotal()"
             />
           </div>
           ${currentCount > 0 ? '<button class="remove-delegate-btn" onclick="removeDelegateInput(this)">✕</button>' : ''}
@@ -15447,6 +15475,7 @@
 
         container.appendChild(row);
         updateAddDelegateButton();
+        updateDelegationTotal();
       }
 
       // Remove a delegate input row
@@ -15454,6 +15483,69 @@
         const row = button.closest('.delegate-input-row');
         row.remove();
         updateAddDelegateButton();
+        updateDelegationTotal();
+      }
+
+      // Update delegation total percentage display
+      function updateDelegationTotal() {
+        const weightInputs = document.querySelectorAll('.delegate-weight');
+        let total = 0;
+
+        // Validate and cap individual inputs
+        weightInputs.forEach(input => {
+          let value = parseFloat(input.value) || 0;
+
+          // Cap individual values at 100%
+          if (value > 100) {
+            value = 100;
+            input.value = '100';
+          }
+
+          // Ensure non-negative
+          if (value < 0) {
+            value = 0;
+            input.value = '0';
+          }
+
+          total += value;
+        });
+
+        const totalDisplay = document.getElementById('totalDelegatedPercent');
+        const selfDisplay = document.getElementById('selfDelegatedPercent');
+        const warningDisplay = document.getElementById('delegationWarning');
+
+        if (totalDisplay) {
+          totalDisplay.textContent = total.toFixed(2) + '%';
+
+          // Color code based on validity
+          if (total > 100) {
+            totalDisplay.style.color = '#ff6b6b'; // Red if over 100%
+          } else if (total === 100) {
+            totalDisplay.style.color = '#66ff66'; // Green if exactly 100%
+          } else {
+            totalDisplay.style.color = '#9d7bff'; // Purple if under 100%
+          }
+        }
+
+        // Show/hide warning if over 100%
+        if (warningDisplay) {
+          warningDisplay.style.display = total > 100 ? 'block' : 'none';
+        }
+
+        if (selfDisplay) {
+          const remaining = Math.max(0, 100 - total);
+          selfDisplay.textContent = remaining.toFixed(2) + '%';
+
+          // Show/hide self delegation info based on whether there's a remainder
+          const selfInfo = document.getElementById('selfDelegationInfo');
+          if (selfInfo) {
+            if (remaining > 0 && total <= 100) {
+              selfInfo.style.display = 'flex';
+            } else {
+              selfInfo.style.display = 'none';
+            }
+          }
+        }
       }
 
       // Update add delegate button state
@@ -15579,15 +15671,41 @@
               })
             );
 
-            // Validate total weight is 100%
+            // Validate total weight
             const totalWeight = weightInputs.reduce((sum, w) => sum + w, 0);
-            if (Math.abs(totalWeight - 100) > 0.01) {
-              showStatus(`Total weight must equal 100% (currently ${totalWeight.toFixed(2)}%)`, true);
+
+            if (totalWeight > 100) {
+              showStatus(`Total weight cannot exceed 100% (currently ${totalWeight.toFixed(2)}%)`, true);
               return;
             }
 
+            // If total is less than 100%, add self-delegation for the remainder
+            let finalAddresses = [...addresses];
+            let finalWeights = [...weightInputs];
+
+            if (totalWeight < 100) {
+              const remaining = 100 - totalWeight;
+
+              // Confirm with user about auto-adding self delegation
+              const confirmSelf = confirm(
+                `Your delegation totals ${totalWeight.toFixed(2)}%.\n\n` +
+                `The remaining ${remaining.toFixed(2)}% will be automatically delegated to yourself.\n\n` +
+                `Continue?`
+              );
+
+              if (!confirmSelf) {
+                return;
+              }
+
+              // Add user's own address with remaining percentage
+              finalAddresses.push(connectedAddress);
+              finalWeights.push(remaining);
+
+              showStatus(`Auto-adding ${remaining.toFixed(2)}% self-delegation...`, false);
+            }
+
             // Convert percentages to basis points (10000 = 100%)
-            const bps = weightInputs.map(w => Math.round(w * 100));
+            const bps = finalWeights.map(w => Math.round(w * 100));
 
             // Adjust for rounding errors - ensure sum is exactly 10000
             const bpsSum = bps.reduce((a, b) => a + b, 0);
@@ -15597,7 +15715,7 @@
 
             // Call setSplitDelegation
             showStatus('Submitting split delegation transaction...', false);
-            const tx = await sharesContract.setSplitDelegation(addresses, bps);
+            const tx = await sharesContract.setSplitDelegation(finalAddresses, bps);
             showStatus('Transaction submitted! Waiting for confirmation...', false);
             await tx.wait();
             showStatus('Split delegation updated successfully!', false);
@@ -15963,7 +16081,7 @@
               : '0.00';
 
             memberDiv.innerHTML = `
-              <div class="member-address">
+              <div class="member-address" style="cursor: pointer;" onclick="showMemberCollectiblesModal('${memberAddress}', '${member.ensName || memberAddress}')">
                 ${member.ensName ? `<div class="member-ens">${member.ensName}</div>` : ''}
                 <div class="member-address-hex">${memberAddress.slice(0, 10)}...${memberAddress.slice(-8)}</div>
               </div>
@@ -15983,7 +16101,7 @@
                 <div class="member-label">Ownership</div>
                 <div class="member-value">${ownershipPercent}%</div>
               </div>
-              <a href="https://etherscan.io/address/${memberAddress}" target="_blank" rel="noopener noreferrer" class="member-link" title="View on Etherscan">
+              <a href="https://etherscan.io/address/${memberAddress}" target="_blank" rel="noopener noreferrer" class="member-link" title="View on Etherscan" onclick="event.stopPropagation();">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
                   <polyline points="15 3 21 3 21 9"></polyline>
@@ -15997,6 +16115,245 @@
         } catch (error) {
           console.error('Error rendering members:', error);
           membersList.innerHTML = `<p style="text-align: center; color: #ff6b6b; padding: 2rem;">Error rendering members: ${escapeHtml(error.message)}<br><small>Check console for details</small></p>`;
+        }
+      }
+
+      // Show member collectibles modal
+      async function showMemberCollectiblesModal(memberAddress, displayName) {
+        if (!currentDAO) return;
+
+        const modal = document.getElementById('nftModal');
+        const modalContent = document.getElementById('nftModalContent');
+
+        // Show loading state
+        modalContent.innerHTML = `
+          <div style="text-align: center; padding: 3rem;">
+            <div style="font-family: 'Cinzel', serif; font-size: 1.5rem; color: #9d7bff; letter-spacing: 0.1em; margin-bottom: 1rem;">
+              Loading Collectibles...
+            </div>
+            <div style="font-size: 0.9rem; color: rgba(230, 217, 255, 0.6);">
+              ${displayName}
+            </div>
+          </div>
+        `;
+        modal.style.display = 'flex';
+
+        try {
+          const molochContract = new ethers.Contract(currentDAO.dao.dao, MOLOCH_ABI, provider);
+          const collectibles = [];
+
+          // Check for vote receipts
+          for (const proposal of currentDAO.dao.proposals) {
+            const voterData = proposal.voters?.find(v => v.voter?.toLowerCase() === memberAddress.toLowerCase());
+            if (voterData) {
+              const support = Number(voterData.support);
+              const receiptId = ethers.solidityPackedKeccak256(
+                ['string', 'uint256', 'uint8'],
+                ['Moloch:receipt', proposal.id, support]
+              );
+
+              const balance = await molochContract.balanceOf(memberAddress, receiptId);
+              if (balance > 0n) {
+                collectibles.push({
+                  type: 'receipt',
+                  proposalId: proposal.id,
+                  support,
+                  balance,
+                  receiptId
+                });
+              }
+            }
+          }
+
+          // Check for emergency permits
+          try {
+            const bumpConfigCalldata = INTERFACES.bumpConfig.encodeFunctionData('bumpConfig', []);
+            const emergencyNonce = ethers.id("EMERGENCY_CONFIG_BUMP");
+            const config = await molochContract.config();
+            const permitId = computeProposalId(currentDAO.dao.dao, 0, currentDAO.dao.dao, 0, bumpConfigCalldata, emergencyNonce, config);
+
+            const permitBalance = await molochContract.balanceOf(memberAddress, permitId);
+            if (permitBalance > 0n) {
+              collectibles.push({
+                type: 'emergency_permit',
+                permitId,
+                balance: permitBalance
+              });
+            }
+          } catch (permitError) {
+            console.error('Error checking emergency permit:', permitError);
+          }
+
+          // Render collectibles
+          if (collectibles.length === 0) {
+            modalContent.innerHTML = `
+              <div style="text-align: center; padding: 3rem;">
+                <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;">📦</div>
+                <div style="font-family: 'Cinzel', serif; font-size: 1.2rem; color: #9d7bff; letter-spacing: 0.1em; margin-bottom: 0.5rem;">
+                  NO COLLECTIBLES
+                </div>
+                <div style="font-size: 0.9rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 1.5rem;">
+                  ${displayName}
+                </div>
+                <button onclick="closeNFTModal()" style="padding: 0.75rem 1.5rem; background: rgba(157, 123, 255, 0.2); border: 1px solid rgba(157, 123, 255, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.85rem; cursor: pointer; border-radius: 4px;">
+                  Close
+                </button>
+              </div>
+            `;
+            return;
+          }
+
+          const supportLabels = ['Against', 'For', 'Abstain'];
+          const supportColors = ['#ff6b6b', '#66ff66', '#9d7bff'];
+
+          let collectiblesHTML = '';
+
+          // Fetch metadata for all collectibles
+          for (const item of collectibles) {
+            if (item.type === 'receipt') {
+              try {
+                const tokenURI = await molochContract.tokenURI(item.receiptId);
+                let metadata;
+                if (tokenURI.startsWith('data:application/json;base64,')) {
+                  const json = atob(tokenURI.slice(29));
+                  metadata = JSON.parse(json);
+                } else if (tokenURI.startsWith('data:application/json,')) {
+                  metadata = JSON.parse(decodeURIComponent(tokenURI.slice(22)));
+                } else {
+                  const response = await fetch(tokenURI);
+                  metadata = await response.json();
+                }
+
+                const balanceFormatted = ethers.formatUnits(item.balance, 18);
+                const supportLabel = supportLabels[item.support];
+                const supportColor = supportColors[item.support];
+
+                let imageHTML = '';
+                if (metadata.image) {
+                  imageHTML = `<img src="${metadata.image}" style="width: 100%; border-radius: 8px; margin-bottom: 1rem;" alt="Receipt" />`;
+                }
+
+                collectiblesHTML += `
+                  <div style="background: rgba(157, 123, 255, 0.1); border: 1px solid rgba(157, 123, 255, 0.3); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                    ${imageHTML}
+                    <div style="font-family: 'Cinzel', serif; font-size: 0.75rem; color: #9d7bff; letter-spacing: 0.1em; margin-bottom: 0.5rem;">
+                      VOTE RECEIPT
+                    </div>
+                    <div style="font-size: 0.95rem; color: #e6d9ff; margin-bottom: 0.5rem;">
+                      ${metadata.name || 'Vote Receipt'}
+                    </div>
+                    <div style="font-size: 0.85rem; color: rgba(230, 217, 255, 0.7); margin-bottom: 0.5rem;">
+                      Proposal #${item.proposalId.toString().slice(0, 8)}...
+                    </div>
+                    <div style="font-size: 0.85rem; color: ${supportColor}; margin-bottom: 0.5rem;">
+                      Voted ${supportLabel}
+                    </div>
+                    <div style="font-size: 0.85rem; color: rgba(230, 217, 255, 0.7);">
+                      Balance: ${parseFloat(balanceFormatted).toFixed(4)} receipts
+                    </div>
+                  </div>
+                `;
+              } catch (metadataError) {
+                console.error('Error fetching receipt metadata:', metadataError);
+              }
+            } else if (item.type === 'emergency_permit') {
+              try {
+                const tokenURI = await molochContract.tokenURI(item.permitId);
+                let metadata = null;
+                if (tokenURI.startsWith('data:application/json;base64,')) {
+                  const json = atob(tokenURI.slice(29));
+                  metadata = JSON.parse(json);
+                } else if (tokenURI.startsWith('data:application/json,')) {
+                  metadata = JSON.parse(decodeURIComponent(tokenURI.slice(22)));
+                } else {
+                  const response = await fetch(tokenURI);
+                  metadata = await response.json();
+                }
+
+                const usesText = Number(item.balance) === 1 ? '1 use' : `${Number(item.balance)} uses`;
+
+                let imageHTML = '';
+                if (metadata?.image) {
+                  imageHTML = `<img src="${metadata.image}" style="width: 100%; border-radius: 8px; margin-bottom: 1rem;" alt="Emergency Permit" />`;
+                }
+
+                // Decode the permitData to show what action this permit can execute
+                const bumpConfigCalldata = INTERFACES.bumpConfig.encodeFunctionData('bumpConfig', []);
+                let actionDescription = 'Execute bumpConfig() - Resets governance state';
+
+                // Check if permitData contains spendPermit (0xa8841366)
+                if (bumpConfigCalldata.startsWith('0x7ec924db')) {
+                  actionDescription = '⚡ <strong>Use Permit:</strong> Execute config bump (invalidates all proposals & permits)';
+                }
+
+                collectiblesHTML += `
+                  <div style="background: linear-gradient(135deg, rgba(255, 100, 100, 0.15) 0%, rgba(255, 123, 157, 0.1) 100%); border: 1px solid rgba(255, 123, 157, 0.4); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                    ${imageHTML}
+                    <div style="font-family: 'Cinzel', serif; font-size: 0.75rem; color: #ff7b9d; letter-spacing: 0.1em; margin-bottom: 0.5rem;">
+                      EMERGENCY PERMIT
+                    </div>
+                    <div style="font-size: 0.95rem; color: #e6d9ff; margin-bottom: 0.5rem;">
+                      ${metadata?.name || 'Config Bump Authority'}
+                    </div>
+                    <div style="font-size: 0.85rem; color: rgba(230, 217, 255, 0.7); margin-bottom: 0.75rem; line-height: 1.4;">
+                      ${metadata?.description || 'Emergency power to reset governance state by incrementing config counter.'}
+                    </div>
+                    <div style="background: rgba(255, 100, 100, 0.2); padding: 0.5rem 0.75rem; border-radius: 4px; font-size: 0.8rem; color: rgba(230, 217, 255, 0.9); margin-bottom: 0.5rem;">
+                      ${actionDescription}
+                    </div>
+                    <div style="background: rgba(255, 100, 100, 0.3); display: inline-block; padding: 0.35rem 0.75rem; border-radius: 12px; font-size: 0.8rem; color: #ff6b6b; font-weight: 600;">
+                      ${usesText}
+                    </div>
+                  </div>
+                `;
+              } catch (metadataError) {
+                console.error('Error fetching permit metadata:', metadataError);
+              }
+            }
+          }
+
+          modalContent.innerHTML = `
+            <div style="max-width: 600px; margin: 0 auto;">
+              <div style="text-align: center; margin-bottom: 1.5rem;">
+                <div style="font-family: 'Cinzel', serif; font-size: 1.5rem; color: #9d7bff; letter-spacing: 0.1em; margin-bottom: 0.5rem;">
+                  COLLECTIBLES
+                </div>
+                <div style="font-size: 0.95rem; color: rgba(230, 217, 255, 0.7); margin-bottom: 0.5rem;">
+                  ${displayName}
+                </div>
+                <div style="font-family: 'Courier New', monospace; font-size: 0.75rem; color: rgba(230, 217, 255, 0.5);">
+                  ${memberAddress.slice(0, 10)}...${memberAddress.slice(-8)}
+                </div>
+              </div>
+
+              <div style="max-height: 500px; overflow-y: auto; margin-bottom: 1.5rem;">
+                ${collectiblesHTML}
+              </div>
+
+              <div style="text-align: center;">
+                <button onclick="closeNFTModal()" style="padding: 0.75rem 1.5rem; background: rgba(157, 123, 255, 0.2); border: 1px solid rgba(157, 123, 255, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.85rem; cursor: pointer; border-radius: 4px; transition: all 0.2s ease;">
+                  Close
+                </button>
+              </div>
+            </div>
+          `;
+
+        } catch (error) {
+          console.error('Error loading member collectibles:', error);
+          modalContent.innerHTML = `
+            <div style="text-align: center; padding: 3rem;">
+              <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;">⚠️</div>
+              <div style="font-family: 'Cinzel', serif; font-size: 1.2rem; color: #ff6b6b; letter-spacing: 0.1em; margin-bottom: 0.5rem;">
+                ERROR LOADING COLLECTIBLES
+              </div>
+              <div style="font-size: 0.85rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 1.5rem;">
+                ${error.message}
+              </div>
+              <button onclick="closeNFTModal()" style="padding: 0.75rem 1.5rem; background: rgba(157, 123, 255, 0.2); border: 1px solid rgba(157, 123, 255, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.85rem; cursor: pointer; border-radius: 4px;">
+                Close
+              </button>
+            </div>
+          `;
         }
       }
 
