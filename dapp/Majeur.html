@@ -9108,7 +9108,9 @@
         setProposalThreshold: new ethers.Interface(['function setProposalThreshold(uint96)']),
         setTransfersLocked: new ethers.Interface(['function setTransfersLocked(bool,bool)']),
         setAutoFutarchy: new ethers.Interface(['function setAutoFutarchy(uint256,uint256)']),
-        setRenderer: new ethers.Interface(['function setRenderer(address)'])
+        setRenderer: new ethers.Interface(['function setRenderer(address)']),
+        setPermit: new ethers.Interface(['function setPermit(uint8,address,uint256,bytes,bytes32,address,uint256)']),
+        bumpConfig: new ethers.Interface(['function bumpConfig()'])
       };
 
       // Helper to create minimal proxy init code
@@ -11226,7 +11228,7 @@
 
         // Calculate quorum percentage
         const quorumBps = Number(gov.quorumBps);
-        const quorumPercent = (quorumBps / 100).toFixed(1);
+        const quorumPercent = (quorumBps / 100).toFixed(2);
 
         // Format ragequittable
         const ragequittable = gov.ragequittable ? 'Enabled' : 'Disabled';
@@ -11426,6 +11428,23 @@
                   <line x1="10" y1="14" x2="21" y2="3"></line>
                 </svg>
               </a>
+            </div>
+          </div>
+          <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(157, 123, 255, 0.2);">
+            <div style="font-size: 0.7rem; color: rgba(255, 123, 157, 0.7); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.35rem;">
+              Emergency Permits
+              <a href="#" onclick="event.preventDefault(); prepareEmergencyPermitProposal(); switchDaoView('dao');"
+                 title="Grant or revoke emergency config bump permits"
+                 style="color: #ff7b9d; opacity: 0.5; line-height: 1;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="16"></line>
+                  <line x1="8" y1="12" x2="16" y2="12"></line>
+                </svg>
+              </a>
+            </div>
+            <div style="font-size: 0.85rem; color: rgba(230, 217, 255, 0.6);">
+              Config bump permits (see member collectibles)
             </div>
           </div>
         `;
@@ -11724,6 +11743,7 @@
         clearThresholdHelper();
         clearRagequitHelper();
         clearTransferabilityHelper();
+        clearEmergencyPermitHelper();
         clearSaleHelper();
 
         // Scroll to proposal form
@@ -11990,6 +12010,7 @@
         clearThresholdHelper();
         clearRagequitHelper();
         clearTransferabilityHelper();
+        clearEmergencyPermitHelper();
         clearSaleHelper();
 
         // Scroll to proposal form
@@ -12679,7 +12700,7 @@
 
         const dao = currentDAO.dao;
         const daoAddress = dao.dao;
-        const currentQuorum = Number(dao.gov.quorumBps) / 100;
+        const currentQuorum = (Number(dao.gov.quorumBps) / 100).toFixed(2);
 
         // Scroll to proposal form
         const proposalForm = document.querySelector('.proposal-form');
@@ -13482,6 +13503,170 @@
 
         } catch (error) {
           console.error('Error populating transferability proposal:', error);
+          showStatus('Failed to populate form: ' + error.message, true);
+        }
+      }
+
+      // Emergency Permit (Config Bump) proposal helper
+      async function prepareEmergencyPermitProposal() {
+        if (!currentDAO || !currentDAO.dao) {
+          showStatus('Please select a DAO first', true);
+          return;
+        }
+
+        const dao = currentDAO.dao;
+        const daoAddress = dao.dao;
+
+        // Scroll to proposal form
+        const proposalForm = document.querySelector('.proposal-form');
+        if (proposalForm) {
+          proposalForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Add emergency permit helper UI if not already present
+        let helperDiv = document.getElementById('emergencyPermitHelper');
+        if (!helperDiv) {
+          helperDiv = document.createElement('div');
+          helperDiv.id = 'emergencyPermitHelper';
+          helperDiv.style.cssText = 'margin-bottom: 1rem; padding: 1rem; background: rgba(255, 123, 157, 0.1); border: 1px solid rgba(255, 123, 157, 0.3); border-radius: 4px;';
+          proposalForm.insertBefore(helperDiv, proposalForm.querySelector('.proposal-form-group'));
+        }
+
+        // Calculate the emergency permit ID
+        const bumpConfigCalldata = INTERFACES.bumpConfig.encodeFunctionData('bumpConfig', []);
+        const emergencyNonce = ethers.id("EMERGENCY_CONFIG_BUMP"); // Consistent nonce for this permit type
+        const config = await (new ethers.Contract(daoAddress, MOLOCH_ABI, provider)).config();
+        const permitId = computeProposalId(daoAddress, 0, daoAddress, 0, bumpConfigCalldata, emergencyNonce, config);
+
+        // Check current permit balance for connected user
+        let currentBalance = 0;
+        let currentHolderAddress = '';
+        if (signer) {
+          const userAddress = await signer.getAddress();
+          currentHolderAddress = userAddress;
+          try {
+            const molochContract = new ethers.Contract(daoAddress, MOLOCH_ABI, provider);
+            currentBalance = Number(await molochContract.balanceOf(userAddress, permitId));
+          } catch (e) {
+            console.error('Error fetching permit balance:', e);
+          }
+        }
+
+        // Show emergency permit helper
+        helperDiv.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <div style="font-family: 'Cinzel', serif; font-size: 0.85rem; color: #ff7b9d; letter-spacing: 0.1em;">
+              EMERGENCY PERMIT (CONFIG BUMP)
+            </div>
+            <button onclick="clearEmergencyPermitHelper()" style="background: none; border: none; color: rgba(230, 217, 255, 0.6); cursor: pointer; font-size: 1.2rem; padding: 0; line-height: 1;">&times;</button>
+          </div>
+          <div style="margin-bottom: 0.75rem; padding: 0.75rem; background: rgba(255, 100, 100, 0.1); border-radius: 4px;">
+            <div style="font-size: 0.85rem; color: rgba(230, 217, 255, 0.8); margin-bottom: 0.5rem;">
+              <strong>⚠️ Emergency Power:</strong> Config Bump
+            </div>
+            <div style="font-size: 0.8rem; color: rgba(230, 217, 255, 0.7); line-height: 1.4;">
+              This permit allows instant execution of <code>bumpConfig()</code>, which increments the config counter and <strong>invalidates all pending proposals and permits</strong>. Use this as a last resort to reset governance state in emergencies.
+            </div>
+            ${currentBalance > 0 ? `
+              <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #ff7b9d;">
+                You currently hold: <strong>${currentBalance}</strong> use${currentBalance !== 1 ? 's' : ''}
+              </div>
+            ` : ''}
+          </div>
+          <div style="margin-bottom: 0.75rem;">
+            <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Recipient Address</label>
+            <input type="text" id="emergencyPermitRecipient" placeholder="${currentHolderAddress || '0x...'}" value="${currentHolderAddress}"
+                   style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 123, 157, 0.3); color: #e6d9ff; font-family: 'Courier New', monospace; font-size: 0.85rem;" />
+          </div>
+          <div style="margin-bottom: 0.75rem;">
+            <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Number of Uses</label>
+            <input type="number" id="emergencyPermitCount" placeholder="1" value="${currentBalance > 0 ? currentBalance : 1}" min="0" step="1"
+                   style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 123, 157, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
+            <div style="margin-top: 0.5rem; font-size: 0.75rem; color: rgba(230, 217, 255, 0.5);">
+              Set to <strong>0</strong> to revoke all permits, or increase to add more uses. Each use allows one config bump.
+            </div>
+          </div>
+          <button onclick="populateEmergencyPermitProposal('${daoAddress}', '${permitId.toString()}', '${bumpConfigCalldata}', '${emergencyNonce}')"
+                  onmouseover="this.style.background='rgba(255, 123, 157, 0.35)'; this.style.borderColor='#ff7b9d'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(255, 123, 157, 0.3)';"
+                  onmouseout="this.style.background='rgba(255, 123, 157, 0.2)'; this.style.borderColor='rgba(255, 123, 157, 0.4)'; this.style.transform='translateY(0)'; this.style.boxShadow='none';"
+                  style="width: 100%; padding: 0.75rem; background: rgba(255, 123, 157, 0.2); border: 1px solid rgba(255, 123, 157, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.75rem; letter-spacing: 0.15em; cursor: pointer; text-transform: uppercase; transition: all 0.2s ease; font-weight: 600;">
+            Populate Proposal Form
+          </button>
+        `;
+
+        // Focus on count input
+        setTimeout(() => {
+          const input = document.getElementById('emergencyPermitCount');
+          if (input) {
+            input.select();
+            input.focus();
+          }
+        }, 100);
+      }
+
+      function clearEmergencyPermitHelper() {
+        const helperDiv = document.getElementById('emergencyPermitHelper');
+        if (helperDiv) helperDiv.remove();
+      }
+
+      async function populateEmergencyPermitProposal(daoAddress, permitId, bumpConfigCalldata, emergencyNonce) {
+        try {
+          const recipientInput = document.getElementById('emergencyPermitRecipient').value.trim();
+          const countInput = document.getElementById('emergencyPermitCount').value.trim();
+
+          if (!recipientInput) {
+            showStatus('Please enter a recipient address', true);
+            return;
+          }
+
+          // Resolve ENS if needed
+          const recipientAddress = await resolveENS(recipientInput);
+          if (!ethers.isAddress(recipientAddress)) {
+            showStatus('Please enter a valid Ethereum address or ENS name', true);
+            return;
+          }
+
+          if (countInput === '' || isNaN(countInput) || parseInt(countInput) < 0) {
+            showStatus('Please enter a valid number of uses (0 or more)', true);
+            return;
+          }
+
+          const count = parseInt(countInput);
+
+          // Encode setPermit(uint8 op, address to, uint256 value, bytes data, bytes32 nonce, address spender, uint256 count)
+          const calldata = INTERFACES.setPermit.encodeFunctionData('setPermit', [
+            0, // op = call
+            daoAddress, // to = self (for bumpConfig)
+            0, // value = 0
+            bumpConfigCalldata, // data = bumpConfig() calldata
+            emergencyNonce, // nonce = consistent emergency nonce
+            recipientAddress, // spender = recipient
+            count // count = number of uses
+          ]);
+
+          const action = count === 0 ? 'Revoke' : (count === 1 ? 'Grant' : `Grant ${count}`);
+          const description = `${action} emergency config bump permit${count !== 1 ? 's' : ''} to ${recipientAddress.slice(0, 6)}...${recipientAddress.slice(-4)}`;
+
+          document.getElementById('proposalTo').value = daoAddress;
+          document.getElementById('proposalValue').value = '0';
+          document.getElementById('proposalData').value = calldata;
+          document.getElementById('proposalDescription').value = description;
+
+          // Update UI hints and translations
+          updateTargetAddressHint();
+          updateCalldataTranslation();
+          updateCalldataPreview();
+
+          showStatus('Proposal form populated!', false);
+          clearEmergencyPermitHelper();
+
+          // Scroll to show the populated form
+          setTimeout(() => {
+            document.getElementById('proposalDescription').scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 300);
+
+        } catch (error) {
+          console.error('Error populating emergency permit proposal:', error);
           showStatus('Failed to populate form: ' + error.message, true);
         }
       }
@@ -14671,6 +14856,216 @@
             console.error('Error rendering receipt:', renderError);
           }
         });
+
+        // Check for emergency permits
+        try {
+          const bumpConfigCalldata = INTERFACES.bumpConfig.encodeFunctionData('bumpConfig', []);
+          const emergencyNonce = ethers.id("EMERGENCY_CONFIG_BUMP");
+          const config = await molochContract.config();
+          const permitId = computeProposalId(currentDAO.dao.dao, 0, currentDAO.dao.dao, 0, bumpConfigCalldata, emergencyNonce, config);
+
+          const permitBalance = await molochContract.balanceOf(connectedAddress, permitId);
+
+          if (permitBalance > 0n) {
+            // Fetch tokenURI for emergency permit
+            let permitMetadata = null;
+            try {
+              const tokenURI = await molochContract.tokenURI(permitId);
+
+              // Parse metadata (could be data URI or IPFS)
+              if (tokenURI.startsWith('data:application/json;base64,')) {
+                const json = atob(tokenURI.slice(29));
+                permitMetadata = JSON.parse(json);
+              } else if (tokenURI.startsWith('data:application/json,')) {
+                permitMetadata = JSON.parse(decodeURIComponent(tokenURI.slice(22)));
+              } else {
+                // Fetch from URL
+                const response = await fetch(tokenURI);
+                permitMetadata = await response.json();
+              }
+            } catch (tokenURIError) {
+              console.error('Error fetching emergency permit tokenURI:', tokenURIError);
+              // Continue with fallback UI
+            }
+
+            // Create emergency permit card
+            const permitCard = document.createElement('div');
+            permitCard.className = 'receipt-card';
+            permitCard.style.cssText = 'background: linear-gradient(135deg, rgba(255, 100, 100, 0.15) 0%, rgba(255, 123, 157, 0.1) 100%); border: 1px solid rgba(255, 123, 157, 0.4); cursor: pointer; transition: all 0.2s ease;';
+
+            const usesText = Number(permitBalance) === 1 ? '1 use' : `${Number(permitBalance)} uses`;
+
+            // Build image HTML from metadata if available
+            let imageHTML = '';
+            if (permitMetadata?.image) {
+              imageHTML = `<img src="${permitMetadata.image}" class="receipt-image" alt="Emergency Permit" style="width: 100%; border-radius: 4px; margin-bottom: 0.75rem;" />`;
+            }
+
+            permitCard.innerHTML = `
+              ${imageHTML}
+              <div style="padding: ${imageHTML ? '0 1rem 1rem 1rem' : '1rem'};">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                  <div style="font-family: 'Cinzel', serif; font-size: 0.75rem; color: #ff7b9d; letter-spacing: 0.1em;">
+                    EMERGENCY PERMIT
+                  </div>
+                  <div style="background: rgba(255, 100, 100, 0.3); padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.7rem; color: #ff6b6b; font-weight: 600;">
+                    ${usesText}
+                  </div>
+                </div>
+                <div style="font-size: 0.85rem; color: #e6d9ff; margin-bottom: 0.5rem; font-weight: 600;">
+                  ${permitMetadata?.name || 'Config Bump Authority'}
+                </div>
+                <div style="font-size: 0.75rem; color: rgba(230, 217, 255, 0.7); line-height: 1.4;">
+                  ${permitMetadata?.description || 'Emergency power to reset governance state by incrementing config counter. Invalidates all pending proposals and permits.'}
+                </div>
+                <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(255, 123, 157, 0.3);">
+                  <div style="font-size: 0.7rem; color: rgba(230, 217, 255, 0.5); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.35rem;">
+                    Permit ID
+                  </div>
+                  <div style="font-family: 'Courier New', monospace; font-size: 0.65rem; color: rgba(230, 217, 255, 0.6); word-break: break-all;">
+                    ${permitId.toString().slice(0, 20)}...${permitId.toString().slice(-20)}
+                  </div>
+                </div>
+              </div>
+            `;
+
+            permitCard.onmouseover = function() {
+              this.style.transform = 'translateY(-2px)';
+              this.style.boxShadow = '0 4px 12px rgba(255, 123, 157, 0.3)';
+            };
+
+            permitCard.onmouseout = function() {
+              this.style.transform = 'translateY(0)';
+              this.style.boxShadow = 'none';
+            };
+
+            permitCard.onclick = function() {
+              showEmergencyPermitModal(permitId, Number(permitBalance), permitMetadata);
+            };
+
+            receiptsGrid.appendChild(permitCard);
+          }
+        } catch (permitError) {
+          console.error('Error checking emergency permit:', permitError);
+        }
+      }
+
+      // Show emergency permit modal with use option
+      function showEmergencyPermitModal(permitId, balance, metadata = null) {
+        const modal = document.getElementById('nftModal');
+        const modalContent = document.getElementById('nftModalContent');
+
+        const usesText = balance === 1 ? '1 use remaining' : `${balance} uses remaining`;
+
+        // Build image HTML if metadata available
+        let imageHTML = '';
+        if (metadata?.image) {
+          imageHTML = `
+            <div style="text-align: center; margin-bottom: 1.5rem;">
+              <img src="${metadata.image}" alt="Emergency Permit" style="max-width: 100%; max-height: 400px; border-radius: 8px; border: 1px solid rgba(255, 123, 157, 0.3);" />
+            </div>
+          `;
+        }
+
+        modalContent.innerHTML = `
+          <div style="max-width: 500px; margin: 0 auto;">
+            ${imageHTML}
+            <div style="text-align: center; margin-bottom: 1.5rem;">
+              <div style="font-family: 'Cinzel', serif; font-size: 1.5rem; color: #ff7b9d; letter-spacing: 0.1em; margin-bottom: 0.5rem;">
+                ${metadata?.name || 'EMERGENCY PERMIT'}
+              </div>
+              <div style="font-size: 1rem; color: #e6d9ff; margin-bottom: 0.5rem;">
+                ${metadata?.description || 'Config Bump Authority'}
+              </div>
+              <div style="background: rgba(255, 100, 100, 0.2); display: inline-block; padding: 0.5rem 1rem; border-radius: 16px; font-size: 0.9rem; color: #ff6b6b; font-weight: 600;">
+                ${usesText}
+              </div>
+            </div>
+
+            <div style="background: rgba(255, 100, 100, 0.1); border: 1px solid rgba(255, 123, 157, 0.3); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+              <div style="font-size: 0.85rem; color: rgba(230, 217, 255, 0.8); line-height: 1.6;">
+                <strong style="color: #ff7b9d;">⚠️ Emergency Power:</strong><br><br>
+                This permit grants you the authority to execute <code>bumpConfig()</code>, which increments the DAO's config counter.<br><br>
+                <strong>Effect:</strong> Invalidates ALL pending proposals and ALL existing permits (including this one after use).<br><br>
+                <strong>Use case:</strong> Emergency governance reset when proposals or permits are compromised.
+              </div>
+            </div>
+
+            <div style="background: rgba(0, 0, 0, 0.3); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+              <div style="font-size: 0.75rem; color: rgba(230, 217, 255, 0.5); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
+                Permit ID
+              </div>
+              <div style="font-family: 'Courier New', monospace; font-size: 0.75rem; color: rgba(230, 217, 255, 0.8); word-break: break-all;">
+                ${permitId.toString()}
+              </div>
+            </div>
+
+            <button onclick="useEmergencyPermit('${permitId.toString()}')"
+                    onmouseover="this.style.background='rgba(255, 100, 100, 0.4)'; this.style.borderColor='#ff6b6b';"
+                    onmouseout="this.style.background='rgba(255, 123, 157, 0.2)'; this.style.borderColor='rgba(255, 123, 157, 0.4)';"
+                    style="width: 100%; padding: 1rem; background: rgba(255, 123, 157, 0.2); border: 1px solid rgba(255, 123, 157, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.85rem; letter-spacing: 0.15em; cursor: pointer; text-transform: uppercase; transition: all 0.2s ease; font-weight: 600; border-radius: 4px;">
+              🚨 USE EMERGENCY PERMIT
+            </button>
+
+            <div style="text-align: center; margin-top: 1rem;">
+              <button onclick="closeNFTModal()"
+                      style="background: none; border: none; color: rgba(230, 217, 255, 0.6); cursor: pointer; font-size: 0.85rem; text-decoration: underline;">
+                Close
+              </button>
+            </div>
+          </div>
+        `;
+
+        modal.style.display = 'flex';
+      }
+
+      // Use emergency permit to bump config
+      async function useEmergencyPermit(permitIdStr) {
+        if (!signer) {
+          showStatus('Please connect your wallet first', true);
+          return;
+        }
+
+        const confirmed = confirm(
+          '⚠️ EMERGENCY ACTION CONFIRMATION\n\n' +
+          'You are about to execute bumpConfig(), which will:\n\n' +
+          '• Invalidate ALL pending proposals\n' +
+          '• Invalidate ALL existing permits\n' +
+          '• Reset the governance state\n\n' +
+          'This action is IRREVERSIBLE.\n\n' +
+          'Are you absolutely sure you want to proceed?'
+        );
+
+        if (!confirmed) return;
+
+        try {
+          showStatus('Executing emergency permit...', false);
+
+          const molochContract = new ethers.Contract(currentDAO.dao.dao, MOLOCH_ABI, signer);
+          const bumpConfigCalldata = INTERFACES.bumpConfig.encodeFunctionData('bumpConfig', []);
+          const emergencyNonce = ethers.id("EMERGENCY_CONFIG_BUMP");
+
+          const tx = await molochContract.spendPermit(
+            0, // op = call
+            currentDAO.dao.dao, // to = self
+            0, // value = 0
+            bumpConfigCalldata, // data = bumpConfig()
+            emergencyNonce // nonce
+          );
+
+          showStatus('Transaction submitted. Waiting for confirmation...', false);
+          await tx.wait();
+
+          showStatus('🚨 Emergency config bump executed! Governance state reset.', false);
+          closeNFTModal();
+
+          // Refresh DAO data
+          await refreshCurrentDAO(true);
+
+        } catch (error) {
+          console.error('Error using emergency permit:', error);
+          showStatus('Failed to execute emergency permit: ' + error.message, true);
+        }
       }
 
       // ==================== DELEGATION FUNCTIONS ====================
@@ -15786,12 +16181,14 @@
 
         // Get config once for all proposals
         let daoConfig;
+        let configFetched = false;
         try {
           const molochContract = new ethers.Contract(currentDAO.dao.dao, MOLOCH_ABI, provider);
           daoConfig = await molochContract.config();
+          configFetched = true;
         } catch (e) {
           console.error('Error getting DAO config:', e);
-          daoConfig = 0n; // fallback
+          daoConfig = 0n; // fallback (but we know it failed)
         }
 
         // Must match Moloch.sol enum ProposalState (line 79-87)
@@ -15944,9 +16341,9 @@
             }
           }
 
-          // Only show unverified badge if we have messages but couldn't verify
-          // Don't show badge if messages haven't loaded yet (prevents false negatives)
-          if (hasMessages && !isVerified) {
+          // Only show unverified badge if we have messages AND config but couldn't verify
+          // Don't show badge if messages haven't loaded or config fetch failed (prevents false negatives)
+          if (hasMessages && configFetched && !isVerified) {
             verificationBadge = '<span style="color: #ff6b6b; font-size: 0.9rem; margin-left: 0.5rem;" title="⚠ Proposal data not found in messages - cannot verify integrity">⚠ Unverified</span>';
           }
 
@@ -16585,6 +16982,56 @@
               <div>Set renderer to:</div>
               <div style="margin-top: 0.25rem; font-size: 0.8rem;"><code style="background: rgba(0,0,0,0.3); padding: 0.15rem 0.35rem;">${newRenderer}</code></div>
               <div style="margin-top: 0.25rem; font-size: 0.75rem; opacity: 0.7;">DAO self-call (governance)</div>
+            `;
+          }
+          // bumpConfig() - 0x7ec924db
+          else if (isDaoSelfCall && functionSelector === '0x7ec924db') {
+            translation = `
+              <div style="opacity: 0.8; margin-bottom: 0.35rem; font-size: 0.8rem; color: #ff7b9d;">🚨 Emergency Action</div>
+              <div><strong>Bump Config Counter</strong></div>
+              <div style="margin-top: 0.25rem; font-size: 0.75rem; opacity: 0.7;">Invalidates all pending proposals and permits</div>
+              <div style="margin-top: 0.25rem; font-size: 0.75rem; opacity: 0.7;">DAO self-call (governance)</div>
+            `;
+          }
+          // setPermit(uint8 op, address to, uint256 value, bytes data, bytes32 nonce, address spender, uint256 count) - 0x12374b04
+          else if (isDaoSelfCall && functionSelector === '0x12374b04' && calldata.length >= 458) {
+            const decoded = abiCoder.decode(['uint8', 'address', 'uint256', 'bytes', 'bytes32', 'address', 'uint256'], '0x' + calldata.slice(10));
+            const op = decoded[0];
+            const targetAddress = decoded[1];
+            const value = decoded[2];
+            const permitData = decoded[3];
+            const nonce = decoded[4];
+            const spender = decoded[5];
+            const count = Number(decoded[6]);
+
+            const opType = op === 0 ? 'call' : 'delegatecall';
+            const action = count === 0 ? 'Revoke' : (count === 1 ? 'Grant 1 permit' : `Grant ${count} permits`);
+            const usesText = count === 0 ? 'Revoke all permits' : (count === 1 ? '1 use' : `${count} uses`);
+
+            translation = `
+              <div style="opacity: 0.8; margin-bottom: 0.35rem; font-size: 0.8rem; color: #ff7b9d;">⚡ ${action}</div>
+              <div style="margin-bottom: 0.25rem;"><strong>To:</strong> ${spender.slice(0, 6)}...${spender.slice(-4)}</div>
+              <div style="margin-bottom: 0.25rem;"><strong>Uses:</strong> ${usesText}</div>
+              <div style="margin-bottom: 0.25rem; font-size: 0.75rem; opacity: 0.7;"><strong>Action:</strong> ${opType} to ${targetAddress.slice(0, 6)}...${targetAddress.slice(-4)}</div>
+              <div style="margin-top: 0.25rem; font-size: 0.75rem; opacity: 0.7;">DAO self-call (governance)</div>
+            `;
+          }
+          // spendPermit(uint8 op, address to, uint256 value, bytes data, bytes32 nonce) - 0xa8841366
+          else if (isDaoSelfCall && functionSelector === '0xa8841366' && calldata.length >= 330) {
+            const decoded = abiCoder.decode(['uint8', 'address', 'uint256', 'bytes', 'bytes32'], '0x' + calldata.slice(10));
+            const op = decoded[0];
+            const targetAddress = decoded[1];
+            const value = decoded[2];
+            const permitData = decoded[3];
+            const nonce = decoded[4];
+
+            const opType = op === 0 ? 'call' : 'delegatecall';
+
+            translation = `
+              <div style="opacity: 0.8; margin-bottom: 0.35rem; font-size: 0.8rem; color: #ff7b9d;">⚡ Use Permit</div>
+              <div style="margin-bottom: 0.25rem;"><strong>Execute:</strong> ${opType} to ${targetAddress.slice(0, 6)}...${targetAddress.slice(-4)}</div>
+              <div style="margin-bottom: 0.25rem; font-size: 0.75rem; opacity: 0.7;">Burns 1 permit to execute action</div>
+              <div style="margin-top: 0.25rem; font-size: 0.75rem; opacity: 0.7;">DAO self-call (permit execution)</div>
             `;
           }
           // mintFromMoloch(address recipient, uint256 amount) - 0x2806b0af
