@@ -9283,6 +9283,22 @@
           "outputs": [],
           "stateMutability": "payable",
           "type": "function"
+        },
+        {
+          "inputs": [
+            {"internalType": "uint8", "name": "op", "type": "uint8"},
+            {"internalType": "address", "name": "to", "type": "address"},
+            {"internalType": "uint256", "name": "value", "type": "uint256"},
+            {"internalType": "bytes", "name": "data", "type": "bytes"},
+            {"internalType": "bytes32", "name": "nonce", "type": "bytes32"}
+          ],
+          "name": "spendPermit",
+          "outputs": [
+            {"internalType": "bool", "name": "ok", "type": "bool"},
+            {"internalType": "bytes", "name": "retData", "type": "bytes"}
+          ],
+          "stateMutability": "payable",
+          "type": "function"
         }
       ];
 
@@ -16134,10 +16150,17 @@
         }
 
         try {
-          // Check if user holds the permit before attempting to spend
           const molochContract = new ethers.Contract(currentDAO.dao.dao, MOLOCH_ABI, signer);
           const userAddress = await signer.getAddress();
-          const permitBalance = await molochContract.balanceOf(userAddress, permitIdStr);
+
+          // Recalculate the permit parameters and ID to ensure consistency
+          const bumpConfigCalldata = INTERFACES.bumpConfig.encodeFunctionData('bumpConfig', []);
+          const emergencyNonce = ethers.id("EMERGENCY_CONFIG_BUMP");
+          const config = await molochContract.config();
+          const permitId = computeProposalId(currentDAO.dao.dao, 0, currentDAO.dao.dao, 0, bumpConfigCalldata, emergencyNonce, config);
+
+          // Check if user holds the permit before attempting to spend
+          const permitBalance = await molochContract.balanceOf(userAddress, permitId);
 
           if (permitBalance === 0n || permitBalance === 0) {
             showStatus('You do not hold this emergency permit. Cannot execute.', true);
@@ -16158,9 +16181,6 @@
           if (!confirmed) return;
 
           showStatus('Executing emergency permit...', false);
-
-          const bumpConfigCalldata = INTERFACES.bumpConfig.encodeFunctionData('bumpConfig', []);
-          const emergencyNonce = ethers.id("EMERGENCY_CONFIG_BUMP");
 
           const tx = await molochContract.spendPermit(
             0, // op = call
