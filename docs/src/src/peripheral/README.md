@@ -1,6 +1,18 @@
 
 
 # Contents
+- [IZAMM](DAICO.sol/interface.IZAMM.md)
+- [IMoloch](DAICO.sol/interface.IMoloch.md)
+- [ISharesLoot](DAICO.sol/interface.ISharesLoot.md)
+- [Call](DAICO.sol/struct.Call.md)
+- [ISummoner](DAICO.sol/interface.ISummoner.md)
+- [DAICO](DAICO.sol/contract.DAICO.md)
+- [ensureApproval](DAICO.sol/function.ensureApproval.md)
+- [safeTransferETH](DAICO.sol/function.safeTransferETH.md)
+- [balanceOf](DAICO.sol/function.balanceOf.md)
+- [safeTransferFrom](DAICO.sol/function.safeTransferFrom.md)
+- [safeTransfer](DAICO.sol/function.safeTransfer.md)
+- [DAICO constants](DAICO.sol/constants.DAICO.md)
 - [ISummoner](MolochViewHelper.sol/interface.ISummoner.md)
 - [Seat](MolochViewHelper.sol/struct.Seat.md)
 - [IBadges](MolochViewHelper.sol/interface.IBadges.md)
@@ -21,3 +33,7 @@
 - [UserMemberView](MolochViewHelper.sol/struct.UserMemberView.md)
 - [UserDAOLens](MolochViewHelper.sol/struct.UserDAOLens.md)
 - [MolochViewHelper](MolochViewHelper.sol/contract.MolochViewHelper.md)
+- [Tribute](Tribute.sol/contract.Tribute.md)
+- [safeTransferETH](Tribute.sol/function.safeTransferETH.md)
+- [safeTransfer](Tribute.sol/function.safeTransfer.md)
+- [safeTransferFrom](Tribute.sol/function.safeTransferFrom.md)

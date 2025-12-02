@@ -9,7 +9,8 @@ via_ir = true
 
 remappings = [
   "@solady=lib/solady/",
-  "@forge=lib/forge-std/src/"
+  "@forge=lib/forge-std/src/",
+  "@zamm=lib/ZAMM/src/"
 ]
 
 [fmt]
