@@ -179,13 +179,13 @@ struct ProposalView {
     VoterView[] voters; // only members who actually voted
 }
 
+struct TokenBalance {
+    address token; // address(0) = native ETH
+    uint256 balance;
+}
+
 struct DAOTreasury {
-    uint256 eth;
-    uint256 usdc;
-    uint256 usdt;
-    uint256 dai;
-    uint256 wsteth;
-    uint256 reth;
+    TokenBalance[] balances;
 }
 
 struct MessageView {
@@ -225,16 +225,8 @@ struct UserDAOLens {
 contract MolochViewHelper {
     /* ---------------------------- Core references --------------------------- */
 
-    // Summoner factory on Ethereum mainnet
-    // NOTE: change this if you deploy Summoner to a different address / network.
+    // Summoner factory (same CREATE2 address on all supported networks)
     ISummoner public constant SUMMONER = ISummoner(0x0000000000330B8df9E3bc5E553074DA58eE9138);
-
-    // Mainnet token addresses (treasury scan)
-    address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-    address public constant USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
-    address public constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
-    address public constant WSTETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
-    address public constant RETH = 0xae78736Cd615f374D3085123A210448E74Fc6393;
 
     /* ---------------------------------------------------------------------- */
     /*                             DAO PAGINATION                             */
@@ -266,14 +258,21 @@ contract MolochViewHelper {
 
     /// @notice Full state for a single DAO: meta, config, supplies, members,
     ///         proposals & votes, futarchy, treasury, messages.
+    /// @param dao The DAO address
+    /// @param proposalStart Starting index for proposals
+    /// @param proposalCount Number of proposals to fetch
+    /// @param messageStart Starting index for messages
+    /// @param messageCount Number of messages to fetch
+    /// @param treasuryTokens Array of token addresses to check balances for (address(0) = native ETH)
     function getDAOFullState(
         address dao,
         uint256 proposalStart,
         uint256 proposalCount,
         uint256 messageStart,
-        uint256 messageCount
+        uint256 messageCount,
+        address[] calldata treasuryTokens
     ) public view returns (DAOLens memory out) {
-        out = _buildDAOFullState(dao, proposalStart, proposalCount, messageStart, messageCount);
+        out = _buildDAOFullState(dao, proposalStart, proposalCount, messageStart, messageCount, treasuryTokens);
     }
 
     /* ---------------------------------------------------------------------- */
@@ -290,15 +289,17 @@ contract MolochViewHelper {
     ///  - proposals [proposalStart .. proposalStart+proposalCount)
     ///  - per-proposal tallies, state, per-member votes
     ///  - per-proposal futarchy config
-    ///  - treasury balances (ETH, USDC, USDT, DAI, wstETH, rETH)
+    ///  - treasury balances for specified tokens
     ///  - messages [messageStart .. messageStart+messageCount)
+    /// @param treasuryTokens Array of token addresses to check balances for (address(0) = native ETH)
     function getDAOsFullState(
         uint256 daoStart,
         uint256 daoCount,
         uint256 proposalStart,
         uint256 proposalCount,
         uint256 messageStart,
-        uint256 messageCount
+        uint256 messageCount,
+        address[] calldata treasuryTokens
     ) public view returns (DAOLens[] memory out) {
         uint256 total = SUMMONER.getDAOCount();
         if (daoStart >= total) {
@@ -314,7 +315,7 @@ contract MolochViewHelper {
         for (uint256 i; i < len; ++i) {
             address dao = SUMMONER.daos(daoStart + i);
             out[i] =
-                _buildDAOFullState(dao, proposalStart, proposalCount, messageStart, messageCount);
+                _buildDAOFullState(dao, proposalStart, proposalCount, messageStart, messageCount, treasuryTokens);
         }
     }
 
@@ -324,7 +325,8 @@ contract MolochViewHelper {
 
     /// @notice Find all DAOs (within a slice) where `user` has shares, loot, or a badge seat.
     /// @dev Lightweight summary: no proposals/messages; intended for wallet dashboards.
-    function getUserDAOs(address user, uint256 daoStart, uint256 daoCount)
+    /// @param treasuryTokens Array of token addresses to check balances for (address(0) = native ETH)
+    function getUserDAOs(address user, uint256 daoStart, uint256 daoCount, address[] calldata treasuryTokens)
         public
         view
         returns (UserMemberView[] memory out)
@@ -406,7 +408,7 @@ contract MolochViewHelper {
             supplies.lootHeldByDAO = ILoot(lootToken).balanceOf(dao);
 
             // Treasury snapshot
-            DAOTreasury memory treasury = _getTreasury(dao);
+            DAOTreasury memory treasury = _getTreasury(dao, treasuryTokens);
 
             (address[] memory dels, uint32[] memory bps) =
                 IShares(sharesToken).splitDelegationOf(user);
@@ -437,6 +439,7 @@ contract MolochViewHelper {
 
     /// @notice Full DAO state (like getDAOsFullState) but filtered to DAOs where `user` is a member.
     /// @dev This is the heavy "one-shot" user-dashboard view: use small daoCount / proposalCount / messageCount.
+    /// @param treasuryTokens Array of token addresses to check balances for (address(0) = native ETH)
     function getUserDAOsFullState(
         address user,
         uint256 daoStart,
@@ -444,7 +447,8 @@ contract MolochViewHelper {
         uint256 proposalStart,
         uint256 proposalCount,
         uint256 messageStart,
-        uint256 messageCount
+        uint256 messageCount,
+        address[] calldata treasuryTokens
     ) public view returns (UserDAOLens[] memory out) {
         uint256 total = SUMMONER.getDAOCount();
         if (daoStart >= total) {
@@ -493,7 +497,7 @@ contract MolochViewHelper {
             }
 
             DAOLens memory daoLens = _buildDAOFullState(
-                daoAddr, proposalStart, proposalCount, messageStart, messageCount
+                daoAddr, proposalStart, proposalCount, messageStart, messageCount, treasuryTokens
             );
 
             (address[] memory dels, uint32[] memory bps) =
@@ -538,7 +542,8 @@ contract MolochViewHelper {
         uint256 proposalStart,
         uint256 proposalCount,
         uint256 messageStart,
-        uint256 messageCount
+        uint256 messageCount,
+        address[] calldata treasuryTokens
     ) internal view returns (DAOLens memory out) {
         IMoloch M = IMoloch(dao);
 
@@ -583,7 +588,7 @@ contract MolochViewHelper {
         ProposalView[] memory proposals = _getProposals(M, members, proposalStart, proposalCount);
         MessageView[] memory messages = _getMessagesInternal(dao, messageStart, messageCount);
 
-        DAOTreasury memory treasury = _getTreasury(dao);
+        DAOTreasury memory treasury = _getTreasury(dao, treasuryTokens);
 
         out.dao = dao;
         out.meta = meta;
@@ -765,12 +770,33 @@ contract MolochViewHelper {
     /*                           TREASURY BALANCE VIEW                        */
     /* ---------------------------------------------------------------------- */
 
-    function _getTreasury(address dao) internal view returns (DAOTreasury memory t) {
-        t.eth = dao.balance;
-        t.usdc = IERC20(USDC).balanceOf(dao);
-        t.usdt = IERC20(USDT).balanceOf(dao);
-        t.dai = IERC20(DAI).balanceOf(dao);
-        t.wsteth = IERC20(WSTETH).balanceOf(dao);
-        t.reth = IERC20(RETH).balanceOf(dao);
+    /// @dev Fetches balances for specified tokens. Uses staticcall to gracefully handle
+    ///      missing contracts (returns 0 balance if call fails).
+    /// @param dao The DAO address to check balances for
+    /// @param tokens Array of token addresses (address(0) = native ETH)
+    function _getTreasury(address dao, address[] calldata tokens) internal view returns (DAOTreasury memory t) {
+        uint256 len = tokens.length;
+        t.balances = new TokenBalance[](len);
+
+        for (uint256 i; i < len; ++i) {
+            address token = tokens[i];
+            uint256 bal;
+
+            if (token == address(0)) {
+                // Native ETH
+                bal = dao.balance;
+            } else {
+                // ERC20 - use staticcall to handle missing contracts gracefully
+                (bool success, bytes memory data) = token.staticcall(
+                    abi.encodeWithSelector(IERC20.balanceOf.selector, dao)
+                );
+                if (success && data.length >= 32) {
+                    bal = abi.decode(data, (uint256));
+                }
+                // If call fails or returns invalid data, bal remains 0
+            }
+
+            t.balances[i] = TokenBalance({token: token, balance: bal});
+        }
     }
 }

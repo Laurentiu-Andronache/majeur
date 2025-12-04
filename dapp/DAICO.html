@@ -134,6 +134,41 @@
             color: var(--blue);
         }
 
+        /* TESTNET TOGGLE */
+        .testnet-toggle {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            padding: 0.5em 0.8em;
+            font-family: 'Oswald', sans-serif;
+            font-size: 0.7rem;
+            font-style: normal;
+            z-index: 999;
+            opacity: 0;
+            transform: translateY(100%);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .testnet-toggle.visible {
+            opacity: 0.6;
+            transform: translateY(0);
+        }
+
+        .testnet-toggle:hover {
+            opacity: 1;
+        }
+
+        .testnet-toggle a {
+            color: var(--black);
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .testnet-toggle.active a {
+            color: var(--orange);
+            font-weight: bold;
+        }
+
         /* HERO SECTION */
         .hero {
             min-height: 100vh;
@@ -343,6 +378,131 @@
         @keyframes bounce {
             0%, 100% { transform: translateX(-50%) translateY(0); }
             50% { transform: translateX(-50%) translateY(10px); }
+        }
+
+        /* HOW IT WORKS POST-IT NOTE */
+        .how-it-works {
+            position: absolute;
+            bottom: calc(var(--spacing-lg) + 40px);
+            left: var(--spacing-md);
+            width: clamp(140px, 18vw, 200px);
+            background: #fffbcc;
+            padding: 0.8em 1em;
+            z-index: 10;
+            transform: rotate(-2deg);
+            box-shadow:
+                2px 3px 8px rgba(0, 0, 0, 0.15),
+                inset 0 -2px 4px rgba(0, 0, 0, 0.03);
+            opacity: 0;
+            animation: noteSlideIn 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.8s forwards;
+            border-left: 3px solid #e6d966;
+        }
+
+        .how-it-works::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg,
+                transparent 0%,
+                rgba(0,0,0,0.03) 20%,
+                rgba(0,0,0,0.05) 50%,
+                rgba(0,0,0,0.03) 80%,
+                transparent 100%
+            );
+        }
+
+        .how-it-works-header {
+            font-family: 'Oswald', sans-serif;
+            font-style: italic;
+            font-size: clamp(0.7rem, 1.5vw, 0.85rem);
+            color: var(--black);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.5em;
+            opacity: 0.7;
+            border-bottom: 1px dashed rgba(0,0,0,0.2);
+            padding-bottom: 0.4em;
+        }
+
+        .how-it-works-list {
+            list-style: none;
+            font-family: 'Oswald', sans-serif;
+            font-style: normal;
+            font-size: clamp(0.6rem, 1.2vw, 0.75rem);
+            color: var(--black);
+            line-height: 1.6;
+        }
+
+        .how-it-works-list li {
+            position: relative;
+            padding-left: 1.2em;
+            margin-bottom: 0.25em;
+            opacity: 0.85;
+        }
+
+        .how-it-works-list li::before {
+            content: attr(data-num);
+            position: absolute;
+            left: 0;
+            font-style: italic;
+            opacity: 0.5;
+            font-size: 0.9em;
+        }
+
+        @keyframes noteSlideIn {
+            0% {
+                opacity: 0;
+                transform: rotate(-2deg) translateY(20px);
+            }
+            100% {
+                opacity: 1;
+                transform: rotate(-2deg) translateY(0);
+            }
+        }
+
+        /* Mobile: keep on left, lower position near scroll hint */
+        @media (max-width: 600px) {
+            .how-it-works {
+                left: var(--spacing-sm);
+                bottom: 12px;
+                width: clamp(130px, 40vw, 160px);
+                padding: 0.5em 0.7em;
+            }
+
+            .how-it-works-header {
+                font-size: 0.65rem;
+            }
+
+            .how-it-works-list {
+                font-size: 0.55rem;
+            }
+        }
+
+        /* Very small screens: even more compact */
+        @media (max-width: 380px) {
+            .how-it-works {
+                width: 125px;
+                padding: 0.4em 0.6em;
+                bottom: 10px;
+            }
+
+            .how-it-works-header {
+                font-size: 0.6rem;
+                margin-bottom: 0.3em;
+                padding-bottom: 0.3em;
+            }
+
+            .how-it-works-list {
+                font-size: 0.5rem;
+                line-height: 1.4;
+            }
+
+            .how-it-works-list li {
+                margin-bottom: 0.1em;
+            }
         }
 
         /* CONTENT SECTIONS */
@@ -3971,6 +4131,10 @@
         <span>built by </span><a href="https://majeurdao.eth.limo/#/dao/0x5E58BA0e06ED0F5558f83bE732a4b899a674053E" target="_blank" rel="noopener">zOrg</a><span> for </span><a href="https://zamm.finance/" target="_blank" rel="noopener">zamm.finance</a>
     </div>
 
+    <div class="testnet-toggle" id="testnetToggle">
+        <a onclick="toggleTestnet()">testnet</a>
+    </div>
+
     <!-- HERO -->
     <section class="hero">
         <svg class="lines">
@@ -4000,6 +4164,17 @@
             <div class="hero-bottom">
                 <div class="word daico" id="daico">DAICO.WTF</div>
             </div>
+        </div>
+
+        <!-- How It Works Post-it Note -->
+        <div class="how-it-works">
+            <div class="how-it-works-header">How it works</div>
+            <ul class="how-it-works-list">
+                <li data-num="1.">crowdfund as dao</li>
+                <li data-num="2.">ops gets streamed</li>
+                <li data-num="3.">dao can shut off tap</li>
+                <li data-num="4.">dao can do whatever</li>
+            </ul>
         </div>
 
         <a href="#fund-section" class="scroll-hint">
@@ -4877,7 +5052,40 @@
     </div>
 
     <script>
-        // Contract addresses (Mainnet)
+        // Network configuration
+        const NETWORKS = {
+            mainnet: {
+                chainId: 1n,
+                name: 'Mainnet',
+                rpcs: [
+                    'https://eth.llamarpc.com',
+                    'https://rpc.ankr.com/eth',
+                    'https://ethereum.publicnode.com',
+                    'https://1rpc.io/eth'
+                ],
+                swissKnifeChainId: 1
+            },
+            sepolia: {
+                chainId: 11155111n,
+                name: 'Sepolia',
+                rpcs: [
+                    'https://rpc.sepolia.org',
+                    'https://rpc2.sepolia.org',
+                    'https://ethereum-sepolia.publicnode.com',
+                    'https://sepolia.drpc.org'
+                ],
+                swissKnifeChainId: 11155111
+            }
+        };
+
+        // Current network (persisted in localStorage)
+        let currentNetwork = localStorage.getItem('daico_network') || 'mainnet';
+
+        function getNetwork() {
+            return NETWORKS[currentNetwork];
+        }
+
+        // Contract addresses (same on Mainnet and Sepolia)
         const DAICO_ADDRESS = '0x000000000033e92DB97B4B3beCD2c255126C60aC';
         const SUMMONER_ADDRESS = '0x0000000000330B8df9E3bc5E553074DA58eE9138';
         const DEFAULT_RENDERER = '0x000000000011c799980827f52d3137b4abd6e654';
@@ -4949,7 +5157,7 @@
         // Swiss Knife calldata decoder URL builder
         const SWISS_KNIFE_BASE = 'https://calldata.swiss-knife.xyz/decoder';
         function buildSwissKnifeUrl(calldata) {
-            return `${SWISS_KNIFE_BASE}?chainId=1&address=${DAICO_ADDRESS}&calldata=${calldata}`;
+            return `${SWISS_KNIFE_BASE}?chainId=${getNetwork().swissKnifeChainId}&address=${DAICO_ADDRESS}&calldata=${calldata}`;
         }
 
         // Error handling helpers
@@ -5395,8 +5603,9 @@
                 // Check network
                 const network = await provider.getNetwork();
                 const networkBadge = document.getElementById('networkBadge');
-                if (network.chainId === 1n) {
-                    networkBadge.textContent = 'Mainnet';
+                const expectedNetwork = getNetwork();
+                if (network.chainId === expectedNetwork.chainId) {
+                    networkBadge.textContent = expectedNetwork.name;
                     networkBadge.classList.remove('wrong');
                 } else {
                     networkBadge.textContent = 'Wrong Network';
@@ -5705,14 +5914,14 @@
 
         function setTapPct(pct, el) {
             wizardState.tapPct = pct;
-            document.querySelectorAll('.tap-preset-btn').forEach(btn => btn.classList.remove('active'));
+            el.parentElement.querySelectorAll('.tap-preset-btn').forEach(btn => btn.classList.remove('active'));
             el.classList.add('active');
             updateTapEffect();
         }
 
         function setTapDuration(months, el) {
             wizardState.tapDuration = months;
-            document.querySelectorAll('.tap-duration-btn').forEach(btn => btn.classList.remove('active'));
+            el.parentElement.querySelectorAll('.tap-duration-btn').forEach(btn => btn.classList.remove('active'));
             el.classList.add('active');
             updateTapEffect();
         }
@@ -6113,8 +6322,8 @@
 
             // Check network
             const network = await provider.getNetwork();
-            if (network.chainId !== 1n) {
-                showWizardStatus('Please switch to Ethereum Mainnet', 'error');
+            if (network.chainId !== getNetwork().chainId) {
+                showWizardStatus(`Please switch to ${getNetwork().name}`, 'error');
                 return;
             }
 
@@ -6565,8 +6774,8 @@
             }
 
             const network = await provider.getNetwork();
-            if (network.chainId !== 1n) {
-                document.getElementById('summaryStatus').textContent = 'Please switch to Ethereum Mainnet';
+            if (network.chainId !== getNetwork().chainId) {
+                document.getElementById('summaryStatus').textContent = `Please switch to ${getNetwork().name}`;
                 return;
             }
 
@@ -6890,14 +7099,7 @@
         let completedDAICOs = [];
         let currentSaleTab = 'active';
         let scannerProvider = null;
-
-        // Public RPCs for scanning without wallet connection
-        const PUBLIC_RPCS = [
-            'https://eth.llamarpc.com',
-            'https://rpc.ankr.com/eth',
-            'https://ethereum.publicnode.com',
-            'https://1rpc.io/eth'
-        ];
+        let scannerNetworkKey = null;
 
         // Initialize scanner with a provider (can be default or connected)
         async function initScanner() {
@@ -6905,9 +7107,14 @@
             if (provider) {
                 return provider;
             }
+            // Reset scanner if network changed
+            if (scannerNetworkKey !== currentNetwork) {
+                scannerProvider = null;
+                scannerNetworkKey = currentNetwork;
+            }
             // Try public RPCs with fallback
             if (!scannerProvider) {
-                for (const rpc of PUBLIC_RPCS) {
+                for (const rpc of getNetwork().rpcs) {
                     try {
                         const testProvider = new ethers.JsonRpcProvider(rpc);
                         // Quick test to verify RPC works
@@ -7530,7 +7737,7 @@
 
         function setSlippage(pct, btn) {
             currentPurchase.slippage = pct;
-            document.querySelectorAll('.slippage-btn').forEach(b => b.classList.remove('active'));
+            btn.parentElement.querySelectorAll('.slippage-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
         }
 
@@ -7830,7 +8037,7 @@
 
         function startTapAccrual() {
             stopTapAccrual(); // Clear any existing interval
-            tapAccrualInterval = setInterval(updateTapDisplay, 100); // Update every 100ms
+            tapAccrualInterval = setInterval(updateTapDisplay, 500); // Update every 500ms
         }
 
         function stopTapAccrual() {
@@ -8194,8 +8401,8 @@
 
             // Check network
             const network = await provider.getNetwork();
-            if (network.chainId !== 1n) {
-                showStatus('Please switch to Ethereum Mainnet', 'error');
+            if (network.chainId !== getNetwork().chainId) {
+                showStatus(`Please switch to ${getNetwork().name}`, 'error');
                 return;
             }
 
@@ -8583,15 +8790,57 @@
             growObserver.observe(growIllustration);
         }
 
-        // Attribution box - show after scrolling past hero
+        // Attribution box - show after scrolling past hero (throttled)
         const attributionBox = document.getElementById('attributionBox');
+        const testnetToggle = document.getElementById('testnetToggle');
+        let attributionScrollTimeout;
         window.addEventListener('scroll', () => {
-            if (window.scrollY > window.innerHeight * 0.5) {
-                attributionBox.classList.add('visible');
-            } else {
-                attributionBox.classList.remove('visible');
-            }
+            if (attributionScrollTimeout) return;
+            attributionScrollTimeout = setTimeout(() => {
+                attributionScrollTimeout = null;
+                if (window.scrollY > window.innerHeight * 0.5) {
+                    attributionBox.classList.add('visible');
+                    testnetToggle.classList.add('visible');
+                } else {
+                    attributionBox.classList.remove('visible');
+                    testnetToggle.classList.remove('visible');
+                }
+            }, 100);
         }, { passive: true });
+
+        // Testnet toggle function
+        function toggleTestnet() {
+            currentNetwork = currentNetwork === 'mainnet' ? 'sepolia' : 'mainnet';
+            localStorage.setItem('daico_network', currentNetwork);
+            // Force scanner to reinitialize with new network
+            scannerProvider = null;
+            scannerNetworkKey = null;
+            // Clear cached DAICOs
+            activeDAICOs = [];
+            completedDAICOs = [];
+            // Update UI
+            updateTestnetToggleUI();
+            // Disconnect wallet to force reconnect on correct network
+            if (connectedAddress) {
+                disconnectWallet();
+            }
+            // Reload page to reset all state cleanly
+            window.location.reload();
+        }
+
+        function updateTestnetToggleUI() {
+            const toggle = document.getElementById('testnetToggle');
+            if (currentNetwork === 'sepolia') {
+                toggle.classList.add('active');
+                toggle.querySelector('a').textContent = 'testnet ✓';
+            } else {
+                toggle.classList.remove('active');
+                toggle.querySelector('a').textContent = 'testnet';
+            }
+        }
+
+        // Initialize testnet toggle state
+        updateTestnetToggleUI();
 
         // Theme boxes pop animation on scroll
         const themeObserver = new IntersectionObserver((entries) => {
