@@ -1,5 +1,5 @@
 # Moloch
-[Git Source](https://github.com/z0r0z/SAW/blob/1098c25d112838b519fc1471aa11e5ab4aaeadc5/src/Moloch.sol)
+[Git Source](https://github.com/z0r0z/SAW/blob/2b3c1d52c1b3c34600b54e1c2e32ae4821ae258a/src/Moloch.sol)
 
 ERC-20 shares (delegatable/split) & Loot + ERC-6909 receipts + ERC-721 badges.
 Features: timelock, permits, futarchy, token sales, ragequit, SBT-gated chat.

@@ -18,6 +18,12 @@ MolochViewHelper: [`0x000000000066317bd3662A649D8901c076268Df9`](https://contrac
 
 DAICO: [`0x000000000033e92DB97B4B3beCD2c255126C60aC`](https://contractscan.xyz/contract/0x000000000033e92DB97B4B3beCD2c255126C60aC)
 
+## Dapps
+
+> [majeurdao.eth](https://majeurdao.eth.limo/)
+
+> [daicowtf.eth](https://daicowtf.eth.limo/)
+
 ## TL;DR
 
 Moloch (Majeur) is a DAO framework where:

@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Oswald:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.15.0/ethers.umd.min.js" integrity="sha512-UXYETj+vXKSURF1UlgVRLzWRS9ZiQTv3lcL4rbeLyqTXCPNZC6PTLF/Ik3uxm2Zo+E109cUpJPZfLxJsCgKSng==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <style>
         :root {
             --pink: #FFB6D9;
@@ -830,6 +830,97 @@
             font-size: clamp(1.5rem, 4vw, 2.5rem);
         }
 
+        /* ZAMM swap badge - subtle diagonal link */
+        .zamm-swap-badge {
+            position: absolute;
+            bottom: 28%;
+            right: 10%;
+            transform: rotate(4deg);
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            opacity: 0.6;
+            transition: all 0.15s ease-out;
+            padding: 0.4rem 0.6rem;
+            border: 2px solid transparent;
+        }
+
+        .zamm-swap-badge:hover {
+            opacity: 1;
+            border-color: var(--blue);
+            background: rgba(0, 71, 255, 0.1);
+        }
+
+        .zamm-swap-badge img {
+            width: 28px;
+            height: 28px;
+        }
+
+        .zamm-swap-badge .zamm-text {
+            font-family: 'Oswald', sans-serif;
+            font-style: italic;
+            font-size: clamp(0.85rem, 2vw, 1rem);
+            color: var(--blue);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Majeur DAO badge - CTRL section */
+        .majeur-badge {
+            position: absolute;
+            top: 12%;
+            right: 6%;
+            transform: rotate(-5deg);
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            opacity: 0.6;
+            transition: all 0.15s ease-out;
+            padding: 0.4rem 0.6rem;
+            border: 2px solid transparent;
+            color: #c4b5fd;
+        }
+
+        .majeur-badge:hover {
+            opacity: 1;
+            border-color: #c4b5fd;
+            background: rgba(196, 181, 253, 0.1);
+        }
+
+        .majeur-badge svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .majeur-badge .majeur-text {
+            font-family: 'Oswald', sans-serif;
+            font-style: italic;
+            font-size: clamp(0.75rem, 2vw, 0.9rem);
+            color: #c4b5fd;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* World Computer highlight link - GROW section */
+        .world-computer-link {
+            color: var(--orange);
+            background: var(--black);
+            text-decoration: none;
+            padding: 0.05em 0.2em;
+            font-weight: 500;
+            transition: all 0.1s ease-out;
+            display: inline;
+        }
+
+        .world-computer-link:hover {
+            color: var(--black);
+            background: var(--orange);
+        }
+
         /* Stagger animations */
         .crossed-snipers.animated .cross-line {
             animation-delay: 0s;
@@ -874,6 +965,34 @@
 
             .crossed-bs .crossed-text {
                 font-size: clamp(1.2rem, 5vw, 1.8rem);
+            }
+
+            .zamm-swap-badge {
+                bottom: 12%;
+                right: 5%;
+            }
+
+            .zamm-swap-badge img {
+                width: 22px;
+                height: 22px;
+            }
+
+            .zamm-swap-badge .zamm-text {
+                font-size: 0.75rem;
+            }
+
+            .majeur-badge {
+                top: 8%;
+                right: 4%;
+            }
+
+            .majeur-badge svg {
+                width: 20px;
+                height: 20px;
+            }
+
+            .majeur-badge .majeur-text {
+                font-size: 0.7rem;
             }
         }
 
@@ -1531,6 +1650,29 @@
             background: rgba(255, 255, 255, 0.1);
         }
 
+        /* Tap Preset Buttons */
+        .tap-preset-btn, .tap-duration-btn {
+            padding: 0.6rem 1.2rem;
+            font-family: 'Oswald', sans-serif;
+            font-size: 1rem;
+            background: transparent;
+            color: var(--white);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tap-preset-btn:hover, .tap-duration-btn:hover {
+            border-color: var(--cyan);
+            color: var(--cyan);
+        }
+
+        .tap-preset-btn.active, .tap-duration-btn.active {
+            background: var(--cyan);
+            color: var(--black);
+            border-color: var(--cyan);
+        }
+
         /* LP Slider */
         .wizard-lp-slider {
             display: flex;
@@ -1844,6 +1986,32 @@
             color: var(--cyan);
         }
 
+        /* Trust Mode notice */
+        .wizard-trust-notice {
+            margin-top: 1.5rem;
+            padding: 1rem 1.25rem;
+            background: rgba(255, 200, 100, 0.1);
+            border: 2px solid var(--yellow);
+            text-align: center;
+        }
+
+        .wizard-trust-title {
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--yellow);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .wizard-trust-desc {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.5;
+            font-style: normal;
+        }
+
         /* Wizard success */
         .wizard-success {
             text-align: center;
@@ -2027,6 +2195,36 @@
             color: var(--black);
         }
 
+        .edit-tap-pct {
+            background: var(--green);
+            color: var(--black);
+        }
+
+        .edit-tap-pct:hover {
+            background: var(--cyan);
+            color: var(--black);
+        }
+
+        .edit-tap-months {
+            background: var(--green);
+            color: var(--black);
+        }
+
+        .edit-tap-months:hover {
+            background: var(--cyan);
+            color: var(--black);
+        }
+
+        .edit-tap-toggle {
+            background: transparent;
+            color: rgba(255, 255, 255, 0.5);
+            padding: 0.1rem 0.3rem;
+        }
+
+        .edit-tap-toggle:hover {
+            color: var(--cyan);
+        }
+
         .summary-static {
             color: rgba(255, 255, 255, 0.6);
         }
@@ -2087,10 +2285,41 @@
             cursor: not-allowed;
         }
 
+        .summary-advanced-link {
+            font-size: 0.75rem;
+            color: var(--white);
+            opacity: 0.4;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            transition: opacity 0.15s ease-out;
+            margin-top: 0.5rem;
+        }
+
+        .summary-advanced-link:hover {
+            opacity: 0.8;
+        }
+
         .summary-price-preview {
             font-size: clamp(0.9rem, 2vw, 1.2rem);
             color: var(--cyan);
             font-style: normal;
+        }
+
+        .summary-tap-preview {
+            font-size: clamp(0.75rem, 1.8vw, 1rem);
+            color: var(--green);
+            font-style: normal;
+            opacity: 0.7;
+            margin-top: 0.3em;
+        }
+
+        .summary-loot-note {
+            font-size: clamp(0.7rem, 1.5vw, 0.9rem);
+            color: var(--yellow);
+            font-style: normal;
+            opacity: 0.8;
+            margin-top: 0.5em;
         }
 
         .summary-token-icon {
@@ -2106,32 +2335,117 @@
             height: 100%;
         }
 
-        .summary-name-inputs {
-            display: flex;
-            gap: 1rem;
-            margin-top: 2rem;
-            flex-wrap: wrap;
-            justify-content: center;
+        .summary-name-section {
+            margin-top: 2.5rem;
+            text-align: center;
+            font-size: clamp(1.2rem, 3vw, 1.8rem);
+            line-height: 2;
+            color: rgba(255, 255, 255, 0.6);
         }
 
         .summary-name-input {
-            padding: 0.75rem 1rem;
-            background: rgba(255, 255, 255, 0.05);
-            border: 2px solid var(--cyan);
-            color: var(--white);
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid var(--cyan);
+            color: var(--cyan);
             font-family: 'Oswald', sans-serif;
-            font-size: 1rem;
+            font-size: inherit;
             text-align: center;
-            width: 180px;
+            padding: 0.1em 0.3em;
+            margin: 0 0.2em;
+            transition: all 0.15s ease-out;
         }
 
         .summary-name-input:focus {
             outline: none;
-            background: rgba(0, 255, 255, 0.1);
+            border-bottom-color: var(--white);
+            color: var(--white);
         }
 
         .summary-name-input::placeholder {
-            color: rgba(255, 255, 255, 0.3);
+            color: rgba(0, 255, 255, 0.4);
+            font-style: italic;
+        }
+
+        .summary-name-input.name-field {
+            width: 200px;
+            border-bottom-color: var(--yellow);
+            color: var(--yellow);
+        }
+
+        .summary-name-input.name-field:focus {
+            border-bottom-color: var(--white);
+            color: var(--white);
+        }
+
+        .summary-name-input.name-field::placeholder {
+            color: rgba(255, 255, 0, 0.4);
+        }
+
+        .summary-name-input.symbol-field {
+            width: 100px;
+            text-transform: uppercase;
+            border-bottom-color: var(--orange);
+            color: var(--orange);
+        }
+
+        .summary-name-input.symbol-field:focus {
+            border-bottom-color: var(--white);
+            color: var(--white);
+        }
+
+        .summary-name-input.symbol-field::placeholder {
+            color: rgba(255, 165, 0, 0.4);
+        }
+
+        .summary-description-wrapper {
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .summary-description {
+            background: transparent;
+            border: none;
+            border-bottom: 2px dashed rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.7);
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.9rem;
+            text-align: center;
+            padding: 0.5em;
+            width: 80%;
+            max-width: 500px;
+            min-height: 1.5em;
+            resize: none;
+            transition: all 0.15s ease-out;
+        }
+
+        .summary-description:focus {
+            outline: none;
+            border-bottom-color: var(--cyan);
+            color: var(--white);
+        }
+
+        .summary-description::placeholder {
+            color: rgba(255, 255, 255, 0.25);
+            font-style: italic;
+        }
+
+        .summary-duna-hint {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.35);
+            margin-top: 0.35rem;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .summary-duna-hint a {
+            color: var(--cyan);
+            opacity: 0.7;
+            text-decoration: none;
+        }
+
+        .summary-duna-hint a:hover {
+            opacity: 1;
+            text-decoration: underline;
         }
 
         /* ACTIVE DAICOS SECTION */
@@ -2147,7 +2461,7 @@
             align-items: center;
             justify-content: space-between;
             max-width: 1200px;
-            margin: 0 auto 2.5rem;
+            margin: 0 auto 1.5rem;
         }
 
         .active-daicos-title {
@@ -2176,6 +2490,91 @@
             background: var(--cyan);
             transform: translate(-2px, -2px);
             box-shadow: 4px 4px 0 var(--white);
+        }
+
+        /* Sale status tabs */
+        .sale-tabs {
+            display: flex;
+            gap: 0;
+            max-width: 1200px;
+            margin: 0 auto 2rem;
+        }
+
+        .sale-tab {
+            font-family: 'Oswald', sans-serif;
+            font-style: italic;
+            font-size: clamp(0.9rem, 2vw, 1.1rem);
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.5);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-bottom: none;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: all 0.1s ease-out;
+        }
+
+        .sale-tab:first-child {
+            border-right: none;
+        }
+
+        .sale-tab:hover {
+            color: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .sale-tab.active {
+            color: var(--green);
+            background: var(--black);
+            border-color: var(--green);
+        }
+
+        .sale-tab .tab-count {
+            font-style: normal;
+            font-size: 0.85em;
+            opacity: 0.7;
+            margin-left: 0.5rem;
+        }
+
+        /* Completed sale card styling */
+        .daico-card.completed {
+            opacity: 0.7;
+            border-color: rgba(0, 255, 255, 0.3);
+        }
+
+        .daico-card.completed::before {
+            display: none; /* Hide LIVE badge for completed sales */
+        }
+
+        .daico-card.completed:hover {
+            opacity: 0.9;
+        }
+
+        .daico-card.completed .daico-deadline {
+            color: var(--orange);
+        }
+
+        .sale-status-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-family: 'Oswald', sans-serif;
+            font-size: 0.75rem;
+            font-style: normal;
+            padding: 0.25rem 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .sale-status-badge.sold-out {
+            background: var(--orange);
+            color: var(--black);
+        }
+
+        .sale-status-badge.ended {
+            background: rgba(255, 255, 255, 0.2);
+            color: var(--white);
         }
 
         .active-daicos-grid {
@@ -2256,6 +2655,34 @@
             margin-bottom: 1.25rem;
             font-style: normal;
             font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .daico-trib-icon {
+            width: 24px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+
+        .daico-trib-icon svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .daico-trib-icon-sm {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+            display: inline-flex;
+            vertical-align: middle;
+            margin-right: 0.25rem;
+        }
+
+        .daico-trib-icon-sm svg {
+            width: 100%;
+            height: 100%;
         }
 
         .daico-progress {
@@ -2282,6 +2709,13 @@
             font-style: normal;
         }
 
+        .daico-raised {
+            color: var(--green);
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+        }
+
         .daico-deadline {
             font-size: 1.1rem;
             font-family: 'Oswald', sans-serif;
@@ -2300,6 +2734,63 @@
             color: var(--orange);
             font-style: normal;
             font-weight: bold;
+        }
+
+        .daico-card-content {
+            display: flex;
+            gap: 1.25rem;
+        }
+
+        .daico-image {
+            width: 80px;
+            height: 80px;
+            min-width: 80px;
+            border: 2px solid var(--cyan);
+            background: var(--black);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .daico-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .daico-image-placeholder {
+            background: linear-gradient(135deg, rgba(0, 255, 255, 0.1) 0%, rgba(0, 255, 0, 0.1) 100%);
+        }
+
+        .daico-image-initial {
+            font-family: 'Oswald', sans-serif;
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--cyan);
+            text-transform: uppercase;
+        }
+
+        .daico-image-description {
+            padding: 0.5rem;
+            background: var(--black);
+        }
+
+        .daico-desc-text {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.65rem;
+            line-height: 1.3;
+            color: var(--white);
+            display: -webkit-box;
+            -webkit-line-clamp: 5;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            word-break: break-word;
+        }
+
+        .daico-info {
+            flex: 1;
+            min-width: 0;
         }
 
         .daico-loading, .no-daicos {
@@ -2362,6 +2853,20 @@
             color: var(--green);
             text-transform: uppercase;
             letter-spacing: 0.05em;
+        }
+
+        .purchase-description {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            color: rgba(255, 255, 255, 0.85);
+            background: rgba(0, 0, 0, 0.3);
+            border-left: 3px solid var(--cyan);
+            padding: 0.75rem 1rem;
+            margin-bottom: 1.5rem;
+            max-height: 100px;
+            overflow-y: auto;
+            word-break: break-word;
         }
 
         .purchase-info {
@@ -2615,9 +3120,11 @@
 
         .tap-amount {
             color: var(--orange);
-            font-family: 'Oswald', sans-serif;
-            font-size: 1.4rem;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 1.3rem;
             font-weight: bold;
+            letter-spacing: 0.02em;
+            text-shadow: 0 0 10px rgba(255, 165, 0, 0.3);
         }
 
         .tap-claim-btn {
@@ -2884,7 +3391,7 @@
 
             .active-daicos-header {
                 padding: 0 0.5rem;
-                margin-bottom: 1.5rem;
+                margin-bottom: 1rem;
             }
 
             .active-daicos-title {
@@ -2895,6 +3402,21 @@
                 width: 48px;
                 height: 48px;
                 font-size: 1.4rem;
+            }
+
+            .sale-tabs {
+                padding: 0 0.5rem;
+                margin-bottom: 1.5rem;
+            }
+
+            .sale-tab {
+                padding: 0.6rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .sale-status-badge {
+                font-size: 0.65rem;
+                padding: 0.2rem 0.4rem;
             }
 
             .daico-card {
@@ -2920,6 +3442,16 @@
                 font-size: 1.15rem;
             }
 
+            .daico-trib-icon {
+                width: 20px;
+                height: 20px;
+            }
+
+            .daico-trib-icon-sm {
+                width: 14px;
+                height: 14px;
+            }
+
             .daico-progress {
                 height: 10px;
             }
@@ -2930,6 +3462,25 @@
 
             .daico-deadline {
                 font-size: 0.95rem;
+            }
+
+            .daico-image {
+                width: 64px;
+                height: 64px;
+                min-width: 64px;
+            }
+
+            .daico-image-initial {
+                font-size: 2rem;
+            }
+
+            .daico-desc-text {
+                font-size: 0.55rem;
+                -webkit-line-clamp: 4;
+            }
+
+            .daico-card-content {
+                gap: 1rem;
             }
 
             /* Purchase modal */
@@ -3055,6 +3606,134 @@
             .form-label {
                 font-size: 0.85rem;
             }
+
+            /* Advanced form modal optimizations */
+            .modal-container {
+                margin: 0.5rem;
+                max-height: calc(100vh - 1rem);
+            }
+
+            .modal-header {
+                padding: 0.85rem 1rem;
+            }
+
+            .modal-body {
+                padding: 1rem;
+                max-height: calc(100vh - 80px);
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .form-section {
+                margin-bottom: 1.5rem;
+            }
+
+            .form-section-title {
+                font-size: 1rem;
+                margin-bottom: 0.75rem;
+            }
+
+            .form-group {
+                margin-bottom: 0.75rem;
+            }
+
+            .toggle-section {
+                padding: 0.85rem;
+            }
+
+            .toggle-header label {
+                font-size: 0.9rem;
+            }
+
+            .toggle-content {
+                padding-top: 0.75rem;
+            }
+
+            .viz-panel {
+                padding: 0.85rem;
+                margin-bottom: 1.25rem;
+            }
+
+            .viz-title {
+                font-size: 0.9rem;
+            }
+
+            .viz-row {
+                font-size: 0.85rem;
+            }
+
+            /* Submit button */
+            .submit-btn {
+                padding: 1rem;
+                font-size: 1.1rem;
+            }
+
+            /* Tap config buttons */
+            .tap-preset-btn, .tap-duration-btn {
+                padding: 0.5rem 0.9rem;
+                font-size: 0.9rem;
+            }
+
+            .tap-preset-btns {
+                gap: 0.4rem !important;
+            }
+
+            /* Wizard tap effect box */
+            #wizardTapEffect {
+                font-size: 0.85rem !important;
+                padding: 0.75rem !important;
+            }
+
+            /* Wizard tap ops display */
+            .tap-ops-display {
+                font-size: 0.75rem !important;
+                padding: 0.6rem 0.8rem !important;
+            }
+
+            /* Text summoning improvements */
+            .summary-name-section {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .summary-name-input.name-field {
+                width: 100%;
+                max-width: none;
+            }
+
+            .summary-name-input.symbol-field {
+                width: 80px;
+            }
+
+            .summary-description {
+                font-size: 0.9rem;
+            }
+
+            .summary-tap-preview {
+                font-size: 0.7rem;
+            }
+
+            /* Advanced form grid fixes */
+            .form-row {
+                grid-template-columns: 1fr !important;
+                gap: 1rem !important;
+            }
+
+            .form-group-row {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+
+            /* LP and tap sections in advanced form */
+            .lp-config-section,
+            .tap-config-section {
+                padding: 1rem;
+            }
+
+            .lp-config-section .form-row,
+            .tap-config-section .form-row {
+                gap: 0.75rem;
+            }
         }
 
         /* EXTRA SMALL MOBILE */
@@ -3088,6 +3767,21 @@
                 font-size: 1.2rem;
             }
 
+            .daico-image {
+                width: 56px;
+                height: 56px;
+                min-width: 56px;
+            }
+
+            .daico-image-initial {
+                font-size: 1.6rem;
+            }
+
+            .daico-desc-text {
+                font-size: 0.5rem;
+                -webkit-line-clamp: 3;
+            }
+
             .purchase-title,
             .wizard-title {
                 font-size: 1.3rem;
@@ -3095,6 +3789,39 @@
 
             .swap-input {
                 font-size: 1.4rem;
+            }
+
+            /* Tap buttons on extra small */
+            .tap-preset-btn, .tap-duration-btn {
+                padding: 0.4rem 0.7rem;
+                font-size: 0.8rem;
+            }
+
+            /* Summary text on extra small */
+            .summary-sentence {
+                font-size: 0.9rem;
+                line-height: 1.7;
+            }
+
+            .summary-editable {
+                padding: 0.1em 0.2em;
+            }
+
+            .summary-price-preview {
+                font-size: 0.75rem;
+            }
+
+            .summary-tap-preview {
+                font-size: 0.65rem;
+            }
+
+            .summary-name-section {
+                font-size: 1rem;
+            }
+
+            .summary-launch-btn {
+                padding: 0.85rem 1.5rem;
+                font-size: 1rem;
             }
         }
 
@@ -3119,6 +3846,20 @@
                 min-height: 44px;
             }
 
+            .tap-preset-btn, .tap-duration-btn {
+                min-height: 44px;
+            }
+
+            .summary-editable {
+                min-height: 32px;
+                display: inline-flex;
+                align-items: center;
+            }
+
+            .summary-launch-btn {
+                min-height: 52px;
+            }
+
             /* Remove hover effects that don't work on touch */
             .daico-card:hover {
                 transform: none;
@@ -3137,6 +3878,41 @@
 
             .purchase-btn:active:not(:disabled) {
                 transform: scale(0.98);
+            }
+
+            .tap-preset-btn:active, .tap-duration-btn:active {
+                transform: scale(0.95);
+            }
+
+            .summary-editable:active {
+                transform: scale(0.98);
+            }
+
+            .wizard-raise-btn:active {
+                transform: scale(0.98);
+            }
+
+            .zamm-swap-badge:hover {
+                opacity: 0.6;
+                border-color: transparent;
+                background: transparent;
+            }
+
+            .zamm-swap-badge:active {
+                opacity: 1;
+                transform: rotate(4deg) scale(0.95);
+            }
+
+            .majeur-badge:hover {
+                opacity: 0.6;
+                border-color: transparent;
+                background: transparent;
+            }
+
+            .majeur-badge:active {
+                opacity: 1;
+                border-color: #c4b5fd;
+                transform: rotate(-5deg) scale(0.95);
             }
         }
 
@@ -3182,7 +3958,7 @@
 </head>
 <body>
     <!-- LAUNCH BUTTON - Fixed top left, visible on all pages -->
-    <button id="launchBtn" class="launch-btn" onclick="openWizard()">Launch DAICO</button>
+    <button id="launchBtn" class="launch-btn" onclick="document.getElementById('summary-section').scrollIntoView({behavior: 'smooth'})">Launch DAICO</button>
 
     <!-- WALLET HEADER -->
     <div class="wallet-header">
@@ -3191,7 +3967,7 @@
     </div>
 
     <div class="attribution-box" id="attributionBox">
-        <span>built by </span><a href="https://majeurdao.eth.limo/#/dao/0x5E58BA0e06ED0F5558f83bE732a4b899a674053E" target="_blank">zOrg</a><span> for </span><a href="https://zamm.finance/" target="_blank">zamm.finance</a>
+        <span>built by </span><a href="https://majeurdao.eth.limo/#/dao/0x5E58BA0e06ED0F5558f83bE732a4b899a674053E" target="_blank" rel="noopener">zOrg</a><span> for </span><a href="https://zamm.finance/" target="_blank" rel="noopener">zamm.finance</a>
     </div>
 
     <!-- HERO -->
@@ -3235,7 +4011,7 @@
     <section class="section section-fund" id="fund-section">
         <div class="theme">FUND</div>
         <div class="content">
-            <p>Sell tokens. Raise capital. Seed liquidity. Fixed price. Onchain. Auditable.</p>
+            <p>Sell tokens. Raise capital. Seed liquidity. Automatically.</p>
             <div class="crossed-word crossed-snipers">
                 <span class="crossed-text">snipers</span>
                 <svg class="cross-lines" viewBox="0 0 100 50">
@@ -3258,6 +4034,11 @@
                 </svg>
             </div>
         </div>
+        <!-- ZAMM swap badge -->
+        <a href="https://zamm.finance/" target="_blank" rel="noopener" class="zamm-swap-badge" title="Swap DAICO tokens on ZAMM">
+            <img src="https://content.wrappr.wtf/ipfs/bafybeibuct6mftnmgzkbn4tq47elpokbkahkjxq7z6qceptlcsvpxletou" alt="ZAMM">
+            <span class="zamm-text">swap</span>
+        </a>
         <div class="section-daico">DAICO.WTF</div>
     </section>
 
@@ -3265,7 +4046,7 @@
     <section class="section section-ctrl" id="ctrl-section">
         <div class="theme">CTRL</div>
         <div class="content">
-            <p>Token holders control the treasury. Set the TAP. Vote on proposals. Ragequit anytime. Your capital, your call.</p>
+            <p>Token holders control funding at all times. Vote on treasury proposals based on your share of contributions. Adjust the TAP to OPS. Ragequit for refund. No meetings. Always online as a DAO.</p>
             <!-- Hand-drawn diagram -->
             <div class="ctrl-diagram">
                 <svg class="diagram-svg" viewBox="0 0 400 200">
@@ -3305,8 +4086,8 @@
                     <path class="diagram-line line-treasury" d="M 200,50 L 200,70"/>
 
                     <!-- DAO to Ops (TAP) - dotted line -->
-                    <path class="diagram-line line-tap dotted" d="M 250,100 Q 265,100 290,100"/>
                     <text class="diagram-line-label label-tap" x="270" y="92">tap</text>
+                    <path class="diagram-line line-tap dotted" d="M 250,105 Q 270,105 290,105"/>
 
                     <!-- Holder to Exit (ragequit) -->
                     <path class="diagram-line line-ragequit" d="M 60,130 Q 60,170 150,170"/>
@@ -3314,6 +4095,22 @@
                 </svg>
             </div>
         </div>
+        <!-- Majeur DAO badge -->
+        <a href="https://majeurdao.eth.limo/" target="_blank" rel="noopener" class="majeur-badge" title="Manage your DAO on Majeur">
+            <svg viewBox="0 0 32 32" fill="none">
+                <line x1="16" y1="0" x2="16" y2="16" stroke="currentColor" stroke-width="1" opacity="0.7"/>
+                <line x1="16" y1="32" x2="16" y2="16" stroke="currentColor" stroke-width="1" opacity="0.7"/>
+                <line x1="0" y1="16" x2="16" y2="16" stroke="currentColor" stroke-width="1" opacity="0.7"/>
+                <line x1="32" y1="16" x2="16" y2="16" stroke="currentColor" stroke-width="1" opacity="0.7"/>
+                <line x1="3" y1="3" x2="16" y2="16" stroke="currentColor" stroke-width="0.8" opacity="0.5"/>
+                <line x1="29" y1="3" x2="16" y2="16" stroke="currentColor" stroke-width="0.8" opacity="0.5"/>
+                <line x1="3" y1="29" x2="16" y2="16" stroke="currentColor" stroke-width="0.8" opacity="0.5"/>
+                <line x1="29" y1="29" x2="16" y2="16" stroke="currentColor" stroke-width="0.8" opacity="0.5"/>
+                <circle cx="16" cy="16" r="5" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.5"/>
+                <circle cx="16" cy="16" r="2.5" fill="currentColor" opacity="0.6"/>
+            </svg>
+            <span class="majeur-text">majeur</span>
+        </a>
         <div class="section-daico">DAICO.WTF</div>
     </section>
 
@@ -3321,7 +4118,7 @@
     <section class="section section-grow" id="grow-section">
         <div class="theme">GROW</div>
         <div class="content">
-            <p>Funding secured. Contributors aligned. Build for the long term. No rugs. No games. Just execution.</p>
+            <p>Plug into open financial opportunities on the <a href="https://ethereum.org/" target="_blank" rel="noopener" class="world-computer-link">World Computer</a>. Farm yield, airdrops, and unlock passive earnings from Day 1. Put grants and venture into hyperdrive.</p>
         </div>
         <div class="section-daico">DAICO.WTF</div>
 
@@ -3402,29 +4199,50 @@
             <span class="summary-static">day voting.</span>
             <span class="summary-editable edit-timelock" id="editTimelock" onclick="editSummaryField('timelock')">1</span>
             <span class="summary-static">day timelock.</span>
+            <br>
+            <span class="summary-static">Tap</span>
+            <span class="summary-editable edit-tap-pct" id="editTapPct" onclick="editTapPctField()">100%</span>
+            <span class="summary-static" id="tapOverText">over</span>
+            <span class="summary-editable edit-tap-months" id="editTapMonths" onclick="editSummaryField('tapMonths')">6</span>
+            <span class="summary-static" id="tapMonthsText">months</span>
+            <span class="summary-editable edit-tap-toggle" id="editTapToggle" onclick="toggleSummaryTap()" style="opacity: 0.5; font-size: 0.8em;">(disable)</span>
         </div>
 
         <div id="summaryPricePreview" class="summary-price-preview"></div>
+        <div id="summaryTapPreview" class="summary-tap-preview"></div>
+        <div id="summaryLootNote" class="summary-loot-note" style="display: none;">
+            You retain voting control. Loot holders can ragequit.
+        </div>
 
-        <div class="summary-name-inputs">
-            <input type="text" id="summaryName" class="summary-name-input" placeholder="DAO Name">
-            <input type="text" id="summarySymbol" class="summary-name-input" placeholder="SYMBOL" maxlength="10" style="width: 120px;">
+        <div class="summary-name-section">
+            <span>Call it</span>
+            <input type="text" id="summaryName" class="summary-name-input name-field" placeholder="Name">
+            <span>(</span><input type="text" id="summarySymbol" class="summary-name-input symbol-field" placeholder="SYM" maxlength="10"><span>)</span>
+        </div>
+        <div class="summary-description-wrapper">
+            <textarea id="summaryDescription" class="summary-description" placeholder="vision..." rows="1"></textarea>
+            <div class="summary-duna-hint">defaults to <a href="https://github.com/z0r0z/majeur?tab=readme-ov-file#wyoming-duna-compliance" target="_blank" rel="noopener">DUNA</a></div>
         </div>
 
         <div class="summary-launch-container">
             <button id="summaryLaunchBtn" class="summary-launch-btn" onclick="launchFromSummary()">Launch</button>
             <div id="summaryStatus" style="color: var(--cyan); font-style: normal; text-align: center;"></div>
+            <div class="summary-advanced-link" onclick="openWizard()">Advanced</div>
         </div>
     </section>
 
     <!-- ACTIVE DAICOS SECTION -->
     <section class="section-active-daicos" id="active-daicos-section">
         <div class="active-daicos-header">
-            <div class="active-daicos-title">Active Sales</div>
+            <div class="active-daicos-title">Sales</div>
             <button class="refresh-btn" onclick="daicoScanTriggered = false; triggerDAICOScan();">↻</button>
         </div>
+        <div class="sale-tabs">
+            <button id="activeTab" class="sale-tab active" onclick="showSaleTab('active')">Active<span id="activeCount" class="tab-count"></span></button>
+            <button id="completedTab" class="sale-tab" onclick="showSaleTab('completed')">Completed<span id="completedCount" class="tab-count"></span></button>
+        </div>
         <div id="activeDaicosList" class="active-daicos-grid">
-            <div class="daico-loading">Scroll to load active DAICOs...</div>
+            <div class="daico-loading">Scroll to load DAICOs...</div>
         </div>
     </section>
 
@@ -3435,6 +4253,9 @@
                 <div class="purchase-title" id="purchaseDaoName">Buy Tokens</div>
                 <button class="wizard-close" onclick="closePurchaseModal()">&times;</button>
             </div>
+
+            <!-- DAO Description (from contractURI) -->
+            <div id="purchaseDescription" class="purchase-description" style="display: none;"></div>
 
             <div id="purchaseStatus" class="status-message"></div>
 
@@ -3495,9 +4316,9 @@
             <div class="slippage-row">
                 <span>Slippage Tolerance</span>
                 <div class="slippage-options">
-                    <button class="slippage-btn active" onclick="setSlippage(0.5)">0.5%</button>
-                    <button class="slippage-btn" onclick="setSlippage(1)">1%</button>
-                    <button class="slippage-btn" onclick="setSlippage(2)">2%</button>
+                    <button class="slippage-btn active" onclick="setSlippage(0.5, this)">0.5%</button>
+                    <button class="slippage-btn" onclick="setSlippage(1, this)">1%</button>
+                    <button class="slippage-btn" onclick="setSlippage(2, this)">2%</button>
                 </div>
             </div>
 
@@ -3517,12 +4338,15 @@
                     <span>Team Funding (TAP)</span>
                     <span id="tapClaimable" class="tap-amount">0 ETH</span>
                 </div>
+                <div id="tapOpsRow" class="tap-ops-row" style="font-size: 0.85rem; opacity: 0.7; margin-top: 0.5rem;">
+                    Operator: <span id="tapOpsDisplay" style="font-family: 'Roboto Mono', monospace;"></span>
+                </div>
                 <button id="claimTapBtn" class="tap-claim-btn" onclick="claimTap()">Claim TAP</button>
             </div>
 
             <!-- Link to Majeur -->
             <div class="purchase-footer">
-                <a id="majeurLink" href="#" target="_blank" class="majeur-link">View full DAO on Majeur →</a>
+                <a id="majeurLink" href="#" target="_blank" rel="noopener" class="majeur-link">View full DAO on Majeur →</a>
             </div>
         </div>
     </div>
@@ -3565,6 +4389,11 @@
                 <div class="wizard-input-group">
                     <label class="wizard-label">Symbol</label>
                     <input type="text" id="wizardSymbol" class="wizard-input" placeholder="MPD" maxlength="10">
+                </div>
+                <div class="wizard-input-group" style="margin-top: 0.5rem;">
+                    <label class="wizard-label" style="opacity: 0.6;">Description <span style="font-weight: normal; font-size: 0.75rem;">(optional)</span></label>
+                    <textarea id="wizardDescription" class="wizard-input" placeholder="Brief description of your project..." style="resize: vertical; min-height: 50px; max-height: 120px; font-family: inherit;"></textarea>
+                    <small style="color: rgba(255, 255, 255, 0.35); font-size: 0.7rem; margin-top: 0.25rem; display: block;">defaults to <a href="https://github.com/z0r0z/majeur?tab=readme-ov-file#wyoming-duna-compliance" target="_blank" rel="noopener" style="color: var(--cyan); opacity: 0.7;">DUNA</a></small>
                 </div>
                 <div class="wizard-nav">
                     <button class="wizard-btn back" onclick="wizardBack()">Back</button>
@@ -3611,12 +4440,12 @@
             <div id="wizardStep4" class="wizard-step">
                 <div class="wizard-step-title">Enable the TAP?</div>
                 <p style="color: rgba(255,255,255,0.6); text-align: center; margin-bottom: 1.5rem; font-style: normal;">
-                    Release 10% of raised funds to ops over 6 months. DAO can adjust anytime.
+                    Release funds gradually to an ops address. DAO can adjust anytime via governance.
                 </p>
                 <div class="wizard-choice">
                     <button class="wizard-choice-btn tap-yes" onclick="showTapConfig()">
                         Yes
-                        <div class="wizard-choice-desc">Release funds gradually to ops.</div>
+                        <div class="wizard-choice-desc">Controlled fund release to ops.</div>
                     </button>
                     <button class="wizard-choice-btn tap-no" onclick="selectTap(false)">
                         No
@@ -3624,11 +4453,43 @@
                     </button>
                 </div>
                 <div id="wizardTapConfig" style="display: none; margin-top: 1.5rem;">
-                    <div class="wizard-input-group">
-                        <label class="wizard-label">Ops Address (receives TAP funds)</label>
-                        <input type="text" id="wizardTapOps" class="wizard-input" placeholder="0x... or ENS name (default: your wallet)">
-                        <div id="wizardTapOpsResolved" style="text-align: center; margin-top: 0.5rem; font-size: 0.8rem; font-style: normal; color: var(--cyan);"></div>
+                    <!-- Ops Address (clickable to edit) -->
+                    <div class="wizard-input-group" style="margin-bottom: 1.5rem;">
+                        <label class="wizard-label">Ops Address</label>
+                        <div id="wizardTapOpsDisplay" class="tap-ops-display" onclick="toggleTapOpsEdit()" style="cursor: pointer; padding: 0.75rem 1rem; background: rgba(0,255,255,0.05); border: 1px solid rgba(0,255,255,0.3); font-family: 'Roboto Mono', monospace; font-size: 0.9rem; text-align: center;">
+                            <span id="wizardTapOpsAddr" style="color: var(--cyan);"></span>
+                            <span style="opacity: 0.5; margin-left: 0.5rem; font-size: 0.8rem;">click to change</span>
+                        </div>
+                        <div id="wizardTapOpsEdit" style="display: none;">
+                            <input type="text" id="wizardTapOps" class="wizard-input" placeholder="0x... or ENS name" style="margin-top: 0.5rem;">
+                            <div id="wizardTapOpsResolved" style="text-align: center; margin-top: 0.5rem; font-size: 0.8rem; font-style: normal; color: var(--cyan);"></div>
+                        </div>
                     </div>
+
+                    <!-- Tap Percentage -->
+                    <div class="wizard-input-group" style="margin-bottom: 1.5rem;">
+                        <label class="wizard-label">Percentage of Raise</label>
+                        <div class="tap-preset-btns" style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
+                            <button class="tap-preset-btn" onclick="setTapPct(25, this)">25%</button>
+                            <button class="tap-preset-btn" onclick="setTapPct(50, this)">50%</button>
+                            <button class="tap-preset-btn active" onclick="setTapPct(100, this)">100%</button>
+                        </div>
+                        <div id="wizardTapPctSummary" style="text-align: center; margin-top: 0.75rem; font-size: 0.9rem; color: rgba(255,255,255,0.7);"></div>
+                    </div>
+
+                    <!-- Tap Duration -->
+                    <div class="wizard-input-group" style="margin-bottom: 1.5rem;">
+                        <label class="wizard-label">Release Duration</label>
+                        <div class="tap-preset-btns" style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
+                            <button class="tap-duration-btn" onclick="setTapDuration(3, this)">3 mo</button>
+                            <button class="tap-duration-btn active" onclick="setTapDuration(6, this)">6 mo</button>
+                            <button class="tap-duration-btn" onclick="setTapDuration(12, this)">12 mo</button>
+                        </div>
+                    </div>
+
+                    <!-- Tap Effect Summary -->
+                    <div id="wizardTapEffect" style="text-align: center; padding: 1rem; background: rgba(0,255,0,0.05); border: 1px solid rgba(0,255,0,0.2); margin-bottom: 1.5rem; font-size: 0.95rem; line-height: 1.6;"></div>
+
                     <div class="wizard-nav">
                         <button class="wizard-btn back" onclick="hideTapConfig()">Back</button>
                         <button class="wizard-btn next" onclick="confirmTapConfig()">Confirm</button>
@@ -3738,6 +4599,14 @@
                         <span class="wizard-summary-value">1 day</span>
                     </div>
                 </div>
+                <!-- Trust Mode notice for ungovernable DAICO -->
+                <div id="wizardTrustModeNotice" class="wizard-trust-notice" style="display: none;">
+                    <div class="wizard-trust-title">Trust Mode</div>
+                    <div class="wizard-trust-desc">
+                        No voting shareholders — loot holders trust the tap operator.
+                        Contributors can ragequit anytime for a pro-rata treasury refund.
+                    </div>
+                </div>
                 <div class="wizard-nav">
                     <button class="wizard-btn back" onclick="wizardBack()">Back</button>
                     <button id="wizardLaunchBtn" class="wizard-btn launch" onclick="launchSimpleDAICO()">Launch</button>
@@ -3750,7 +4619,7 @@
                     <div class="wizard-success-title">DAICO Launched</div>
                     <p style="color: rgba(255,255,255,0.6); font-style: normal;">Your DAO is live with an active token sale.</p>
                     <div id="wizardSuccessAddress" class="wizard-success-address"></div>
-                    <a id="wizardSuccessLink" href="#" target="_blank" class="wizard-success-link">View Your DAO</a>
+                    <a id="wizardSuccessLink" href="#" target="_blank" rel="noopener" class="wizard-success-link">View Your DAO</a>
                 </div>
             </div>
         </div>
@@ -3781,7 +4650,7 @@
                     <div class="success-title">DAICO Launched!</div>
                     <p style="color: rgba(255,255,255,0.7); margin-bottom: 1rem; font-style: normal;">Your DAO has been created with an active token sale.</p>
                     <div id="successAddress" class="success-address"></div>
-                    <a id="successLink" href="#" target="_blank" class="success-dao-link">View Your DAO</a>
+                    <a id="successLink" href="#" target="_blank" rel="noopener" class="success-dao-link">View Your DAO</a>
                 </div>
 
                 <!-- FORM (shown by default) -->
@@ -3845,6 +4714,13 @@
                                 </label>
                                 <input type="number" id="quorumPct" class="form-input" placeholder="20" min="1" max="100" value="20">
                             </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="opacity: 0.7;">Description
+                                <span class="hint">Optional - stored as on-chain metadata</span>
+                            </label>
+                            <textarea id="daoDescription" class="form-input" placeholder="Brief description of your project..." style="resize: vertical; min-height: 50px; max-height: 100px; font-family: inherit;"></textarea>
+                            <small style="color: rgba(255, 255, 255, 0.35); font-size: 0.7rem; margin-top: 0.25rem; display: block;">defaults to <a href="https://github.com/z0r0z/majeur?tab=readme-ov-file#wyoming-duna-compliance" target="_blank" rel="noopener" style="color: var(--cyan); opacity: 0.7;">DUNA</a> charter</small>
                         </div>
                     </div>
 
@@ -4018,7 +4894,8 @@
             '0x6B175474E89094C44Da98b954EedeAC495271d0F': { symbol: 'DAI', decimals: 18 },
             '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48': { symbol: 'USDC', decimals: 6 },
             '0xdAC17F958D2ee523a2206206994597C13D831ec7': { symbol: 'USDT', decimals: 6 },
-            '0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0': { symbol: 'wstETH', decimals: 18 }
+            '0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0': { symbol: 'wstETH', decimals: 18 },
+            '0xae78736Cd615f374D3085123A210448E74Fc6393': { symbol: 'rETH', decimals: 18 }
         };
 
         // Token icons (SVG)
@@ -4028,6 +4905,7 @@
             usdt: `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="#26A17B"/><path fill="#FFF" d="M17.922 17.383v-.002c-.11.008-.677.042-1.942.042-1.01 0-1.721-.03-1.971-.042v.003c-3.888-.171-6.79-.848-6.79-1.658 0-.809 2.902-1.486 6.79-1.66v2.644c.254.018.982.061 1.988.061 1.207 0 1.812-.05 1.925-.06v-2.643c3.88.173 6.775.85 6.775 1.658 0 .81-2.895 1.485-6.775 1.657m0-3.59v-2.366h5.414V7.819H8.595v3.608h5.414v2.365c-4.4.202-7.709 1.074-7.709 2.118 0 1.044 3.309 1.915 7.709 2.118v7.582h3.913v-7.584c4.393-.202 7.694-1.073 7.694-2.116 0-1.043-3.301-1.914-7.694-2.117"/></svg>`,
             dai: `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle fill="#F4B731" cx="16" cy="16" r="16"/><path fill="#FFF" d="M9.277 8h6.552c3.985 0 7.006 2.116 8.13 5.194H26v1.861h-1.611c.031.294.047.594.047.898v.046c0 .342-.02.68-.06 1.01H26v1.86h-2.08C22.767 21.905 19.77 24 15.83 24H9.277v-5.131H7v-1.86h2.277v-1.954H7v-1.86h2.277V8z"/></svg>`,
             wsteth: `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle fill="#00A3FF" cx="16" cy="16" r="16"/><path fill="#FFF" d="M9.437 14.864l-.181.275c-2.048 3.097-1.603 7.253 1.034 9.824 1.561 1.521 3.622 2.353 5.683 2.353 0 0 0 0-6.536-12.452z"/><path fill="#FFF" opacity=".6" d="M15.997 18.611l-6.56-3.747c6.56 12.452 6.56 12.452 6.56 12.452 0-2.683 0-5.623 0-8.705z"/><path fill="#FFF" opacity=".6" d="M22.563 14.864l.181.275c2.048 3.097 1.603 7.253-1.034 9.824-1.561 1.521-3.622 2.353-5.683 2.353 0 0 0 0 6.536-12.452z"/><path fill="#FFF" opacity=".2" d="M16.003 18.611l6.56-3.747c-6.56 12.452-6.56 12.452-6.56 12.452 0-2.683 0-5.623 0-8.705z"/></svg>`,
+            reth: `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle fill="#FF6B35" cx="16" cy="16" r="16"/><path fill="#FFF" d="M16 6l-6.5 10.5L16 20l6.5-3.5L16 6z"/><path fill="#FFF" opacity=".6" d="M16 20l-6.5-3.5L16 26l6.5-9.5L16 20z"/></svg>`,
             shares: `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle fill="#55FB9B" cx="16" cy="16" r="14" stroke="#000" stroke-width="1"/><text x="16" y="20" font-family="sans-serif" font-size="12" font-weight="bold" fill="#000" text-anchor="middle">S</text></svg>`,
             loot: `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle fill="#FF69B4" cx="16" cy="16" r="14" stroke="#000" stroke-width="1"/><text x="16" y="20" font-family="sans-serif" font-size="12" font-weight="bold" fill="#000" text-anchor="middle">L</text></svg>`,
             default: `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="14" fill="none" stroke="#00ffff" stroke-width="2"/><circle cx="16" cy="16" r="8" fill="none" stroke="#00ffff" stroke-width="1.5" opacity="0.5"/></svg>`
@@ -4040,6 +4918,7 @@
             if (addr === '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48') return TOKEN_ICONS.usdc;
             if (addr === '0xdac17f958d2ee523a2206206994597c13d831ec7') return TOKEN_ICONS.usdt;
             if (addr === '0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0') return TOKEN_ICONS.wsteth;
+            if (addr === '0xae78736cd615f374d3085123a210448e74fc6393') return TOKEN_ICONS.reth;
             return TOKEN_ICONS.default;
         }
 
@@ -4062,6 +4941,15 @@
             setProposalTTL: new ethers.Interface(['function setProposalTTL(uint64)']),
             setTimelockDelay: new ethers.Interface(['function setTimelockDelay(uint64)'])
         };
+
+        // DAICO interface for encoding calldata
+        const DAICO_IFACE = new ethers.Interface(DAICO_ABI);
+
+        // Swiss Knife calldata decoder URL builder
+        const SWISS_KNIFE_BASE = 'https://calldata.swiss-knife.xyz/decoder';
+        function buildSwissKnifeUrl(calldata) {
+            return `${SWISS_KNIFE_BASE}?chainId=1&address=${DAICO_ADDRESS}&calldata=${calldata}`;
+        }
 
         // Error handling helpers
         function isUserRejection(error) {
@@ -4100,6 +4988,149 @@
             if (error.reason) return error.reason;
             if (error.message) return error.message.slice(0, 100);
             return 'Launch failed';
+        }
+
+        // Build contractURI metadata JSON (ERC-7572 compatible)
+        // Returns data URI with JSON for on-chain storage, or empty string if no description
+        // Note: If empty, the on-chain renderer displays default DUNA charter
+        function buildContractURI(name, symbol, description) {
+            if (!description || !description.trim()) {
+                return ''; // Empty triggers renderer's default DUNA template
+            }
+            const metadata = {
+                name: name || '',
+                symbol: symbol || '',
+                description: description.trim()
+                // Future: image, external_link, banner_image, etc.
+            };
+            const json = JSON.stringify(metadata);
+            return 'data:application/json;utf8,' + json;
+        }
+
+        // Parse contractURI to extract metadata (handles both JSON and SVG formats)
+        // Returns: { type: 'json'|'svg', image?: string, description?: string, name?: string, symbol?: string }
+        function parseContractURI(uri) {
+            if (!uri) return null;
+
+            try {
+                // Handle data URI formats
+                if (uri.startsWith('data:')) {
+                    // JSON format: data:application/json;utf8,{...} or data:application/json;base64,...
+                    if (uri.startsWith('data:application/json')) {
+                        let jsonStr;
+                        if (uri.includes(';base64,')) {
+                            const base64 = uri.split(';base64,')[1];
+                            jsonStr = atob(base64);
+                        } else if (uri.includes(';utf8,')) {
+                            jsonStr = uri.split(';utf8,')[1];
+                        } else {
+                            // Assume raw JSON after comma
+                            jsonStr = uri.split(',')[1];
+                        }
+                        const metadata = JSON.parse(jsonStr);
+                        return {
+                            type: 'json',
+                            name: metadata.name,
+                            symbol: metadata.symbol,
+                            description: metadata.description,
+                            image: metadata.image,
+                            external_link: metadata.external_link,
+                            banner_image: metadata.banner_image
+                        };
+                    }
+
+                    // SVG format: data:image/svg+xml;base64,... or data:image/svg+xml,...
+                    if (uri.startsWith('data:image/svg+xml')) {
+                        return {
+                            type: 'svg',
+                            image: uri // The URI itself is the image
+                        };
+                    }
+
+                    // Other image formats
+                    if (uri.startsWith('data:image/')) {
+                        return {
+                            type: 'image',
+                            image: uri
+                        };
+                    }
+                }
+
+                // IPFS format
+                if (uri.startsWith('ipfs://')) {
+                    const ipfsHash = uri.replace('ipfs://', '');
+                    return {
+                        type: 'ipfs',
+                        image: `https://ipfs.io/ipfs/${ipfsHash}`
+                    };
+                }
+
+                // HTTP(S) URL - could be JSON or image
+                if (uri.startsWith('http://') || uri.startsWith('https://')) {
+                    return {
+                        type: 'url',
+                        image: uri
+                    };
+                }
+
+                return null;
+            } catch (e) {
+                console.warn('Failed to parse contractURI:', e);
+                return null;
+            }
+        }
+
+        // Validate image URL to prevent XSS (javascript:, etc.)
+        function isSafeImageUrl(url) {
+            if (!url || typeof url !== 'string') return false;
+            const lower = url.toLowerCase().trim();
+            return lower.startsWith('https://') ||
+                   lower.startsWith('http://') ||
+                   lower.startsWith('data:image/') ||
+                   lower.startsWith('ipfs://');
+        }
+
+        // Render DAO image/logo based on metadata
+        // Returns HTML for the image display area
+        function renderDaoImage(metadata, name) {
+            const safeName = escapeHtml(name || '?');
+            const initial = safeName[0].toUpperCase();
+
+            if (!metadata) {
+                // No metadata - show default placeholder
+                return `<div class="daico-image daico-image-placeholder">
+                    <span class="daico-image-initial">${initial}</span>
+                </div>`;
+            }
+
+            // If we have a safe image URL (from JSON, SVG data URI, or direct image)
+            if (metadata.image && isSafeImageUrl(metadata.image)) {
+                return `<div class="daico-image">
+                    <img src="${metadata.image}" alt="${safeName}" onerror="this.parentElement.innerHTML='<span class=\\'daico-image-initial\\'>${initial}</span>'" />
+                </div>`;
+            }
+
+            // JSON with description but no image - render description box
+            if (metadata.type === 'json' && metadata.description) {
+                const truncatedDesc = metadata.description.length > 120
+                    ? metadata.description.slice(0, 117) + '...'
+                    : metadata.description;
+                return `<div class="daico-image daico-image-description">
+                    <span class="daico-desc-text">${escapeHtml(truncatedDesc)}</span>
+                </div>`;
+            }
+
+            // Fallback to initial
+            return `<div class="daico-image daico-image-placeholder">
+                <span class="daico-image-initial">${initial}</span>
+            </div>`;
+        }
+
+        // Helper to escape HTML for safe rendering
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         // CREATE2 address prediction (must match Summoner's proxy bytecode)
@@ -4463,6 +5494,8 @@
             raiseAmount: null, // ETH target
             enableTap: false,
             tapOps: null, // Resolved ops address for tap
+            tapPct: 100, // Percentage of raise for tap (default 100%)
+            tapDuration: 6, // Duration in months (default 6)
             enableLP: false,
             lpPct: 10, // Default 10%
             step: 1
@@ -4473,7 +5506,8 @@
             quorumBps: 1000, // 10%
             proposalTTL: 172800, // 2 days in seconds
             timelockDelay: 86400, // 1 day in seconds
-            tapPct: 10 // 10% of raise goes to tap
+            tapPct: 100, // 100% of raise goes to tap by default
+            tapDuration: 6 // 6 months default
         };
 
         // Calculate price per token from raise amount
@@ -4510,7 +5544,7 @@
 
         function openWizard() {
             // Reset wizard state
-            wizardState = { tokenType: null, raiseAmount: null, enableTap: false, tapOps: null, enableLP: false, lpPct: 10, step: 1 };
+            wizardState = { tokenType: null, raiseAmount: null, enableTap: false, tapOps: null, tapPct: 100, tapDuration: 6, enableLP: false, lpPct: 10, step: 1 };
 
             // Reset all steps
             document.querySelectorAll('.wizard-step').forEach(el => el.classList.remove('active'));
@@ -4519,6 +5553,7 @@
             // Clear inputs
             document.getElementById('wizardName').value = '';
             document.getElementById('wizardSymbol').value = '';
+            document.getElementById('wizardDescription').value = '';
             document.getElementById('wizardCustomRaiseInput').value = '';
             document.getElementById('wizardCustomRaise').style.display = 'none';
             document.getElementById('wizardRaiseNav').style.display = 'flex';
@@ -4614,18 +5649,114 @@
 
         function showTapConfig() {
             document.getElementById('wizardTapConfig').style.display = 'block';
-            // Pre-fill with connected address if available
-            if (connectedAddress && !document.getElementById('wizardTapOps').value) {
-                document.getElementById('wizardTapOps').placeholder = `Default: ${connectedAddress.slice(0, 6)}...${connectedAddress.slice(-4)}`;
+
+            // Show connected address as default ops
+            if (connectedAddress) {
+                document.getElementById('wizardTapOpsAddr').textContent = connectedAddress;
             }
+
+            // Reset to defaults
+            wizardState.tapPct = 100;
+            wizardState.tapDuration = 6;
+
+            // Update button states - select last preset btn (100%) and middle duration btn (6 mo)
+            document.querySelectorAll('.tap-preset-btn').forEach(btn => btn.classList.remove('active'));
+            const presetBtns = document.querySelectorAll('.tap-preset-btn');
+            if (presetBtns.length > 0) presetBtns[presetBtns.length - 1].classList.add('active');
+            document.querySelectorAll('.tap-duration-btn').forEach(btn => btn.classList.remove('active'));
+            const durationBtns = document.querySelectorAll('.tap-duration-btn');
+            if (durationBtns.length > 1) durationBtns[1].classList.add('active');
+
             // Add ENS resolution on blur
             document.getElementById('wizardTapOps').onblur = resolveWizardTapOps;
+
+            // Update the effect summary
+            updateTapEffect();
         }
 
         function hideTapConfig() {
             document.getElementById('wizardTapConfig').style.display = 'none';
             document.getElementById('wizardTapOps').value = '';
             document.getElementById('wizardTapOpsResolved').textContent = '';
+            document.getElementById('wizardTapOpsEdit').style.display = 'none';
+            document.getElementById('wizardTapOpsDisplay').style.display = 'block';
+        }
+
+        function toggleTapOpsEdit() {
+            const display = document.getElementById('wizardTapOpsDisplay');
+            const edit = document.getElementById('wizardTapOpsEdit');
+
+            if (edit.style.display === 'none') {
+                display.style.display = 'none';
+                edit.style.display = 'block';
+                document.getElementById('wizardTapOps').focus();
+            } else {
+                edit.style.display = 'none';
+                display.style.display = 'block';
+            }
+        }
+
+        function setTapPct(pct, el) {
+            wizardState.tapPct = pct;
+            document.querySelectorAll('.tap-preset-btn').forEach(btn => btn.classList.remove('active'));
+            el.classList.add('active');
+            updateTapEffect();
+        }
+
+        function setTapDuration(months, el) {
+            wizardState.tapDuration = months;
+            document.querySelectorAll('.tap-duration-btn').forEach(btn => btn.classList.remove('active'));
+            el.classList.add('active');
+            updateTapEffect();
+        }
+
+        function updateTapEffect() {
+            const raiseAmount = wizardState.raiseAmount || 0;
+            const tapAmount = raiseAmount * (wizardState.tapPct / 100);
+            const duration = wizardState.tapDuration;
+
+            // Calculate rates
+            const daysTotal = duration * 30.44; // avg days per month
+            const ratePerDay = tapAmount / daysTotal;
+
+            // Format the effect text
+            let effectText = '';
+            if (tapAmount > 0) {
+                const tapAmountStr = tapAmount >= 0.01 ? tapAmount.toFixed(2) : tapAmount.toFixed(4);
+                const dailyStr = formatTapRate(ratePerDay);
+                effectText = `<span style="color: var(--green); font-weight: bold;">${tapAmountStr} ETH</span> over <span style="color: var(--cyan);">${duration} months</span>`;
+                effectText += `<br><span style="opacity: 0.6; font-size: 0.85em;">≈ ${dailyStr}/day to ops</span>`;
+            } else {
+                effectText = `<span style="opacity: 0.5;">Set a raise amount first</span>`;
+            }
+
+            document.getElementById('wizardTapEffect').innerHTML = effectText;
+
+            // Also update the percentage summary
+            const remaining = 100 - wizardState.tapPct;
+            const pctSummary = remaining > 0
+                ? `${remaining}% stays in DAO treasury`
+                : `Full raise accessible via tap`;
+            document.getElementById('wizardTapPctSummary').textContent = pctSummary;
+        }
+
+        // Format tap rate with appropriate precision
+        function formatTapRate(ethPerDay) {
+            if (ethPerDay >= 1) {
+                return ethPerDay.toFixed(2) + ' ETH';
+            } else if (ethPerDay >= 0.001) {
+                return ethPerDay.toFixed(4) + ' ETH';
+            } else {
+                // Convert to wei for very small amounts
+                const weiPerDay = ethPerDay * 1e18;
+                if (weiPerDay >= 1e15) {
+                    return (weiPerDay / 1e15).toFixed(2) + ' finney';
+                } else if (weiPerDay >= 1e12) {
+                    return (weiPerDay / 1e12).toFixed(2) + ' gwei';
+                } else {
+                    return ethPerDay.toExponential(2) + ' ETH';
+                }
+            }
         }
 
         async function resolveWizardTapOps() {
@@ -4798,7 +5929,7 @@
             }
         }
 
-        function wizardNext() {
+        async function wizardNext() {
             const step = wizardState.step;
             if (step === 2) {
                 // Validate name/symbol
@@ -4817,23 +5948,49 @@
                 hideWizardStatus();
                 showWizardStep(3);
             } else if (step === 6) {
-                // Validate founders
+                // Validate and resolve founders (supports ENS)
                 const founders = getWizardFounders();
                 if (founders.addresses.length === 0) {
                     showWizardStatus('Please add at least one founder', 'error');
                     return;
                 }
 
+                // Resolve ENS names and validate addresses
+                const resolvedAddresses = [];
                 for (let i = 0; i < founders.addresses.length; i++) {
-                    if (!ethers.isAddress(founders.addresses[i])) {
+                    const input = founders.addresses[i];
+                    let resolved = null;
+
+                    if (ethers.isAddress(input)) {
+                        resolved = input;
+                    } else if (input.includes('.')) {
+                        // Try ENS resolution
+                        showWizardStatus(`Resolving ENS for founder ${i + 1}...`, 'info');
+                        try {
+                            resolved = await provider.resolveName(input);
+                            if (!resolved) {
+                                showWizardStatus(`ENS name not found for founder ${i + 1}`, 'error');
+                                return;
+                            }
+                        } catch (e) {
+                            showWizardStatus(`Failed to resolve ENS for founder ${i + 1}`, 'error');
+                            return;
+                        }
+                    } else {
                         showWizardStatus(`Invalid address for founder ${i + 1}`, 'error');
                         return;
                     }
+
                     if (founders.shares[i] <= 0) {
                         showWizardStatus(`Invalid share amount for founder ${i + 1}`, 'error');
                         return;
                     }
+
+                    resolvedAddresses.push(resolved);
                 }
+
+                // Store resolved addresses for launch
+                wizardState.resolvedFounders = { addresses: resolvedAddresses, shares: founders.shares };
 
                 hideWizardStatus();
                 showWizardStep('confirm');
@@ -4854,8 +6011,8 @@
 
             // Show/hide founders row
             const foundersRow = document.getElementById('wizardSummaryFoundersRow');
+            const founders = isLoot ? getWizardFounders() : { addresses: [], shares: [] };
             if (isLoot) {
-                const founders = getWizardFounders();
                 const totalShares = founders.shares.reduce((a, b) => a + b, 0);
                 document.getElementById('wizardSummaryFounders').textContent = `${founders.addresses.length} founders (${totalShares.toLocaleString()} shares)`;
                 foundersRow.style.display = 'flex';
@@ -4865,10 +6022,12 @@
 
             // Tap summary
             if (wizardState.enableTap) {
-                const tapAmount = wizardState.raiseAmount * (WIZARD_DEFAULTS.tapPct / 100);
+                const tapAmount = wizardState.raiseAmount * (wizardState.tapPct / 100);
+                const duration = wizardState.tapDuration;
                 const opsAddr = wizardState.tapOps || connectedAddress;
                 const shortOps = opsAddr ? `${opsAddr.slice(0, 6)}...${opsAddr.slice(-4)}` : 'your wallet';
-                document.getElementById('wizardSummaryTap').innerHTML = `${tapAmount} ETH over 6 mo <span style="opacity: 0.5;">→ ${shortOps}</span>`;
+                const tapAmountStr = tapAmount >= 0.01 ? tapAmount.toFixed(2) : tapAmount.toFixed(4);
+                document.getElementById('wizardSummaryTap').innerHTML = `${tapAmountStr} ETH / ${duration} mo <span style="opacity: 0.5;">→ ${shortOps}</span>`;
             } else {
                 document.getElementById('wizardSummaryTap').textContent = 'Disabled';
             }
@@ -4879,6 +6038,14 @@
                 document.getElementById('wizardSummaryLP').innerHTML = `${wizardState.lpPct}% <span style="opacity: 0.5;">(${lpAmount} ETH to ZAMM)</span>`;
             } else {
                 document.getElementById('wizardSummaryLP').textContent = 'None';
+            }
+
+            // Trust Mode notice - show for loot sale with tap but no shareholders
+            const trustNotice = document.getElementById('wizardTrustModeNotice');
+            if (isLoot && wizardState.enableTap && founders.addresses.length === 0) {
+                trustNotice.style.display = 'block';
+            } else {
+                trustNotice.style.display = 'none';
             }
         }
 
@@ -4946,17 +6113,41 @@
 
             const name = document.getElementById('wizardName').value.trim();
             const symbol = document.getElementById('wizardSymbol').value.trim().toUpperCase();
+            const description = document.getElementById('wizardDescription').value.trim();
+
+            // Validate required fields
+            if (!name) {
+                showWizardStatus('Please enter a DAO name', 'error');
+                return;
+            }
+            if (!symbol) {
+                showWizardStatus('Please enter a token symbol', 'error');
+                return;
+            }
+            if (!wizardState.raiseAmount || wizardState.raiseAmount <= 0) {
+                showWizardStatus('Please set a raise amount', 'error');
+                return;
+            }
+
+            const contractURI = buildContractURI(name, symbol, description);
             const price = calcPricePerToken(wizardState.raiseAmount);
             const isLoot = wizardState.tokenType === 'loot';
 
-            // Gather founders (only for loot mode)
+            // Gather founders (only for loot mode) - use pre-resolved ENS addresses
             let initHolders = [];
             let initSharesWei = [];
 
             if (isLoot) {
-                const founders = getWizardFounders();
-                initHolders = founders.addresses;
-                initSharesWei = founders.shares.map(s => ethers.parseEther(s.toString()));
+                if (wizardState.resolvedFounders) {
+                    // Use pre-resolved addresses from wizardNext validation
+                    initHolders = wizardState.resolvedFounders.addresses;
+                    initSharesWei = wizardState.resolvedFounders.shares.map(s => ethers.parseEther(s.toString()));
+                } else {
+                    // Fallback to direct validation (shouldn't happen if wizard flow is followed)
+                    const founders = getWizardFounders();
+                    initHolders = founders.addresses;
+                    initSharesWei = founders.shares.map(s => ethers.parseEther(s.toString()));
+                }
             }
 
             try {
@@ -5012,15 +6203,17 @@
                     }
                 ];
 
-                showWizardStatus('Please confirm the transaction in your wallet...', 'info');
-
+                // Encode calldata and show verify link
+                let calldata;
                 let tx;
                 if (wizardState.enableTap) {
-                    // Calculate tap config: 10% of raise over 6 months
-                    const tapAllowanceNum = wizardState.raiseAmount * WIZARD_DEFAULTS.tapPct / 100;
+                    // Calculate tap config using user-selected percentage and duration
+                    const tapAllowanceNum = wizardState.raiseAmount * wizardState.tapPct / 100;
                     const tapAllowance = ethers.parseEther(tapAllowanceNum.toFixed(18));
-                    const SECONDS_PER_6_MONTHS = 15768000n; // ~6 months
-                    const ratePerSec = tapAllowance / SECONDS_PER_6_MONTHS;
+                    // Convert months to seconds (avg 30.44 days/month)
+                    const secondsPerMonth = 2629746n;
+                    const durationSeconds = secondsPerMonth * BigInt(wizardState.tapDuration);
+                    const ratePerSec = tapAllowance / durationSeconds;
 
                     const tapConfig = {
                         ops: wizardState.tapOps || connectedAddress, // Custom ops or default to summoner
@@ -5028,11 +6221,20 @@
                         tapAllowance: tapAllowance
                     };
 
+                    calldata = DAICO_IFACE.encodeFunctionData('summonDAICOWithTapCustom', [
+                        summonConfig, name, symbol, contractURI, WIZARD_DEFAULTS.quorumBps,
+                        true, DEFAULT_RENDERER, salt, initHolders, initSharesWei,
+                        false, false, daicoConfig, tapConfig, customCalls
+                    ]);
+
+                    const verifyUrl = buildSwissKnifeUrl(calldata);
+                    showWizardStatus(`Confirm in wallet... <a href="${verifyUrl}" target="_blank" rel="noopener" style="color: var(--cyan); opacity: 0.7; font-size: 0.85em;">verify calldata</a>`, 'info');
+
                     tx = await daicoContract.summonDAICOWithTapCustom(
                         summonConfig,
                         name,
                         symbol,
-                        '',
+                        contractURI,
                         WIZARD_DEFAULTS.quorumBps,
                         true, // ragequittable
                         DEFAULT_RENDERER,
@@ -5046,11 +6248,20 @@
                         customCalls
                     );
                 } else {
+                    calldata = DAICO_IFACE.encodeFunctionData('summonDAICOCustom', [
+                        summonConfig, name, symbol, contractURI, WIZARD_DEFAULTS.quorumBps,
+                        true, DEFAULT_RENDERER, salt, initHolders, initSharesWei,
+                        false, false, daicoConfig, customCalls
+                    ]);
+
+                    const verifyUrl = buildSwissKnifeUrl(calldata);
+                    showWizardStatus(`Confirm in wallet... <a href="${verifyUrl}" target="_blank" rel="noopener" style="color: var(--cyan); opacity: 0.7; font-size: 0.85em;">verify calldata</a>`, 'info');
+
                     tx = await daicoContract.summonDAICOCustom(
                         summonConfig,
                         name,
                         symbol,
-                        '',
+                        contractURI,
                         WIZARD_DEFAULTS.quorumBps,
                         true, // ragequittable
                         DEFAULT_RENDERER,
@@ -5064,7 +6275,7 @@
                     );
                 }
 
-                showWizardStatus(`Transaction submitted! <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" style="color: var(--cyan);">View on Etherscan</a>`, 'info');
+                showWizardStatus(`Transaction submitted! <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" rel="noopener" style="color: var(--cyan);">View on Etherscan</a>`, 'info');
 
                 await tx.wait();
 
@@ -5075,6 +6286,9 @@
                 document.getElementById('wizardSuccessLink').href = `https://majeurdao.eth.limo/#/dao/${predictedDao}`;
 
                 hideWizardStatus();
+
+                // Refresh DAICO list to show the new sale
+                setTimeout(() => scanForDAICOs(), 3000);
 
             } catch (error) {
                 console.error('Launch failed:', error);
@@ -5110,7 +6324,10 @@
             quorum: 10,
             voting: 2,
             timelock: 1,
-            tributeTokenIndex: 0 // Index into SUMMARY_TRIBUTE_TOKENS
+            tributeTokenIndex: 0, // Index into SUMMARY_TRIBUTE_TOKENS
+            tapEnabled: true,
+            tapPct: 100,
+            tapMonths: 6
         };
 
         // Initialize price preview on load
@@ -5134,14 +6351,16 @@
                 supply: 'editSupply',
                 quorum: 'editQuorum',
                 voting: 'editVoting',
-                timelock: 'editTimelock'
+                timelock: 'editTimelock',
+                tapPct: 'editTapPct',
+                tapMonths: 'editTapMonths'
             };
 
             const el = document.getElementById(elementMap[field]);
-            if (el.classList.contains('editing')) return;
+            if (!el || el.classList.contains('editing')) return;
 
             const currentValue = el.textContent.replace(/[,%]/g, '');
-            const isPercent = field === 'quorum';
+            const isPercent = field === 'quorum' || field === 'tapPct';
 
             el.classList.add('editing');
             el.innerHTML = `<input type="number" value="${currentValue}" min="1" step="any">`;
@@ -5159,6 +6378,8 @@
                 if (field === 'quorum') newValue = Math.max(1, Math.min(100, Math.round(newValue)));
                 if (field === 'voting') newValue = Math.max(1, Math.round(newValue));
                 if (field === 'timelock') newValue = Math.max(0, Math.round(newValue));
+                if (field === 'tapPct') newValue = Math.max(1, Math.min(100, Math.round(newValue)));
+                if (field === 'tapMonths') newValue = Math.max(1, Math.min(60, Math.round(newValue)));
 
                 summaryState[field] = newValue;
 
@@ -5166,7 +6387,7 @@
                 let displayValue;
                 if (field === 'supply') {
                     displayValue = newValue.toLocaleString();
-                } else if (field === 'quorum') {
+                } else if (field === 'quorum' || field === 'tapPct') {
                     displayValue = newValue + '%';
                 } else {
                     displayValue = newValue.toString();
@@ -5175,6 +6396,10 @@
                 el.classList.remove('editing');
                 el.textContent = displayValue;
                 updateSummaryPricePreview();
+                // Update tap preview if raise, tapPct, or tapMonths changed
+                if (field === 'raise' || field === 'tapPct' || field === 'tapMonths') {
+                    updateSummaryTapDisplay();
+                }
             };
 
             input.addEventListener('blur', finishEdit);
@@ -5188,7 +6413,7 @@
                     let displayValue;
                     if (field === 'supply') {
                         displayValue = summaryState[field].toLocaleString();
-                    } else if (field === 'quorum') {
+                    } else if (field === 'quorum' || field === 'tapPct') {
                         displayValue = summaryState[field] + '%';
                     } else {
                         displayValue = summaryState[field].toString();
@@ -5201,14 +6426,17 @@
 
         function toggleSummaryTokenType() {
             const el = document.getElementById('editTokenType');
+            const lootNote = document.getElementById('summaryLootNote');
             if (summaryState.tokenType === 'shares') {
                 summaryState.tokenType = 'loot';
                 el.textContent = 'Loot';
                 el.classList.add('loot');
+                lootNote.style.display = 'block';
             } else {
                 summaryState.tokenType = 'shares';
                 el.textContent = 'Shares';
                 el.classList.remove('loot');
+                lootNote.style.display = 'none';
             }
         }
 
@@ -5218,6 +6446,90 @@
             const el = document.getElementById('editTribute');
             el.textContent = tributeToken.symbol;
             updateSummaryPricePreview();
+            updateSummaryTapDisplay(); // Update daily rate for new token symbol
+        }
+
+        function toggleSummaryTap() {
+            summaryState.tapEnabled = !summaryState.tapEnabled;
+            updateSummaryTapDisplay();
+        }
+
+        function editTapPctField() {
+            // If tap is disabled, clicking the "disabled" text enables it
+            if (!summaryState.tapEnabled) {
+                summaryState.tapEnabled = true;
+                updateSummaryTapDisplay();
+                return;
+            }
+            // Otherwise, edit normally
+            editSummaryField('tapPct');
+        }
+
+        function updateSummaryTapDisplay() {
+            const tapPctEl = document.getElementById('editTapPct');
+            const tapMonthsEl = document.getElementById('editTapMonths');
+            const tapToggleEl = document.getElementById('editTapToggle');
+            const tapOverText = document.getElementById('tapOverText');
+            const tapMonthsText = document.getElementById('tapMonthsText');
+            const tapPreviewEl = document.getElementById('summaryTapPreview');
+
+            if (summaryState.tapEnabled) {
+                // Show tap values
+                tapPctEl.textContent = summaryState.tapPct + '%';
+                tapPctEl.style.opacity = '1';
+                tapMonthsEl.textContent = summaryState.tapMonths;
+                tapMonthsEl.style.display = 'inline';
+                tapToggleEl.textContent = '(disable)';
+                tapOverText.style.display = 'inline';
+                tapMonthsText.style.display = 'inline';
+
+                // Calculate and show daily tap rate
+                const tributeToken = SUMMARY_TRIBUTE_TOKENS[summaryState.tributeTokenIndex];
+                const tapAmount = summaryState.raise * (summaryState.tapPct / 100);
+                const daysTotal = summaryState.tapMonths * 30.44; // avg days per month
+                const ratePerDay = tapAmount / daysTotal;
+                const dailyStr = formatSummaryTapRate(ratePerDay, tributeToken.symbol);
+                tapPreviewEl.textContent = `≈ ${dailyStr}/day to ops`;
+                tapPreviewEl.style.display = 'block';
+            } else {
+                // Hide tap values, show "disabled"
+                tapPctEl.textContent = 'disabled';
+                tapPctEl.style.opacity = '0.5';
+                tapMonthsEl.style.display = 'none';
+                tapToggleEl.textContent = '(enable)';
+                tapOverText.style.display = 'none';
+                tapMonthsText.style.display = 'none';
+                tapPreviewEl.style.display = 'none';
+            }
+        }
+
+        // Format tap rate for summary display
+        function formatSummaryTapRate(amountPerDay, symbol) {
+            // For stablecoins, just show the amount
+            if (symbol === 'USDC' || symbol === 'USDT' || symbol === 'DAI') {
+                if (amountPerDay >= 1) {
+                    return amountPerDay.toFixed(2) + ' ' + symbol;
+                } else if (amountPerDay >= 0.01) {
+                    return amountPerDay.toFixed(4) + ' ' + symbol;
+                } else {
+                    return amountPerDay.toExponential(2) + ' ' + symbol;
+                }
+            }
+            // For ETH and wstETH, use sub-units for small amounts
+            if (amountPerDay >= 1) {
+                return amountPerDay.toFixed(2) + ' ' + symbol;
+            } else if (amountPerDay >= 0.001) {
+                return amountPerDay.toFixed(4) + ' ' + symbol;
+            } else {
+                const weiPerDay = amountPerDay * 1e18;
+                if (weiPerDay >= 1e15) {
+                    return (weiPerDay / 1e15).toFixed(2) + ' finney';
+                } else if (weiPerDay >= 1e12) {
+                    return (weiPerDay / 1e12).toFixed(2) + ' gwei';
+                } else {
+                    return amountPerDay.toExponential(2) + ' ' + symbol;
+                }
+            }
         }
 
         async function launchFromSummary() {
@@ -5234,6 +6546,8 @@
 
             const name = document.getElementById('summaryName').value.trim();
             const symbol = document.getElementById('summarySymbol').value.trim().toUpperCase();
+            const description = document.getElementById('summaryDescription').value.trim();
+            const contractURI = buildContractURI(name, symbol, description);
 
             if (!name) {
                 document.getElementById('summaryStatus').textContent = 'Please enter a DAO name';
@@ -5312,30 +6626,83 @@
                     }
                 ];
 
-                document.getElementById('summaryStatus').textContent = 'Confirm in wallet...';
+                // Encode calldata and show verify link
+                let calldata;
+                let tx;
+                if (summaryState.tapEnabled) {
+                    // Calculate tap config
+                    const tapAllowanceNum = summaryState.raise * summaryState.tapPct / 100;
+                    const tapAllowance = ethers.parseUnits(tapAllowanceNum.toFixed(tributeToken.decimals), tributeToken.decimals);
+                    // Convert months to seconds (avg 30.44 days/month)
+                    const secondsPerMonth = 2629746n;
+                    const durationSeconds = secondsPerMonth * BigInt(summaryState.tapMonths);
+                    const ratePerSec = tapAllowance / durationSeconds;
 
-                const tx = await daicoContract.summonDAICOCustom(
-                    summonConfig,
-                    name,
-                    symbol,
-                    '',
-                    quorumBps,
-                    true,
-                    DEFAULT_RENDERER,
-                    salt,
-                    initHolders,
-                    initSharesWei,
-                    false,
-                    false,
-                    daicoConfig,
-                    customCalls
-                );
+                    const tapConfig = {
+                        ops: connectedAddress, // Default to summoner
+                        ratePerSec: ratePerSec > 0n ? ratePerSec : 1n,
+                        tapAllowance: tapAllowance
+                    };
 
-                document.getElementById('summaryStatus').innerHTML = `Submitted! <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" style="color: var(--cyan);">View tx</a>`;
+                    calldata = DAICO_IFACE.encodeFunctionData('summonDAICOWithTapCustom', [
+                        summonConfig, name, symbol, contractURI, quorumBps,
+                        true, DEFAULT_RENDERER, salt, initHolders, initSharesWei,
+                        false, false, daicoConfig, tapConfig, customCalls
+                    ]);
+
+                    const verifyUrl = buildSwissKnifeUrl(calldata);
+                    document.getElementById('summaryStatus').innerHTML = `Confirm in wallet... <a href="${verifyUrl}" target="_blank" rel="noopener" style="color: var(--cyan); opacity: 0.7; font-size: 0.85em;">verify calldata</a>`;
+
+                    tx = await daicoContract.summonDAICOWithTapCustom(
+                        summonConfig,
+                        name,
+                        symbol,
+                        contractURI,
+                        quorumBps,
+                        true,
+                        DEFAULT_RENDERER,
+                        salt,
+                        initHolders,
+                        initSharesWei,
+                        false,
+                        false,
+                        daicoConfig,
+                        tapConfig,
+                        customCalls
+                    );
+                } else {
+                    calldata = DAICO_IFACE.encodeFunctionData('summonDAICOCustom', [
+                        summonConfig, name, symbol, contractURI, quorumBps,
+                        true, DEFAULT_RENDERER, salt, initHolders, initSharesWei,
+                        false, false, daicoConfig, customCalls
+                    ]);
+
+                    const verifyUrl = buildSwissKnifeUrl(calldata);
+                    document.getElementById('summaryStatus').innerHTML = `Confirm in wallet... <a href="${verifyUrl}" target="_blank" rel="noopener" style="color: var(--cyan); opacity: 0.7; font-size: 0.85em;">verify calldata</a>`;
+
+                    tx = await daicoContract.summonDAICOCustom(
+                        summonConfig,
+                        name,
+                        symbol,
+                        contractURI,
+                        quorumBps,
+                        true,
+                        DEFAULT_RENDERER,
+                        salt,
+                        initHolders,
+                        initSharesWei,
+                        false,
+                        false,
+                        daicoConfig,
+                        customCalls
+                    );
+                }
+
+                document.getElementById('summaryStatus').innerHTML = `Submitted! <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" rel="noopener" style="color: var(--cyan);">View tx</a>`;
 
                 await tx.wait();
 
-                document.getElementById('summaryStatus').innerHTML = `Launched! <a href="https://majeurdao.eth.limo/#/dao/${predictedDao}" target="_blank" style="color: var(--green);">View your DAO</a>`;
+                document.getElementById('summaryStatus').innerHTML = `Launched! <a href="https://majeurdao.eth.limo/#/dao/${predictedDao}" target="_blank" rel="noopener" style="color: var(--green);">View your DAO</a>`;
 
             } catch (error) {
                 console.error('Launch failed:', error);
@@ -5351,8 +6718,11 @@
             }
         }
 
-        // Initialize summary price on page load
-        document.addEventListener('DOMContentLoaded', updateSummaryPricePreview);
+        // Initialize summary price and tap on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            updateSummaryPricePreview();
+            updateSummaryTapDisplay();
+        });
 
         // ==================== END SUMMARY ====================
 
@@ -5371,15 +6741,19 @@
             'function sales(address dao, address tribTkn) view returns (uint256 tribAmt, uint256 forAmt, address forTkn, uint40 deadline)',
             'function taps(address dao) view returns (address ops, address tribTkn, uint128 ratePerSec, uint64 lastClaim)',
             'function lpConfigs(address dao, address tribTkn) view returns (uint16 lpBps, uint16 maxSlipBps, uint256 feeOrHook)',
-            'function claimableTap(address dao) view returns (uint256)',
-            'function buy(address dao, address tribTkn, uint256 amtIn, uint256 minOut, address to) payable'
+            'function claimableTap(address dao) view returns (uint256)'
         ];
 
         const MOLOCH_SCANNER_ABI = [
+            'function name() view returns (string)',
             'function name(uint256) view returns (string)',
+            'function symbol() view returns (string)',
             'function symbol(uint256) view returns (string)',
             'function shares() view returns (address)',
-            'function loot() view returns (address)'
+            'function loot() view returns (address)',
+            'function sharesToken() view returns (address)',
+            'function lootToken() view returns (address)',
+            'function contractURI() view returns (string)'
         ];
 
         const ERC20_ABI = [
@@ -5387,8 +6761,13 @@
             'function totalSupply() view returns (uint256)'
         ];
 
+        // Multicall3 getEthBalance interface (reused for performance)
+        const MULTICALL3_ETH_BALANCE_IFACE = new ethers.Interface(['function getEthBalance(address) view returns (uint256)']);
+
         // Scanner state
         let activeDAICOs = [];
+        let completedDAICOs = [];
+        let currentSaleTab = 'active';
         let scannerProvider = null;
 
         // Initialize scanner with a provider (can be default or connected)
@@ -5451,6 +6830,14 @@
                 });
                 callMeta.push({ type: 'loot', dao });
 
+                // Get contractURI for image/metadata
+                calls.push({
+                    target: dao,
+                    allowFailure: true,
+                    callData: molochIface.encodeFunctionData('contractURI', [])
+                });
+                callMeta.push({ type: 'contractURI', dao });
+
                 // Check sales for each common tribute token
                 for (const tribTkn of tribTokens) {
                     calls.push({
@@ -5501,10 +6888,18 @@
                         daoInfo[meta.dao].sharesToken = molochIface.decodeFunctionResult('shares', returnData)[0];
                     } else if (meta.type === 'loot') {
                         daoInfo[meta.dao].lootToken = molochIface.decodeFunctionResult('loot', returnData)[0];
+                    } else if (meta.type === 'contractURI') {
+                        const uri = molochIface.decodeFunctionResult('contractURI', returnData)[0];
+                        daoInfo[meta.dao].contractURI = uri;
+                        // Parse the contractURI to extract metadata
+                        const metadata = parseContractURI(uri);
+                        if (metadata) {
+                            daoInfo[meta.dao].metadata = metadata;
+                        }
                     } else if (meta.type === 'sale') {
                         const [tribAmt, forAmt, forTkn, deadline] = daicoIface.decodeFunctionResult('sales', returnData);
-                        // Check if sale is active: has terms and not expired
-                        if (tribAmt > 0n && forAmt > 0n && (deadline === 0 || deadline > now)) {
+                        // Track all sales with valid terms (active or completed)
+                        if (tribAmt > 0n && forAmt > 0n) {
                             daoInfo[meta.dao].sales.push({
                                 tribTkn: meta.tribTkn,
                                 tribAmt,
@@ -5553,12 +6948,33 @@
                     balanceMeta.push({ dao: daoData.dao, tribTkn: sale.tribTkn, type: 'totalSupply' });
                 }
 
-                // Get DAO ETH balance for tap
+                // Get DAO tribute token balance (for "raised" display)
+                for (const sale of daoData.sales) {
+                    if (sale.tribTkn === ethers.ZeroAddress) {
+                        // ETH - use multicall's getEthBalance
+                        balanceCalls.push({
+                            target: MULTICALL3_ADDRESS,
+                            allowFailure: true,
+                            callData: MULTICALL3_ETH_BALANCE_IFACE.encodeFunctionData('getEthBalance', [daoData.dao])
+                        });
+                        balanceMeta.push({ dao: daoData.dao, tribTkn: sale.tribTkn, type: 'treasuryBalance' });
+                    } else {
+                        // ERC20 tribute token
+                        balanceCalls.push({
+                            target: sale.tribTkn,
+                            allowFailure: true,
+                            callData: erc20Iface.encodeFunctionData('balanceOf', [daoData.dao])
+                        });
+                        balanceMeta.push({ dao: daoData.dao, tribTkn: sale.tribTkn, type: 'treasuryBalance' });
+                    }
+                }
+
+                // Get DAO ETH balance for tap display
                 if (daoData.tap) {
                     balanceCalls.push({
                         target: MULTICALL3_ADDRESS,
                         allowFailure: true,
-                        callData: new ethers.Interface(['function getEthBalance(address) view returns (uint256)']).encodeFunctionData('getEthBalance', [daoData.dao])
+                        callData: MULTICALL3_ETH_BALANCE_IFACE.encodeFunctionData('getEthBalance', [daoData.dao])
                     });
                     balanceMeta.push({ dao: daoData.dao, type: 'ethBalance' });
                 }
@@ -5587,8 +7003,17 @@
                             if (sale) {
                                 sale.totalSupply = erc20Iface.decodeFunctionResult('totalSupply', returnData)[0];
                             }
+                        } else if (meta.type === 'treasuryBalance') {
+                            const sale = daoData.sales.find(s => s.tribTkn === meta.tribTkn);
+                            if (sale) {
+                                if (meta.tribTkn === ethers.ZeroAddress) {
+                                    sale.treasuryBalance = MULTICALL3_ETH_BALANCE_IFACE.decodeFunctionResult('getEthBalance', returnData)[0];
+                                } else {
+                                    sale.treasuryBalance = erc20Iface.decodeFunctionResult('balanceOf', returnData)[0];
+                                }
+                            }
                         } else if (meta.type === 'ethBalance') {
-                            daoData.ethBalance = new ethers.Interface(['function getEthBalance(address) view returns (uint256)']).decodeFunctionResult('getEthBalance', returnData)[0];
+                            daoData.ethBalance = MULTICALL3_ETH_BALANCE_IFACE.decodeFunctionResult('getEthBalance', returnData)[0];
                         }
                     } catch (e) {
                         // Skip decode errors
@@ -5596,27 +7021,66 @@
                 }
             }
 
-            // Filter to only DAOs with remaining supply
+            const currentTime = Math.floor(Date.now() / 1000);
+
+            // Separate active and completed sales
             activeDAICOs = activeDaos.filter(d =>
-                d.sales.some(s => s.remainingSupply && s.remainingSupply > 0n)
+                d.sales.some(s => {
+                    const hasSupply = s.remainingSupply && s.remainingSupply > 0n;
+                    const notExpired = s.deadline === 0 || s.deadline > currentTime;
+                    return hasSupply && notExpired;
+                })
             );
+
+            completedDAICOs = activeDaos.filter(d =>
+                d.sales.some(s => {
+                    const soldOut = !s.remainingSupply || s.remainingSupply === 0n;
+                    const expired = s.deadline > 0 && s.deadline <= currentTime;
+                    return soldOut || expired;
+                })
+            ).filter(d => !activeDAICOs.includes(d)); // Exclude if also active
 
             return activeDAICOs;
         }
 
-        // Render active DAICOs to the page
-        function renderActiveDAICOs() {
+        // Tab switching for sales
+        function showSaleTab(tab) {
+            currentSaleTab = tab;
+
+            // Update tab UI
+            document.getElementById('activeTab').classList.toggle('active', tab === 'active');
+            document.getElementById('completedTab').classList.toggle('active', tab === 'completed');
+
+            // Render appropriate list
+            renderDAICOs();
+        }
+
+        // Update tab counts
+        function updateTabCounts() {
+            const activeCount = document.getElementById('activeCount');
+            const completedCount = document.getElementById('completedCount');
+            if (activeCount) activeCount.textContent = activeDAICOs.length > 0 ? `(${activeDAICOs.length})` : '';
+            if (completedCount) completedCount.textContent = completedDAICOs.length > 0 ? `(${completedDAICOs.length})` : '';
+        }
+
+        // Render DAICOs based on current tab
+        function renderDAICOs() {
             const container = document.getElementById('activeDaicosList');
             if (!container) return;
 
-            if (activeDAICOs.length === 0) {
-                container.innerHTML = '<div class="no-daicos">No active DAICOs found. Be the first to launch one!</div>';
+            const daicos = currentSaleTab === 'active' ? activeDAICOs : completedDAICOs;
+
+            if (daicos.length === 0) {
+                const msg = currentSaleTab === 'active'
+                    ? 'No active sales found. Be the first to launch one!'
+                    : 'No completed sales yet.';
+                container.innerHTML = `<div class="no-daicos">${msg}</div>`;
                 return;
             }
 
             const now = Math.floor(Date.now() / 1000);
 
-            container.innerHTML = activeDAICOs.map(daoData => {
+            container.innerHTML = daicos.map(daoData => {
                 // Use first active sale for display
                 const sale = daoData.sales[0];
                 const tribInfo = COMMON_TRIB_TOKENS[sale.tribTkn] || { symbol: '???', decimals: 18 };
@@ -5627,19 +7091,29 @@
                 const pricePerToken = tribAmtNum / forAmtNum;
                 const pricePerMillion = pricePerToken * 1_000_000;
 
-                // Remaining supply
+                // Remaining supply (tokens available for purchase)
                 const remainingNum = Number(ethers.formatEther(sale.remainingSupply || 0n));
-                const totalNum = Number(ethers.formatEther(sale.totalSupply || sale.remainingSupply || 1n));
-                const soldPct = totalNum > 0 ? ((totalNum - remainingNum) / totalNum * 100).toFixed(1) : 0;
 
-                // Time remaining
+                // Treasury balance = amount raised (tribute tokens received by DAO)
+                const treasuryNum = sale.treasuryBalance
+                    ? Number(ethers.formatUnits(sale.treasuryBalance, tribInfo.decimals))
+                    : 0;
+
+                // For progress visualization, we'll show treasury raised
+                // This is accurate: all tribute goes to DAO treasury
+                // We don't know the "target" without event indexing, so we show absolute raised
+
+                // Time remaining with readable date
                 let timeRemaining = '';
                 if (sale.deadline > 0) {
                     const secsLeft = sale.deadline - now;
                     if (secsLeft > 0) {
+                        const deadlineDate = new Date(sale.deadline * 1000);
+                        const dateStr = deadlineDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                         const days = Math.floor(secsLeft / 86400);
                         const hours = Math.floor((secsLeft % 86400) / 3600);
-                        timeRemaining = days > 0 ? `${days}d ${hours}h left` : `${hours}h left`;
+                        const countdown = days > 0 ? `${days}d ${hours}h` : `${hours}h`;
+                        timeRemaining = `Ends ${dateStr} (${countdown})`;
                     } else {
                         timeRemaining = 'Ended';
                     }
@@ -5651,38 +7125,70 @@
                 const isLoot = sale.forTkn.toLowerCase() === daoData.lootToken?.toLowerCase();
                 const tokenType = isLoot ? 'Loot' : 'Shares';
 
-                // Tap info
+                // Tap info (could be ETH or ERC20)
                 let tapHtml = '';
                 if (daoData.tap && daoData.claimableTap > 0n) {
-                    const claimableEth = ethers.formatEther(daoData.claimableTap);
-                    tapHtml = `<div class="daico-tap">TAP: ${Number(claimableEth).toFixed(4)} ETH claimable</div>`;
+                    const tapTribInfo = COMMON_TRIB_TOKENS[daoData.tap.tribTkn] || { symbol: 'ETH', decimals: 18 };
+                    const claimableAmt = Number(ethers.formatUnits(daoData.claimableTap, tapTribInfo.decimals)).toFixed(4);
+                    tapHtml = `<div class="daico-tap">TAP: ${claimableAmt} ${tapTribInfo.symbol} claimable</div>`;
+                }
+
+                // Render DAO image/logo from contractURI metadata
+                const imageHtml = renderDaoImage(daoData.metadata, daoData.name);
+
+                // Format raised amount
+                const raisedStr = treasuryNum >= 1
+                    ? treasuryNum.toFixed(2)
+                    : treasuryNum >= 0.0001
+                        ? treasuryNum.toFixed(4)
+                        : treasuryNum.toFixed(6);
+
+                // Get tribute token icon for visual display
+                const tribIcon = getTokenIcon(sale.tribTkn);
+
+                // Determine completion status
+                const isSoldOut = remainingNum <= 0;
+                const isExpired = sale.deadline > 0 && sale.deadline <= now;
+                const isCompleted = isSoldOut || isExpired;
+
+                // Status badge for completed sales
+                let statusBadge = '';
+                if (isCompleted) {
+                    if (isSoldOut) {
+                        statusBadge = '<div class="sale-status-badge sold-out">Sold Out</div>';
+                    } else if (isExpired) {
+                        statusBadge = '<div class="sale-status-badge ended">Ended</div>';
+                    }
                 }
 
                 return `
-                    <div class="daico-card" onclick="openDAICODetail('${daoData.dao}', '${sale.tribTkn}')">
-                        <div class="daico-header">
-                            <div class="daico-name">${daoData.name || 'Unknown DAO'}</div>
-                            <div class="daico-symbol">${daoData.symbol || '???'}</div>
+                    <div class="daico-card ${isCompleted ? 'completed' : ''}" onclick="openDAICODetail('${daoData.dao}', '${sale.tribTkn}')">
+                        ${statusBadge}
+                        <div class="daico-card-content">
+                            ${imageHtml}
+                            <div class="daico-info">
+                                <div class="daico-header">
+                                    <div class="daico-name">${escapeHtml(daoData.name || 'Unknown DAO')}</div>
+                                    <div class="daico-symbol">${escapeHtml(daoData.symbol || '???')}</div>
+                                </div>
+                                <div class="daico-price">
+                                    <span class="daico-trib-icon">${tribIcon}</span>
+                                    ${pricePerMillion.toFixed(6)} ${tribInfo.symbol} / 1M ${tokenType}
+                                </div>
+                                <div class="daico-stats">
+                                    <span class="daico-raised">
+                                        <span class="daico-trib-icon-sm">${tribIcon}</span>
+                                        ${raisedStr} ${tribInfo.symbol} raised
+                                    </span>
+                                    <span>${remainingNum.toLocaleString()} ${tokenType} left</span>
+                                </div>
+                                <div class="daico-deadline">${timeRemaining}</div>
+                                ${tapHtml}
+                            </div>
                         </div>
-                        <div class="daico-price">${pricePerMillion.toFixed(6)} ${tribInfo.symbol} / 1M ${tokenType}</div>
-                        <div class="daico-progress">
-                            <div class="daico-progress-bar" style="width: ${soldPct}%"></div>
-                        </div>
-                        <div class="daico-stats">
-                            <span>${soldPct}% sold</span>
-                            <span>${remainingNum.toLocaleString()} remaining</span>
-                        </div>
-                        <div class="daico-deadline">${timeRemaining}</div>
-                        ${tapHtml}
                     </div>
                 `;
             }).join('');
-        }
-
-        // Open DAICO detail/buy modal
-        function openDAICODetail(dao, tribTkn) {
-            // For now, link to Majeur for the full DAO experience
-            window.open(`https://majeurdao.eth.limo/#/dao/${dao}`, '_blank');
         }
 
         // Load active DAICOs on scroll into view
@@ -5698,7 +7204,8 @@
 
             try {
                 await scanActiveDAICOs();
-                renderActiveDAICOs();
+                updateTabCounts();
+                renderDAICOs();
             } catch (error) {
                 console.error('DAICO scan failed:', error);
                 if (container) {
@@ -5743,8 +7250,11 @@
         let quoteDebounce = null;
 
         function openPurchaseModal(dao, tribTkn) {
-            // Find DAO data from scanned results
-            const daoData = activeDAICOs.find(d => d.dao.toLowerCase() === dao.toLowerCase());
+            // Find DAO data from scanned results (check both active and completed)
+            let daoData = activeDAICOs.find(d => d.dao.toLowerCase() === dao.toLowerCase());
+            if (!daoData) {
+                daoData = completedDAICOs.find(d => d.dao.toLowerCase() === dao.toLowerCase());
+            }
             if (!daoData) {
                 console.error('DAO not found in scanned data');
                 return;
@@ -5770,6 +7280,15 @@
             // Update modal UI
             document.getElementById('purchaseDaoName').textContent = daoData.name || 'Buy Tokens';
 
+            // Show description from contractURI metadata if present
+            const descEl = document.getElementById('purchaseDescription');
+            if (daoData.metadata && daoData.metadata.description) {
+                descEl.textContent = daoData.metadata.description;
+                descEl.style.display = 'block';
+            } else {
+                descEl.style.display = 'none';
+            }
+
             // Sale info
             const tribInfo = COMMON_TRIB_TOKENS[tribTkn] || { symbol: '???', decimals: 18 };
             const isLoot = sale.forTkn.toLowerCase() === daoData.lootToken?.toLowerCase();
@@ -5778,14 +7297,18 @@
             const remainingNum = Number(ethers.formatEther(sale.remainingSupply || 0n));
             document.getElementById('purchaseRemaining').textContent = remainingNum.toLocaleString() + ' ' + tokenType;
 
-            // Deadline
+            // Deadline with readable date
             const now = Math.floor(Date.now() / 1000);
             if (sale.deadline > 0) {
                 const secsLeft = sale.deadline - now;
                 if (secsLeft > 0) {
+                    const deadlineDate = new Date(sale.deadline * 1000);
+                    const dateStr = deadlineDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                    const timeStr = deadlineDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
                     const days = Math.floor(secsLeft / 86400);
                     const hours = Math.floor((secsLeft % 86400) / 3600);
-                    document.getElementById('purchaseDeadline').textContent = days > 0 ? `${days}d ${hours}h` : `${hours}h`;
+                    const countdown = days > 0 ? `${days}d ${hours}h` : `${hours}h`;
+                    document.getElementById('purchaseDeadline').textContent = `${dateStr} ${timeStr} (${countdown} left)`;
                 } else {
                     document.getElementById('purchaseDeadline').textContent = 'Ended';
                 }
@@ -5806,11 +7329,41 @@
             document.getElementById('receiveTokenSymbol').textContent = tokenType.toUpperCase();
             document.getElementById('receiveAvailable').textContent = remainingNum.toLocaleString();
 
-            // Tap section
-            if (daoData.tap && daoData.claimableTap > 0n) {
+            // Tap section with real-time accrual
+            // Show if tap is configured (ratePerSec > 0) even if nothing claimable yet
+            if (daoData.tap && daoData.tap.ratePerSec > 0n) {
                 document.getElementById('tapSection').style.display = 'block';
-                const claimableEth = Number(ethers.formatEther(daoData.claimableTap)).toFixed(4);
-                document.getElementById('tapClaimable').textContent = claimableEth + ' ETH';
+
+                // Get tap token info (could be ETH or ERC20)
+                const tapTribTkn = daoData.tap.tribTkn;
+                const tapTribInfo = COMMON_TRIB_TOKENS[tapTribTkn] || { symbol: 'ETH', decimals: 18 };
+
+                // Store tap state for real-time updates
+                currentPurchase.tapInfo = {
+                    baseClaimable: daoData.claimableTap || 0n,
+                    ratePerSec: daoData.tap.ratePerSec,
+                    tribTkn: tapTribTkn,
+                    symbol: tapTribInfo.symbol,
+                    decimals: tapTribInfo.decimals,
+                    startTime: Date.now()
+                };
+
+                // Initial display
+                updateTapDisplay();
+
+                // Start real-time accrual (update every 100ms for smooth ticking)
+                startTapAccrual();
+
+                // Display ops address with ENS reverse lookup
+                const opsDisplay = document.getElementById('tapOpsDisplay');
+                const shortOps = daoData.tap.ops.slice(0, 6) + '...' + daoData.tap.ops.slice(-4);
+                opsDisplay.textContent = shortOps;
+                // Try reverse ENS lookup (async, update when ready)
+                provider.lookupAddress(daoData.tap.ops).then(ensName => {
+                    if (ensName) {
+                        opsDisplay.textContent = ensName;
+                    }
+                }).catch(() => {}); // Silently ignore ENS lookup failures
 
                 // Only show claim button if user is ops
                 if (connectedAddress && daoData.tap.ops.toLowerCase() === connectedAddress.toLowerCase()) {
@@ -5820,6 +7373,7 @@
                 }
             } else {
                 document.getElementById('tapSection').style.display = 'none';
+                stopTapAccrual();
             }
 
             // Majeur link
@@ -5838,8 +7392,10 @@
         }
 
         function closePurchaseModal() {
+            stopTapAccrual();
+            clearUrlHash();
             document.getElementById('purchaseModal').style.display = 'none';
-            currentPurchase = { dao: null, tribTkn: null, sale: null, daoData: null, slippage: 0.5, inputMode: 'pay', payBalance: 0n, allowance: 0n };
+            currentPurchase = { dao: null, tribTkn: null, sale: null, daoData: null, slippage: 0.5, inputMode: 'pay', payBalance: 0n, allowance: 0n, tapInfo: null };
         }
 
         async function loadUserBalances() {
@@ -5872,10 +7428,10 @@
             }
         }
 
-        function setSlippage(pct) {
+        function setSlippage(pct, btn) {
             currentPurchase.slippage = pct;
-            document.querySelectorAll('.slippage-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
+            document.querySelectorAll('.slippage-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
         }
 
         function setMaxPay() {
@@ -5975,6 +7531,26 @@
         function updatePurchaseButton() {
             const buyBtn = document.getElementById('buyBtn');
             const approveBtn = document.getElementById('approveBtn');
+
+            // Check if sale is completed (expired or sold out)
+            const now = Math.floor(Date.now() / 1000);
+            const sale = currentPurchase.sale;
+            const isExpired = sale && sale.deadline > 0 && sale.deadline <= now;
+            const isSoldOut = sale && (!sale.remainingSupply || sale.remainingSupply === 0n);
+
+            if (isExpired) {
+                buyBtn.textContent = 'Sale Ended';
+                buyBtn.disabled = true;
+                approveBtn.style.display = 'none';
+                return;
+            }
+
+            if (isSoldOut) {
+                buyBtn.textContent = 'Sold Out';
+                buyBtn.disabled = true;
+                approveBtn.style.display = 'none';
+                return;
+            }
 
             if (!signer) {
                 buyBtn.textContent = 'Connect Wallet';
@@ -6103,7 +7679,7 @@
                 }
 
                 buyBtn.textContent = 'Processing...';
-                showPurchaseStatus(`Transaction submitted! <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" style="color: var(--cyan);">View</a>`, 'info');
+                showPurchaseStatus(`Transaction submitted! <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" rel="noopener" style="color: var(--cyan);">View</a>`, 'info');
 
                 await tx.wait();
 
@@ -6131,6 +7707,50 @@
             }
         }
 
+        // ==================== TAP REAL-TIME ACCRUAL ====================
+        let tapAccrualInterval = null;
+
+        function startTapAccrual() {
+            stopTapAccrual(); // Clear any existing interval
+            tapAccrualInterval = setInterval(updateTapDisplay, 100); // Update every 100ms
+        }
+
+        function stopTapAccrual() {
+            if (tapAccrualInterval) {
+                clearInterval(tapAccrualInterval);
+                tapAccrualInterval = null;
+            }
+        }
+
+        function updateTapDisplay() {
+            const tapInfo = currentPurchase.tapInfo;
+            if (!tapInfo) return;
+
+            // Calculate elapsed time since modal opened (in seconds)
+            const elapsedMs = Date.now() - tapInfo.startTime;
+            const elapsedSec = elapsedMs / 1000;
+
+            // Calculate accrued amount: base + (ratePerSec * elapsed)
+            // ratePerSec is in wei, so we need BigInt math
+            const accruedWei = BigInt(Math.floor(Number(tapInfo.ratePerSec) * elapsedSec));
+            const totalClaimable = tapInfo.baseClaimable + accruedWei;
+
+            // Format with more precision for the ticking effect
+            const formatted = Number(ethers.formatUnits(totalClaimable, tapInfo.decimals));
+
+            // Show more decimal places for small amounts to see the ticking
+            let displayStr;
+            if (formatted >= 1) {
+                displayStr = formatted.toFixed(4);
+            } else if (formatted >= 0.0001) {
+                displayStr = formatted.toFixed(6);
+            } else {
+                displayStr = formatted.toFixed(8);
+            }
+
+            document.getElementById('tapClaimable').textContent = displayStr + ' ' + tapInfo.symbol;
+        }
+
         async function claimTap() {
             if (!signer || !currentPurchase.dao || !currentPurchase.daoData?.tap) return;
 
@@ -6140,23 +7760,38 @@
                 claimBtn.disabled = true;
                 claimBtn.textContent = 'Claiming...';
 
+                // Stop accrual during claim
+                stopTapAccrual();
+
                 const daicoContract = new ethers.Contract(DAICO_ADDRESS, DAICO_PURCHASE_ABI, signer);
                 const tx = await daicoContract.claimTap(currentPurchase.dao);
 
-                showPurchaseStatus(`Claim submitted! <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" style="color: var(--cyan);">View</a>`, 'info');
+                showPurchaseStatus(`Claim submitted! <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" rel="noopener" style="color: var(--cyan);">View</a>`, 'info');
 
                 await tx.wait();
 
                 showPurchaseStatus('TAP claimed successfully!', 'success');
 
-                // Update tap display
-                document.getElementById('tapClaimable').textContent = '0 ETH';
+                // Reset tap display and restart accrual from zero
+                const tapTribInfo = COMMON_TRIB_TOKENS[currentPurchase.daoData.tap.tribTkn] || { symbol: 'ETH', decimals: 18 };
+                currentPurchase.tapInfo = {
+                    baseClaimable: 0n,
+                    ratePerSec: currentPurchase.daoData.tap.ratePerSec,
+                    tribTkn: currentPurchase.daoData.tap.tribTkn,
+                    symbol: tapTribInfo.symbol,
+                    decimals: tapTribInfo.decimals,
+                    startTime: Date.now()
+                };
+                updateTapDisplay();
+                startTapAccrual();
 
             } catch (e) {
                 console.error('Claim failed:', e);
                 if (!isUserRejection(e)) {
                     showPurchaseStatus(getErrorMessage(e), 'error');
                 }
+                // Restart accrual on failure (keep showing ticking)
+                startTapAccrual();
             } finally {
                 claimBtn.disabled = false;
                 claimBtn.textContent = 'Claim TAP';
@@ -6172,14 +7807,170 @@
             status.style.display = 'block';
         }
 
-        function hidePurchaseStatus() {
-            document.getElementById('purchaseStatus').style.display = 'none';
-        }
-
-        // Replace the old openDAICODetail function
+        // Open sale detail and update URL hash
         function openDAICODetail(dao, tribTkn) {
+            // Update URL hash for deep linking
+            updateUrlHash(dao, tribTkn);
             openPurchaseModal(dao, tribTkn);
         }
+
+        // ==================== URL DEEP LINKING ====================
+        // URL format: #/sale/0xDAO or #/sale/0xDAO/0xTribToken
+        // This mirrors Majeur.html pattern: #/dao/0x...
+
+        // Update URL hash when opening a sale
+        function updateUrlHash(dao, tribTkn) {
+            let hash = `#/sale/${dao}`;
+            if (tribTkn && tribTkn !== ethers.ZeroAddress) {
+                hash += `/${tribTkn}`;
+            }
+            window.history.replaceState(null, '', hash);
+        }
+
+        // Clear URL hash when closing modal
+        function clearUrlHash() {
+            if (window.location.hash) {
+                window.history.replaceState(null, '', window.location.pathname);
+            }
+        }
+
+        // Parse URL hash and open sale if specified
+        // Supports: #/sale/0xDAO and #/sale/0xDAO/0xTribToken
+        async function handleDeepLink() {
+            if (!window.location.hash) return;
+
+            try {
+                const hash = window.location.hash;
+
+                // Match format: #/sale/0x... or #/sale/0x.../0x...
+                const saleMatch = hash.match(/^#\/sale\/(0x[a-fA-F0-9]{40})(?:\/(0x[a-fA-F0-9]{40}))?$/);
+                if (!saleMatch) return;
+
+                const dao = saleMatch[1];
+                const tribTkn = saleMatch[2] || ethers.ZeroAddress;
+
+                if (!dao || !ethers.isAddress(dao)) return;
+
+                // Wait for DAICOs to load first
+                await waitForDAICOScan();
+
+                // Find the DAO in our scanned list (check both active and completed)
+                let daoData = activeDAICOs.find(d => d.dao.toLowerCase() === dao.toLowerCase());
+                if (!daoData) {
+                    daoData = completedDAICOs.find(d => d.dao.toLowerCase() === dao.toLowerCase());
+                }
+
+                if (daoData) {
+                    // Find matching sale (by tribTkn or use first)
+                    const sale = daoData.sales.find(s => s.tribTkn.toLowerCase() === tribTkn.toLowerCase())
+                        || daoData.sales[0];
+
+                    if (sale) {
+                        openPurchaseModal(dao, sale.tribTkn);
+                    }
+                } else {
+                    // DAO not in active list - try to fetch it directly
+                    await fetchAndOpenDAO(dao, tribTkn);
+                }
+            } catch (e) {
+                console.error('Deep link error:', e);
+            }
+        }
+
+        // Wait for DAICO scan to complete
+        function waitForDAICOScan() {
+            return new Promise((resolve) => {
+                if (activeDAICOs.length > 0 || completedDAICOs.length > 0 || daicoScanTriggered) {
+                    // If already scanned, wait a bit for results
+                    setTimeout(resolve, 500);
+                } else {
+                    // Trigger scan and wait
+                    triggerDAICOScan().then(() => setTimeout(resolve, 500));
+                }
+            });
+        }
+
+        // Fetch a specific DAO directly (for deep links to DAOs not in active list)
+        async function fetchAndOpenDAO(daoAddr, tribTkn) {
+            try {
+                const rpcProvider = scannerProvider || provider;
+                if (!rpcProvider) return;
+
+                const multicall = new ethers.Contract(MULTICALL3_ADDRESS, MULTICALL3_ABI, rpcProvider);
+                const molochIface = new ethers.Interface(MOLOCH_SCANNER_ABI);
+                const daicoIface = new ethers.Interface(DAICO_SCANNER_ABI);
+                const erc20Iface = new ethers.Interface(ERC20_ABI);
+
+                // Build calls for this specific DAO
+                const calls = [
+                    { target: daoAddr, allowFailure: true, callData: molochIface.encodeFunctionData('name', []) },
+                    { target: daoAddr, allowFailure: true, callData: molochIface.encodeFunctionData('symbol', []) },
+                    { target: daoAddr, allowFailure: true, callData: molochIface.encodeFunctionData('sharesToken', []) },
+                    { target: daoAddr, allowFailure: true, callData: molochIface.encodeFunctionData('lootToken', []) },
+                    { target: DAICO_ADDRESS, allowFailure: true, callData: daicoIface.encodeFunctionData('sales', [daoAddr, tribTkn]) },
+                    { target: DAICO_ADDRESS, allowFailure: true, callData: daicoIface.encodeFunctionData('taps', [daoAddr]) },
+                    { target: DAICO_ADDRESS, allowFailure: true, callData: daicoIface.encodeFunctionData('claimableTap', [daoAddr]) }
+                ];
+
+                const results = await multicall.aggregate3(calls);
+
+                // Parse results
+                const daoData = { dao: daoAddr, sales: [] };
+
+                if (results[0].success) daoData.name = molochIface.decodeFunctionResult('name', results[0].returnData)[0];
+                if (results[1].success) daoData.symbol = molochIface.decodeFunctionResult('symbol', results[1].returnData)[0];
+                if (results[2].success) daoData.sharesToken = molochIface.decodeFunctionResult('sharesToken', results[2].returnData)[0];
+                if (results[3].success) daoData.lootToken = molochIface.decodeFunctionResult('lootToken', results[3].returnData)[0];
+
+                if (results[4].success) {
+                    const [saleTribAmt, saleForAmt, saleForTkn, saleDeadline] = daicoIface.decodeFunctionResult('sales', results[4].returnData);
+                    const now = Math.floor(Date.now() / 1000);
+                    if (saleTribAmt > 0n && saleForAmt > 0n && (saleDeadline === 0 || saleDeadline > now)) {
+                        const sale = { tribTkn, tribAmt: saleTribAmt, forAmt: saleForAmt, forTkn: saleForTkn, deadline: Number(saleDeadline) };
+
+                        // Get remaining supply
+                        const balanceCall = await multicall.aggregate3([
+                            { target: saleForTkn, allowFailure: true, callData: erc20Iface.encodeFunctionData('balanceOf', [daoAddr]) }
+                        ]);
+                        if (balanceCall[0].success) {
+                            sale.remainingSupply = erc20Iface.decodeFunctionResult('balanceOf', balanceCall[0].returnData)[0];
+                        }
+
+                        daoData.sales.push(sale);
+                    }
+                }
+
+                if (results[5].success) {
+                    const [ops, tapTribTkn, ratePerSec, lastClaim] = daicoIface.decodeFunctionResult('taps', results[5].returnData);
+                    if (ops !== ethers.ZeroAddress && ratePerSec > 0n) {
+                        daoData.tap = { ops, tribTkn: tapTribTkn, ratePerSec, lastClaim: Number(lastClaim) };
+                    }
+                }
+
+                if (results[6].success) {
+                    daoData.claimableTap = daicoIface.decodeFunctionResult('claimableTap', results[6].returnData)[0];
+                }
+
+                // Open modal if we found an active sale
+                if (daoData.sales.length > 0) {
+                    // Add to activeDAICOs for modal to work
+                    activeDAICOs.push(daoData);
+                    openPurchaseModal(daoAddr, daoData.sales[0].tribTkn);
+                }
+
+            } catch (e) {
+                console.error('Failed to fetch DAO:', e);
+            }
+        }
+
+        // Listen for hash changes (back/forward navigation)
+        window.addEventListener('hashchange', handleDeepLink);
+
+        // Handle deep link on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Small delay to let other initializations complete
+            setTimeout(handleDeepLink, 100);
+        });
 
         // ==================== END PURCHASE MODAL ====================
 
@@ -6290,6 +8081,8 @@
             // Gather form data
             const name = document.getElementById('daoName').value.trim();
             const symbol = document.getElementById('daoSymbol').value.trim().toUpperCase();
+            const description = document.getElementById('daoDescription').value.trim();
+            const contractURI = buildContractURI(name, symbol, description);
             const quorumPct = parseInt(document.getElementById('quorumPct').value) || 20;
             const supply = parseFormattedNumber(document.getElementById('saleSupply').value);
             const price = parseFloat(document.getElementById('tokenPrice').value) || 0;
@@ -6359,12 +8152,24 @@
                 const tribTkn = paymentToken === 'eth' ? ethers.ZeroAddress : customToken;
                 const saleSupplyWei = ethers.parseEther(supply.toString());
 
+                // Get tribute token decimals (ETH = 18, custom tokens need to be queried)
+                let tribDecimals = 18;
+                if (paymentToken !== 'eth' && customToken) {
+                    try {
+                        const tokenContract = new ethers.Contract(customToken, ERC20_FULL_ABI, provider);
+                        tribDecimals = await tokenContract.decimals();
+                    } catch (e) {
+                        console.warn('Could not fetch token decimals, assuming 18:', e);
+                    }
+                }
+
                 // Calculate tribAmt and forAmt to represent price
                 // Price = tribAmt / forAmt (e.g., 0.0001 ETH per token means 1 ETH = 10000 tokens)
-                // We use 1 token as base: tribAmt = price, forAmt = 1 token (in wei)
-                const forAmtWei = ethers.parseEther('1'); // 1 token
-                // Format price as fixed decimal string to avoid scientific notation
-                const tribAmtWei = ethers.parseEther(price.toFixed(18));
+                // For 6-decimal tokens (USDC/USDT), use larger forAmt to maintain precision
+                const forAmtTokens = tribDecimals <= 6 ? 1_000_000 : 1;
+                const forAmtWei = ethers.parseEther(forAmtTokens.toString());
+                const tribAmtForBatch = price * forAmtTokens;
+                const tribAmtWei = ethers.parseUnits(tribAmtForBatch.toFixed(tribDecimals), tribDecimals);
 
                 const daicoConfig = {
                     tribTkn: tribTkn,
@@ -6402,12 +8207,15 @@
                     }
                 ];
 
+                // Encode calldata and show verify link
+                let calldata;
                 let tx;
+                const quorumBps = quorumPct * 100;
                 if (enableTap && tapRate > 0) {
                     // Use summonDAICOWithTapCustom
                     const SECONDS_PER_MONTH = 2629746n;
-                    const ratePerSecWei = ethers.parseEther(tapRate.toString()) / SECONDS_PER_MONTH;
-                    const tapAllowanceWei = tapBudget > 0 ? ethers.parseEther(tapBudget.toString()) : ethers.MaxUint256;
+                    const ratePerSecWei = ethers.parseUnits(tapRate.toString(), tribDecimals) / SECONDS_PER_MONTH;
+                    const tapAllowanceWei = tapBudget > 0 ? ethers.parseUnits(tapBudget.toString(), tribDecimals) : ethers.MaxUint256;
 
                     const tapConfig = {
                         ops: tapOps,
@@ -6415,13 +8223,21 @@
                         tapAllowance: tapAllowanceWei
                     };
 
-                    showStatus('Please confirm the transaction in your wallet...', 'info');
+                    calldata = DAICO_IFACE.encodeFunctionData('summonDAICOWithTapCustom', [
+                        summonConfig, name, symbol, contractURI, quorumBps,
+                        ragequittable, DEFAULT_RENDERER, salt, initHolders, initSharesWei,
+                        sharesLocked, lootLocked, daicoConfig, tapConfig, customCalls
+                    ]);
+
+                    const verifyUrl = buildSwissKnifeUrl(calldata);
+                    showStatus(`Confirm in wallet... <a href="${verifyUrl}" target="_blank" rel="noopener" style="color: var(--cyan); opacity: 0.7; font-size: 0.85em;">verify calldata</a>`, 'info');
+
                     tx = await daicoContract.summonDAICOWithTapCustom(
                         summonConfig,
                         name,
                         symbol,
-                        '', // orgURI - empty for now
-                        quorumPct * 100, // Convert to bps
+                        contractURI,
+                        quorumBps,
                         ragequittable,
                         DEFAULT_RENDERER,
                         salt,
@@ -6435,13 +8251,21 @@
                     );
                 } else {
                     // Use summonDAICOCustom
-                    showStatus('Please confirm the transaction in your wallet...', 'info');
+                    calldata = DAICO_IFACE.encodeFunctionData('summonDAICOCustom', [
+                        summonConfig, name, symbol, contractURI, quorumBps,
+                        ragequittable, DEFAULT_RENDERER, salt, initHolders, initSharesWei,
+                        sharesLocked, lootLocked, daicoConfig, customCalls
+                    ]);
+
+                    const verifyUrl = buildSwissKnifeUrl(calldata);
+                    showStatus(`Confirm in wallet... <a href="${verifyUrl}" target="_blank" rel="noopener" style="color: var(--cyan); opacity: 0.7; font-size: 0.85em;">verify calldata</a>`, 'info');
+
                     tx = await daicoContract.summonDAICOCustom(
                         summonConfig,
                         name,
                         symbol,
-                        '', // orgURI - empty for now
-                        quorumPct * 100, // Convert to bps
+                        contractURI,
+                        quorumBps,
                         ragequittable,
                         DEFAULT_RENDERER,
                         salt,
@@ -6454,7 +8278,7 @@
                     );
                 }
 
-                showStatus(`Transaction submitted! <a href="https://etherscan.io/tx/${tx.hash}" target="_blank">View on Etherscan</a>`, 'info');
+                showStatus(`Transaction submitted! <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" rel="noopener">View on Etherscan</a>`, 'info');
 
                 const receipt = await tx.wait();
 

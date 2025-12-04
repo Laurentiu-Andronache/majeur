@@ -4810,6 +4810,42 @@
         border-radius: 3px;
       }
 
+      /* Description-only emblem (no image, just text from contractURI) */
+      .dao-emblem.description-only {
+        width: auto;
+        max-width: 280px;
+        height: auto;
+        min-height: 48px;
+        padding: 0.5rem 0.75rem;
+        background: rgba(10, 10, 20, 0.8);
+      }
+
+      .dao-emblem-description {
+        font-family: 'EB Garamond', serif;
+        font-size: 0.8rem;
+        line-height: 1.4;
+        color: rgba(230, 217, 255, 0.85);
+        display: -webkit-box;
+        -webkit-line-clamp: 4;
+        line-clamp: 4;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        word-break: break-word;
+      }
+
+      .tile-emblem-description {
+        font-family: 'EB Garamond', serif;
+        font-size: 0.7rem;
+        line-height: 1.3;
+        color: rgba(230, 217, 255, 0.8);
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        word-break: break-word;
+      }
+
       /* NFT MODAL */
       .nft-modal {
         display: none;
@@ -7361,6 +7397,12 @@
             <input type="text" class="form-input" id="daoSymbol" placeholder="e.g., META" maxlength="10" required>
           </div>
 
+          <div class="form-group">
+            <label class="form-label">Description <span style="opacity: 0.5; font-weight: normal;">(optional)</span></label>
+            <textarea class="form-input" id="daoDescription" placeholder="Describe your DAO's purpose, mission, or governance structure..." rows="3" style="resize: vertical; min-height: 60px; max-height: 150px; font-family: inherit;"></textarea>
+            <small style="color: rgba(230, 217, 255, 0.5); font-size: 0.8rem;">If empty, defaults to <a href="https://github.com/z0r0z/majeur?tab=readme-ov-file#wyoming-duna-compliance" target="_blank" rel="noopener" style="color: #9d7bff;">Wyoming DUNA</a> charter among members</small>
+          </div>
+
           <!-- Quorum Settings -->
           <div class="form-group">
             <label class="form-label">Quorum %</label>
@@ -7454,9 +7496,9 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">Contract URI (optional)</label>
-              <input type="text" class="form-input" id="daoURI" placeholder="https://example.com/metadata.json or https://example.com/logo.svg">
-              <small style="color: rgba(230, 217, 255, 0.5); font-size: 0.8rem;">JSON metadata URL or direct image URL (SVG, PNG, JPG, etc.)</small>
+              <label class="form-label">Emblem/Logo URL (optional)</label>
+              <input type="text" class="form-input" id="daoImageURI" placeholder="https://example.com/logo.svg or ipfs://...">
+              <small style="color: rgba(230, 217, 255, 0.5); font-size: 0.8rem;">Direct image URL for DAO emblem (SVG, PNG, JPG, etc.) or IPFS</small>
             </div>
 
             <div class="form-group">
@@ -7845,11 +7887,25 @@
           <div class="treasury-section">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
               <h4 class="treasury-title" style="margin-bottom: 0;">Treasury</h4>
-              <button onclick="openDepositModal()" class="deposit-button" title="Deposit assets to treasury">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-              </button>
+              <div style="display: flex; gap: 0.5rem;">
+                <button onclick="prepareInternalSaleProposal()" class="deposit-button" title="Internal sale: 1:1 upgrade or DAI continuous" style="background: rgba(157, 123, 255, 0.15); border-color: rgba(157, 123, 255, 0.3);">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 19V5M5 12l7-7 7 7" stroke="#9d7bff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+                <button onclick="prepareNewDaicoSaleProposal()" class="deposit-button" title="DAICO sale: external OTC fundraise" style="background: rgba(100, 200, 150, 0.15); border-color: rgba(100, 200, 150, 0.3);">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="#64c896" stroke-width="1.5" stroke-linejoin="round" fill="none"/>
+                    <path d="M2 17l10 5 10-5" stroke="#64c896" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 12l10 5 10-5" stroke="#64c896" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+                <button onclick="openDepositModal()" class="deposit-button" title="Deposit assets to treasury">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                </button>
+              </div>
             </div>
             <div class="treasury-assets" id="treasuryAssets">
               <!-- Treasury assets will be dynamically rendered here -->
@@ -7883,21 +7939,7 @@
 
           <!-- Sales Section -->
           <div id="salesSection" class="treasury-section" style="margin-top: 1.5rem; display: none;">
-            <h4 class="treasury-title">
-              Active Sales
-              <a href="#" onclick="event.preventDefault(); prepareSaleProposal(); switchDaoView('dao');" title="Configure internal token sale" onmouseover="this.style.opacity='1'; this.style.transform='translateY(-1px)';" onmouseout="this.style.opacity='0.5'; this.style.transform='translateY(0)';" style="margin-left: 0.5rem; color: #9d7bff; opacity: 0.5; transition: all 0.2s; font-size: 0.75rem; text-decoration: none;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;">
-                  <circle cx="9" cy="21" r="1"></circle>
-                  <circle cx="20" cy="21" r="1"></circle>
-                  <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-                </svg>
-              </a>
-              <a href="#" onclick="event.preventDefault(); prepareDaicoSaleProposal(); switchDaoView('dao');" title="Configure DAICO sale (external OTC)" onmouseover="this.style.opacity='1'; this.style.transform='translateY(-1px)';" onmouseout="this.style.opacity='0.5'; this.style.transform='translateY(0)';" style="margin-left: 0.5rem; color: #64c896; opacity: 0.5; transition: all 0.2s; font-size: 0.75rem; text-decoration: none;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;">
-                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
-                </svg>
-              </a>
-            </h4>
+            <h4 class="treasury-title">Active Sales</h4>
             <div id="salesInfo">
               <!-- Active sales will be dynamically rendered here -->
             </div>
@@ -8214,6 +8256,37 @@
           .replace(/>/g, '&gt;')
           .replace(/"/g, '&quot;')
           .replace(/'/g, '&#039;');
+      }
+
+      // Build contractURI metadata JSON (ERC-7572 compatible)
+      // Returns data URI with JSON for on-chain storage, or empty string if no description/image
+      // Note: If empty, the on-chain renderer displays default DUNA charter
+      function buildContractURI(name, symbol, description, imageUrl) {
+        const hasDescription = description && description.trim();
+        const hasImage = imageUrl && imageUrl.trim();
+
+        // If neither description nor image, return empty to trigger renderer's DUNA default
+        if (!hasDescription && !hasImage) {
+          return '';
+        }
+
+        const metadata = {
+          name: name || '',
+          symbol: symbol || ''
+        };
+
+        // Add description if provided
+        if (hasDescription) {
+          metadata.description = description.trim();
+        }
+
+        // Add image if provided
+        if (hasImage) {
+          metadata.image = imageUrl.trim();
+        }
+
+        const json = JSON.stringify(metadata);
+        return 'data:application/json;utf8,' + json;
       }
 
       // Mobile viewport height fix for handling browser chrome
@@ -13119,7 +13192,17 @@
               <div style="padding: 0.75rem; background: rgba(100, 200, 150, 0.05); border: 1px solid rgba(100, 200, 150, 0.2); border-radius: 4px; margin-bottom: 0.75rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                   <div style="font-family: 'Cinzel', serif; font-size: 0.85rem; color: #64c896; letter-spacing: 0.1em;">${tokenType} DAICO SALE</div>
-                  <div style="font-size: 0.7rem; color: rgba(100, 200, 150, 0.8); background: rgba(100, 200, 150, 0.15); padding: 0.2rem 0.5rem; border-radius: 3px;">External OTC</div>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <a href="#" onclick="event.preventDefault(); prepareSaleProposal('${sale.token.address}', '${sale.token.symbol}', ${sale.token.decimals}, ${sale.isLoot}, '${sale.tribAmt}', '${sale.forAmt}', '${sale.forTkn}', ${sale.deadline || 0}); switchDaoView('dao');"
+                       title="Configure or cancel sale via proposal"
+                       style="color: #64c896; opacity: 0.6; line-height: 1;">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                      </svg>
+                    </a>
+                    <div style="font-size: 0.7rem; color: rgba(100, 200, 150, 0.8); background: rgba(100, 200, 150, 0.15); padding: 0.2rem 0.5rem; border-radius: 3px;">External OTC</div>
+                  </div>
                 </div>
                 <div style="font-size: 0.75rem; color: rgba(230, 217, 255, 0.7); margin-bottom: 0.5rem;">
                   Pay ${sale.token.symbol} → Receive ${tokenSymbol}
@@ -13137,6 +13220,25 @@
                 <div style="font-size: 0.7rem; color: rgba(230, 217, 255, 0.5); margin-bottom: 0.5rem;">
                   Ratio: ${tribAmtFormatted} ${sale.token.symbol} = ${forAmtFormatted} ${tokenSymbol}
                 </div>
+                ${(() => {
+                  // Deadline display with countdown
+                  if (!sale.deadline || sale.deadline === 0) {
+                    return '<div style="font-size: 0.7rem; color: rgba(100, 200, 150, 0.7); margin-bottom: 0.5rem;">⏳ No deadline</div>';
+                  }
+                  const now = Math.floor(Date.now() / 1000);
+                  const secsLeft = sale.deadline - now;
+                  if (secsLeft <= 0) {
+                    return '<div style="font-size: 0.7rem; color: rgba(255, 100, 100, 0.8); margin-bottom: 0.5rem;">⏰ Ended</div>';
+                  }
+                  const deadlineDate = new Date(sale.deadline * 1000);
+                  const dateStr = deadlineDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                  const timeStr = deadlineDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                  const days = Math.floor(secsLeft / 86400);
+                  const hours = Math.floor((secsLeft % 86400) / 3600);
+                  const mins = Math.floor((secsLeft % 3600) / 60);
+                  let countdown = days > 0 ? days + 'd ' + hours + 'h' : hours > 0 ? hours + 'h ' + mins + 'm' : mins + 'm';
+                  return '<div style="font-size: 0.7rem; color: rgba(100, 200, 150, 0.8); margin-bottom: 0.5rem;">⏳ Ends ' + dateStr + ' ' + timeStr + ' (' + countdown + ' left)</div>';
+                })()}
                 ${lpConfigHTML}
                 <button onclick="openDaicoPurchaseModal('${sale.token.address}', '${sale.token.symbol}', ${sale.token.decimals}, ${sale.isLoot}, '${sale.tribAmt}', '${sale.forAmt}')"
                         onmouseover="this.style.background='rgba(100, 200, 150, 0.25)'; this.style.borderColor='#64c896';"
@@ -13162,12 +13264,33 @@
                   <div style="font-family: 'Cinzel', serif; font-size: 0.85rem; color: #ffb464; letter-spacing: 0.1em;">TAP FUNDING</div>
                   <div style="font-size: 0.7rem; color: rgba(255, 180, 100, 0.8); background: rgba(255, 180, 100, 0.15); padding: 0.2rem 0.5rem; border-radius: 3px;">Continuous</div>
                 </div>
-                <div style="font-size: 0.75rem; color: rgba(230, 217, 255, 0.7); margin-bottom: 0.5rem;">
-                  <span style="color: #ffb464;">Ops:</span> <a href="https://etherscan.io/address/${tapInfo.ops}" target="_blank" rel="noopener" style="color: rgba(230, 217, 255, 0.8); text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${opsShort}</a>
+                <div style="font-size: 0.75rem; color: rgba(230, 217, 255, 0.7); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.35rem;">
+                  <span style="color: #ffb464;">Ops:</span>
+                  <a href="https://etherscan.io/address/${tapInfo.ops}" target="_blank" rel="noopener" style="color: rgba(230, 217, 255, 0.8); text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${opsShort}</a>
+                  <a href="#" onclick="event.preventDefault(); prepareTapOpsProposal('${tapInfo.ops}'); switchDaoView('dao');"
+                     title="Create proposal to change tap ops address"
+                     style="color: #ffb464; opacity: 0.6; line-height: 1; margin-left: 0.25rem;">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="8" x2="12" y2="16"></line>
+                      <line x1="8" y1="12" x2="16" y2="12"></line>
+                    </svg>
+                  </a>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
                   <div>
-                    <div style="font-size: 0.7rem; color: rgba(230, 217, 255, 0.5);">Rate</div>
+                    <div style="font-size: 0.7rem; color: rgba(230, 217, 255, 0.5); display: flex; align-items: center; gap: 0.35rem;">
+                      Rate
+                      <a href="#" onclick="event.preventDefault(); prepareTapRateProposal('${tapToken.address}', '${tapToken.symbol}', ${tapToken.decimals}, '${tapInfo.ratePerSec}'); switchDaoView('dao');"
+                         title="Create proposal to change tap rate"
+                         style="color: #ffb464; opacity: 0.6; line-height: 1;">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <line x1="12" y1="8" x2="12" y2="16"></line>
+                          <line x1="8" y1="12" x2="16" y2="12"></line>
+                        </svg>
+                      </a>
+                    </div>
                     <div style="font-size: 0.9rem; color: #e6d9ff;">${ratePerMonth.toLocaleString()} ${tapToken.symbol}/mo</div>
                   </div>
                   <div>
@@ -13519,12 +13642,12 @@
             <div style="display: grid; grid-template-columns: 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
               <div>
                 <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Recipient Address or ENS</label>
-                <input type="text" id="transferRecipient" placeholder="vitalik.eth or 0x..."
+                <input type="text" id="treasurySendRecipient" placeholder="vitalik.eth or 0x..."
                        style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 16px;" />
               </div>
               <div>
                 <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Amount (${symbol})</label>
-                <input type="text" id="transferAmount" placeholder="0.0"
+                <input type="text" id="treasurySendAmount" placeholder="0.0"
                        style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 16px;" />
               </div>
             </div>
@@ -13536,7 +13659,7 @@
             </button>
           `;
           setTimeout(() => {
-            const recipientInput = document.getElementById('transferRecipient');
+            const recipientInput = document.getElementById('treasurySendRecipient');
             if (recipientInput) recipientInput.focus();
           }, 100);
 
@@ -13917,11 +14040,9 @@
       }
 
       async function populateTransferProposal(symbol, address, decimals) {
-        console.log('populateTransferProposal called:', { symbol, address, decimals });
         try {
-          const recipientEl = document.getElementById('transferRecipient');
-          const amountEl = document.getElementById('transferAmount');
-          console.log('Input elements:', { recipientEl, amountEl });
+          const recipientEl = document.getElementById('treasurySendRecipient');
+          const amountEl = document.getElementById('treasurySendAmount');
 
           if (!recipientEl || !amountEl) {
             showStatus('Input fields not found', true);
@@ -13930,7 +14051,6 @@
 
           const recipientInput = recipientEl.value.trim();
           let amountInput = amountEl.value.trim();
-          console.log('Input values:', { recipientInput, amountInput });
 
           if (!recipientInput) {
             showStatus('Please enter recipient address or ENS', true);
@@ -15928,6 +16048,1163 @@
         }
       }
 
+      // TAP Rate proposal helper - for changing the tap rate via governance
+      async function prepareTapRateProposal(tribTknAddress, tribTknSymbol, tribTknDecimals, currentRatePerSec) {
+        if (!currentDAO || !currentDAO.dao) {
+          showStatus('Please select a DAO first', true);
+          return;
+        }
+
+        const daoAddress = currentDAO.dao.dao;
+
+        // Calculate current rate per month for display
+        const SECONDS_PER_MONTH = 2629746n;
+        const currentRateBn = BigInt(currentRatePerSec);
+        const currentRatePerMonth = parseFloat(ethers.formatUnits(currentRateBn * SECONDS_PER_MONTH, tribTknDecimals));
+
+        // Scroll to proposal form
+        const proposalForm = document.querySelector('.proposal-form');
+        if (proposalForm) {
+          proposalForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Add tap rate helper UI if not already present
+        let helperDiv = document.getElementById('tapRateHelper');
+        if (!helperDiv) {
+          helperDiv = document.createElement('div');
+          helperDiv.id = 'tapRateHelper';
+          helperDiv.style.cssText = 'margin-bottom: 1rem; padding: 1rem; background: rgba(255, 180, 100, 0.1); border: 1px solid rgba(255, 180, 100, 0.3); border-radius: 4px;';
+          proposalForm.insertBefore(helperDiv, proposalForm.querySelector('.proposal-form-group'));
+        }
+
+        helperDiv.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <div style="font-family: 'Cinzel', serif; font-size: 0.85rem; color: #ffb464; letter-spacing: 0.1em;">
+              CHANGE TAP RATE
+            </div>
+            <button onclick="clearTapRateHelper()" style="background: none; border: none; color: rgba(230, 217, 255, 0.6); cursor: pointer; font-size: 1.2rem; padding: 0; line-height: 1;">&times;</button>
+          </div>
+          <div style="margin-bottom: 0.75rem; padding: 0.75rem; background: rgba(255, 180, 100, 0.1); border-radius: 4px;">
+            <div style="font-size: 0.85rem; color: rgba(230, 217, 255, 0.8); margin-bottom: 0.35rem;">
+              Current Rate: <strong>${currentRatePerMonth.toLocaleString()} ${tribTknSymbol}/month</strong>
+            </div>
+            <div style="font-size: 0.75rem; color: rgba(230, 217, 255, 0.6);">
+              Token: ${tribTknSymbol} (${tribTknDecimals} decimals)
+            </div>
+          </div>
+          <div style="margin-bottom: 0.5rem; padding: 0.5rem; background: rgba(255, 180, 100, 0.05); border-radius: 4px; font-size: 0.75rem; color: rgba(255, 180, 100, 0.9);">
+            <strong>Note:</strong> Per DAICO design, rate changes are non-retroactive. Any unclaimed tap at the old rate is forfeited when the rate changes.
+          </div>
+          <div style="margin-bottom: 0.75rem;">
+            <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">New Rate (${tribTknSymbol} per month)</label>
+            <input type="text" id="tapRateInput" placeholder="${currentRatePerMonth.toLocaleString()}" value="${currentRatePerMonth.toFixed(2)}"
+                   oninput="updateTapRatePreview(${tribTknDecimals}, '${tribTknSymbol}')"
+                   style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 180, 100, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
+            <div style="margin-top: 0.35rem; font-size: 0.7rem; color: rgba(230, 217, 255, 0.5);">
+              Enter 0 to freeze/pause the tap
+            </div>
+            <div id="tapRatePreview" style="margin-top: 0.5rem; display: none;"></div>
+          </div>
+          <button onclick="populateTapRateProposal('${daoAddress}', ${tribTknDecimals}, '${tribTknSymbol}')"
+                  onmouseover="this.style.background='rgba(255, 180, 100, 0.35)'; this.style.borderColor='#ffb464'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(255, 180, 100, 0.3)';"
+                  onmouseout="this.style.background='rgba(255, 180, 100, 0.2)'; this.style.borderColor='rgba(255, 180, 100, 0.4)'; this.style.transform='translateY(0)'; this.style.boxShadow='none';"
+                  style="width: 100%; padding: 0.75rem; background: rgba(255, 180, 100, 0.2); border: 1px solid rgba(255, 180, 100, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.75rem; letter-spacing: 0.15em; cursor: pointer; text-transform: uppercase; transition: all 0.2s ease; font-weight: 600;">
+            Populate Proposal Form
+          </button>
+        `;
+
+        // Focus on input
+        setTimeout(() => {
+          const input = document.getElementById('tapRateInput');
+          if (input) {
+            input.select();
+            input.focus();
+          }
+        }, 100);
+      }
+
+      function updateTapRatePreview(decimals, symbol) {
+        const previewDiv = document.getElementById('tapRatePreview');
+        const rateInput = document.getElementById('tapRateInput');
+        if (!previewDiv || !rateInput) return;
+
+        const newRatePerMonth = parseFloat(rateInput.value.replace(/,/g, ''));
+        if (isNaN(newRatePerMonth) || newRatePerMonth < 0) {
+          previewDiv.style.display = 'none';
+          return;
+        }
+
+        // Calculate rate per second
+        const SECONDS_PER_MONTH = 2629746;
+        const ratePerSec = newRatePerMonth / SECONDS_PER_MONTH;
+
+        // Calculate daily/yearly amounts
+        const ratePerDay = newRatePerMonth / 30.44; // avg days per month
+        const ratePerYear = newRatePerMonth * 12;
+
+        previewDiv.style.display = 'block';
+        previewDiv.innerHTML = `
+          <div style="padding: 0.5rem; background: rgba(255, 180, 100, 0.1); border-radius: 4px; font-size: 0.75rem; color: rgba(230, 217, 255, 0.8);">
+            <div>≈ ${ratePerDay.toFixed(4)} ${symbol}/day</div>
+            <div>≈ ${ratePerYear.toLocaleString()} ${symbol}/year</div>
+            ${newRatePerMonth === 0 ? '<div style="color: #ffb464; margin-top: 0.35rem;">⚠️ Setting rate to 0 will freeze the tap</div>' : ''}
+          </div>
+        `;
+      }
+
+      function clearTapRateHelper() {
+        const helperDiv = document.getElementById('tapRateHelper');
+        if (helperDiv) helperDiv.remove();
+      }
+
+      // DAICO Sale configuration proposal helper - for adjusting or cancelling a sale via governance
+      async function prepareSaleProposal(tribTknAddress, tribTknSymbol, tribTknDecimals, isLoot, currentTribAmt, currentForAmt, forTkn, deadline) {
+        if (!currentDAO || !currentDAO.dao) {
+          showStatus('Please select a DAO first', true);
+          return;
+        }
+
+        const daoAddress = currentDAO.dao.dao;
+        const tokenType = isLoot ? 'LOOT' : 'SHARES';
+        const tokenSymbol = isLoot ? `${currentDAO.dao.meta.symbol}-LOOT` : currentDAO.dao.meta.symbol;
+
+        // Calculate current price per token
+        const tribAmtFormatted = parseFloat(ethers.formatUnits(currentTribAmt, tribTknDecimals));
+        const forAmtFormatted = parseFloat(ethers.formatEther(currentForAmt));
+        const currentPricePerToken = tribAmtFormatted / forAmtFormatted;
+
+        // Scroll to proposal form
+        const proposalForm = document.querySelector('.proposal-form');
+        if (proposalForm) {
+          proposalForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Remove any existing helpers first
+        clearSaleHelper();
+        clearTapRateHelper();
+        clearTapOpsHelper();
+
+        // Add sale helper UI
+        let helperDiv = document.createElement('div');
+        helperDiv.id = 'saleHelper';
+        helperDiv.style.cssText = 'margin-bottom: 1rem; padding: 1rem; background: rgba(100, 200, 150, 0.1); border: 1px solid rgba(100, 200, 150, 0.3); border-radius: 4px;';
+        proposalForm.insertBefore(helperDiv, proposalForm.querySelector('.proposal-form-group'));
+
+        // Format deadline
+        const deadlineDate = deadline && deadline > 0 ? new Date(Number(deadline) * 1000).toLocaleString() : 'No deadline';
+
+        helperDiv.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <div style="font-family: 'Cinzel', serif; font-size: 0.85rem; color: #64c896; letter-spacing: 0.1em;">
+              CONFIGURE ${tokenType} SALE
+            </div>
+            <button onclick="clearSaleHelper()" style="background: none; border: none; color: rgba(230, 217, 255, 0.6); cursor: pointer; font-size: 1.2rem; padding: 0; line-height: 1;">&times;</button>
+          </div>
+          <div style="margin-bottom: 0.75rem; padding: 0.75rem; background: rgba(100, 200, 150, 0.1); border-radius: 4px;">
+            <div style="font-size: 0.85rem; color: rgba(230, 217, 255, 0.8); margin-bottom: 0.35rem;">
+              Current: <strong>${tribAmtFormatted} ${tribTknSymbol} → ${forAmtFormatted} ${tokenSymbol}</strong>
+            </div>
+            <div style="font-size: 0.75rem; color: rgba(230, 217, 255, 0.6);">
+              Price: ${currentPricePerToken.toFixed(6)} ${tribTknSymbol} per ${tokenSymbol} • Deadline: ${deadlineDate}
+            </div>
+          </div>
+
+          <div style="margin-bottom: 0.75rem;">
+            <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Action</label>
+            <select id="saleActionSelect" onchange="updateSaleActionUI(${tribTknDecimals}, '${tribTknSymbol}', '${tokenSymbol}', ${tribAmtFormatted}, ${forAmtFormatted})"
+                    style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(100, 200, 150, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;">
+              <option value="cancel">Cancel Sale (disable purchasing)</option>
+              <option value="adjust">Adjust Sale Terms</option>
+            </select>
+          </div>
+
+          <div id="saleAdjustFields" style="display: none;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+              <div>
+                <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Tribute Amount (${tribTknSymbol})</label>
+                <input type="text" id="saleTribAmtInput" placeholder="${tribAmtFormatted}" value="${tribAmtFormatted}"
+                       oninput="updateSalePreview(${tribTknDecimals}, '${tribTknSymbol}', '${tokenSymbol}')"
+                       style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(100, 200, 150, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">For Amount (${tokenSymbol})</label>
+                <input type="text" id="saleForAmtInput" placeholder="${forAmtFormatted}" value="${forAmtFormatted}"
+                       oninput="updateSalePreview(${tribTknDecimals}, '${tribTknSymbol}', '${tokenSymbol}')"
+                       style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(100, 200, 150, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
+              </div>
+            </div>
+            <div style="margin-bottom: 0.75rem;">
+              <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Deadline (optional)</label>
+              <input type="datetime-local" id="saleDeadlineInput"
+                     style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(100, 200, 150, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
+              <div style="margin-top: 0.35rem; font-size: 0.7rem; color: rgba(230, 217, 255, 0.5);">
+                Leave empty for no deadline
+              </div>
+            </div>
+            <div id="salePreview" style="margin-bottom: 0.75rem; display: none;"></div>
+          </div>
+
+          <div id="saleCancelWarning" style="margin-bottom: 0.75rem; padding: 0.5rem; background: rgba(255, 100, 100, 0.1); border: 1px solid rgba(255, 100, 100, 0.3); border-radius: 4px; font-size: 0.75rem; color: rgba(255, 150, 150, 0.9);">
+            <strong>Warning:</strong> Cancelling the sale will prevent any further purchases. The DAO can create a new sale later via another proposal.
+          </div>
+
+          <button onclick="populateSaleConfigProposal('${tribTknAddress}', '${tribTknSymbol}', ${tribTknDecimals}, '${forTkn}', ${isLoot}, '${tokenSymbol}')"
+                  onmouseover="this.style.background='rgba(100, 200, 150, 0.35)'; this.style.borderColor='#64c896'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(100, 200, 150, 0.3)';"
+                  onmouseout="this.style.background='rgba(100, 200, 150, 0.2)'; this.style.borderColor='rgba(100, 200, 150, 0.4)'; this.style.transform='translateY(0)'; this.style.boxShadow='none';"
+                  style="width: 100%; padding: 0.75rem; background: rgba(100, 200, 150, 0.2); border: 1px solid rgba(100, 200, 150, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.75rem; letter-spacing: 0.15em; cursor: pointer; text-transform: uppercase; transition: all 0.2s ease; font-weight: 600;">
+            Populate Proposal Form
+          </button>
+        `;
+
+        // Focus on select
+        setTimeout(() => {
+          const select = document.getElementById('saleActionSelect');
+          if (select) select.focus();
+        }, 100);
+      }
+
+      function updateSaleActionUI(tribDecimals, tribSymbol, forSymbol, currentTribAmt, currentForAmt) {
+        const action = document.getElementById('saleActionSelect').value;
+        const adjustFields = document.getElementById('saleAdjustFields');
+        const cancelWarning = document.getElementById('saleCancelWarning');
+
+        if (action === 'cancel') {
+          adjustFields.style.display = 'none';
+          cancelWarning.style.display = 'block';
+        } else {
+          adjustFields.style.display = 'block';
+          cancelWarning.style.display = 'none';
+          updateSalePreview(tribDecimals, tribSymbol, forSymbol);
+        }
+      }
+
+      function updateSalePreview(tribDecimals, tribSymbol, forSymbol) {
+        const previewDiv = document.getElementById('salePreview');
+        const tribInput = document.getElementById('saleTribAmtInput');
+        const forInput = document.getElementById('saleForAmtInput');
+        if (!previewDiv || !tribInput || !forInput) return;
+
+        const newTribAmt = parseFloat(tribInput.value.replace(/,/g, ''));
+        const newForAmt = parseFloat(forInput.value.replace(/,/g, ''));
+
+        if (isNaN(newTribAmt) || isNaN(newForAmt) || newTribAmt <= 0 || newForAmt <= 0) {
+          previewDiv.style.display = 'none';
+          return;
+        }
+
+        const newPricePerToken = newTribAmt / newForAmt;
+
+        previewDiv.style.display = 'block';
+        previewDiv.innerHTML = `
+          <div style="padding: 0.5rem; background: rgba(100, 200, 150, 0.1); border-radius: 4px; font-size: 0.75rem; color: rgba(230, 217, 255, 0.8);">
+            <div>New ratio: ${newTribAmt} ${tribSymbol} = ${newForAmt} ${forSymbol}</div>
+            <div>Price per token: ${newPricePerToken.toFixed(6)} ${tribSymbol}</div>
+          </div>
+        `;
+      }
+
+      function clearSaleHelper() {
+        const helperDiv = document.getElementById('saleHelper');
+        if (helperDiv) helperDiv.remove();
+      }
+
+      async function populateSaleConfigProposal(tribTknAddress, tribTknSymbol, tribTknDecimals, forTkn, isLoot, tokenSymbol) {
+        try {
+          const action = document.getElementById('saleActionSelect').value;
+          let tribAmt, forAmt, deadline;
+
+          if (action === 'cancel') {
+            // Cancel sale by setting amounts to 0
+            tribAmt = 0n;
+            forAmt = 0n;
+            deadline = 0;
+          } else {
+            // Adjust sale terms
+            const tribInput = document.getElementById('saleTribAmtInput').value.trim().replace(/,/g, '');
+            const forInput = document.getElementById('saleForAmtInput').value.trim().replace(/,/g, '');
+            const deadlineInput = document.getElementById('saleDeadlineInput').value;
+
+            if (!tribInput || isNaN(parseFloat(tribInput)) || parseFloat(tribInput) <= 0) {
+              showStatus('Please enter a valid tribute amount', true);
+              return;
+            }
+            if (!forInput || isNaN(parseFloat(forInput)) || parseFloat(forInput) <= 0) {
+              showStatus('Please enter a valid token amount', true);
+              return;
+            }
+
+            tribAmt = ethers.parseUnits(tribInput, tribTknDecimals);
+            forAmt = ethers.parseEther(forInput); // Shares/Loot are 18 decimals
+            deadline = deadlineInput ? Math.floor(new Date(deadlineInput).getTime() / 1000) : 0;
+          }
+
+          // Use address(0) for ETH tribute token
+          const tribTknParam = tribTknAddress === ethers.ZeroAddress ? ethers.ZeroAddress : tribTknAddress;
+
+          // Encode setSale(address tribTkn, uint256 tribAmt, address forTkn, uint256 forAmt, uint40 deadline)
+          const setSaleIface = new ethers.Interface(['function setSale(address tribTkn, uint256 tribAmt, address forTkn, uint256 forAmt, uint40 deadline)']);
+          const calldata = setSaleIface.encodeFunctionData('setSale', [tribTknParam, tribAmt, forTkn, forAmt, deadline]);
+
+          // Target is DAICO contract (DAO calls DAICO.setSale)
+          document.getElementById('proposalTo').value = DAICO_ADDRESS;
+          document.getElementById('proposalValue').value = '0';
+          document.getElementById('proposalData').value = calldata;
+
+          let description;
+          let metadata;
+          if (action === 'cancel') {
+            description = `Cancel ${tokenSymbol} DAICO sale (${tribTknSymbol} payments)`;
+            metadata = `<<<DAICO_SALE action="cancel" tribToken="${tribTknParam}" tribSymbol="${tribTknSymbol}" forToken="${forTkn}" forSymbol="${tokenSymbol}" DAICO_SALE>>>`;
+          } else {
+            const tribAmtFormatted = parseFloat(ethers.formatUnits(tribAmt, tribTknDecimals));
+            const forAmtFormatted = parseFloat(ethers.formatEther(forAmt));
+            description = `Adjust ${tokenSymbol} sale: ${tribAmtFormatted} ${tribTknSymbol} = ${forAmtFormatted} ${tokenSymbol}`;
+            metadata = `<<<DAICO_SALE action="adjust" tribToken="${tribTknParam}" tribDecimals="${tribTknDecimals}" tribSymbol="${tribTknSymbol}" tribAmt="${tribAmt.toString()}" forToken="${forTkn}" forSymbol="${tokenSymbol}" forAmt="${forAmt.toString()}" deadline="${deadline}" DAICO_SALE>>>`;
+          }
+
+          const fullDescription = `${description}\n\n${metadata}`;
+          setLockedProposalDescription(fullDescription, description);
+
+          // Update UI hints and translations
+          updateTargetAddressHint();
+          updateCalldataTranslation();
+          updateCalldataPreview();
+
+          showStatus('Proposal form populated!', false);
+          clearSaleHelper();
+
+          // Scroll to show the populated form
+          setTimeout(() => {
+            document.getElementById('proposalDescription').scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 300);
+
+        } catch (error) {
+          console.error('Error populating sale proposal:', error);
+          showStatus('Failed to populate form: ' + error.message, true);
+        }
+      }
+
+      // Create new DAICO sale proposal helper - for DAOs that want to set up a new sale
+      async function prepareNewDaicoSaleProposal() {
+        if (!currentDAO || !currentDAO.dao) {
+          showStatus('Please select a DAO first', true);
+          return;
+        }
+
+        // Switch to DAO view and scroll to proposal form
+        switchDaoView('dao');
+
+        const proposalForm = document.querySelector('.proposal-form');
+        if (proposalForm) {
+          setTimeout(() => {
+            proposalForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 100);
+        }
+
+        // Remove any existing helpers first
+        clearSaleHelper();
+        clearTapRateHelper();
+        clearTapOpsHelper();
+        clearNewSaleHelper();
+
+        // Add new sale helper UI
+        let helperDiv = document.createElement('div');
+        helperDiv.id = 'newSaleHelper';
+        helperDiv.style.cssText = 'margin-bottom: 1rem; padding: 1rem; background: rgba(100, 200, 150, 0.1); border: 1px solid rgba(100, 200, 150, 0.3); border-radius: 4px;';
+
+        setTimeout(() => {
+          const proposalFormEl = document.querySelector('.proposal-form');
+          if (proposalFormEl) {
+            proposalFormEl.insertBefore(helperDiv, proposalFormEl.querySelector('.proposal-form-group'));
+          }
+        }, 150);
+
+        const sharesAddr = currentDAO.dao.shares;
+        const lootAddr = currentDAO.dao.loot;
+        const daoSymbol = currentDAO.dao.meta.symbol;
+
+        helperDiv.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <div style="font-family: 'Cinzel', serif; font-size: 0.85rem; color: #64c896; letter-spacing: 0.1em;">
+              CREATE DAICO SALE
+            </div>
+            <button onclick="clearNewSaleHelper()" style="background: none; border: none; color: rgba(230, 217, 255, 0.6); cursor: pointer; font-size: 1.2rem; padding: 0; line-height: 1;">&times;</button>
+          </div>
+          <div style="margin-bottom: 0.5rem; padding: 0.5rem; background: rgba(100, 200, 150, 0.08); border-radius: 4px; font-size: 0.75rem; color: rgba(230, 217, 255, 0.7);">
+            Set up a DAICO sale to sell ${daoSymbol} shares or loot for ETH or ERC20 tokens. The DAICO contract will mint tokens to buyers.
+          </div>
+
+          <div style="margin-bottom: 0.75rem;">
+            <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Token to Sell</label>
+            <select id="newSaleTokenType"
+                    style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(100, 200, 150, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;">
+              <option value="shares">${daoSymbol} (Shares)</option>
+              <option value="loot">${daoSymbol}-LOOT (Loot)</option>
+            </select>
+          </div>
+
+          <div style="margin-bottom: 0.75rem;">
+            <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Payment Token</label>
+            <select id="newSalePaymentToken" onchange="updateNewSalePaymentUI()"
+                    style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(100, 200, 150, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;">
+              <option value="eth" data-decimals="18">ETH</option>
+              <option value="usdc" data-decimals="6">USDC</option>
+              <option value="usdt" data-decimals="6">USDT</option>
+              <option value="dai" data-decimals="18">DAI</option>
+              <option value="custom" data-decimals="18">Custom ERC20</option>
+            </select>
+          </div>
+
+          <div id="newSaleCustomTokenFields" style="display: none; margin-bottom: 0.75rem;">
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 0.5rem;">
+              <div>
+                <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Token Address</label>
+                <input type="text" id="newSaleCustomTokenAddr" placeholder="0x..."
+                       style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(100, 200, 150, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Decimals</label>
+                <input type="number" id="newSaleCustomTokenDecimals" placeholder="18" value="18"
+                       style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(100, 200, 150, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
+              </div>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+            <div>
+              <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Price Amount</label>
+              <input type="text" id="newSaleTribAmt" placeholder="1" value="1"
+                     oninput="updateNewSalePreview()"
+                     style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(100, 200, 150, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
+              <div style="margin-top: 0.2rem; font-size: 0.65rem; color: rgba(230, 217, 255, 0.5);">Amount of payment token</div>
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Token Amount</label>
+              <input type="text" id="newSaleForAmt" placeholder="1000" value="1000"
+                     oninput="updateNewSalePreview()"
+                     style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(100, 200, 150, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
+              <div style="margin-top: 0.2rem; font-size: 0.65rem; color: rgba(230, 217, 255, 0.5);">Amount of shares/loot</div>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 0.75rem;">
+            <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Deadline (optional)</label>
+            <input type="datetime-local" id="newSaleDeadline"
+                   style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(100, 200, 150, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
+            <div style="margin-top: 0.2rem; font-size: 0.65rem; color: rgba(230, 217, 255, 0.5);">Leave empty for no deadline</div>
+          </div>
+
+          <div id="newSalePreview" style="margin-bottom: 0.75rem; padding: 0.5rem; background: rgba(100, 200, 150, 0.1); border-radius: 4px; font-size: 0.75rem; color: rgba(230, 217, 255, 0.8);">
+            <div>Ratio: 1 <span id="newSalePaymentSymbol">ETH</span> = 1000 ${daoSymbol}</div>
+            <div>Price per token: 0.001 <span id="newSalePaymentSymbol2">ETH</span></div>
+          </div>
+
+          <div style="margin-bottom: 0.75rem; padding: 0.5rem; background: rgba(255, 180, 100, 0.1); border: 1px solid rgba(255, 180, 100, 0.3); border-radius: 4px; font-size: 0.75rem; color: rgba(255, 180, 100, 0.9);">
+            <strong>Important:</strong> After this proposal passes, you must also grant DAICO minting permission for your shares/loot token via a separate setAuth proposal.
+          </div>
+
+          <button onclick="populateNewDaicoSaleProposal('${sharesAddr}', '${lootAddr}', '${daoSymbol}')"
+                  onmouseover="this.style.background='rgba(100, 200, 150, 0.35)'; this.style.borderColor='#64c896'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(100, 200, 150, 0.3)';"
+                  onmouseout="this.style.background='rgba(100, 200, 150, 0.2)'; this.style.borderColor='rgba(100, 200, 150, 0.4)'; this.style.transform='translateY(0)'; this.style.boxShadow='none';"
+                  style="width: 100%; padding: 0.75rem; background: rgba(100, 200, 150, 0.2); border: 1px solid rgba(100, 200, 150, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.75rem; letter-spacing: 0.15em; cursor: pointer; text-transform: uppercase; transition: all 0.2s ease; font-weight: 600;">
+            Populate Proposal Form
+          </button>
+        `;
+
+        // Initialize preview
+        setTimeout(() => updateNewSalePreview(), 200);
+      }
+
+      function updateNewSalePaymentUI() {
+        const paymentSelect = document.getElementById('newSalePaymentToken');
+        const customFields = document.getElementById('newSaleCustomTokenFields');
+        const selectedOption = paymentSelect.options[paymentSelect.selectedIndex];
+
+        if (paymentSelect.value === 'custom') {
+          customFields.style.display = 'block';
+        } else {
+          customFields.style.display = 'none';
+        }
+
+        updateNewSalePreview();
+      }
+
+      function updateNewSalePreview() {
+        const paymentSelect = document.getElementById('newSalePaymentToken');
+        const tribAmtInput = document.getElementById('newSaleTribAmt');
+        const forAmtInput = document.getElementById('newSaleForAmt');
+        const previewDiv = document.getElementById('newSalePreview');
+        const paymentSymbol1 = document.getElementById('newSalePaymentSymbol');
+        const paymentSymbol2 = document.getElementById('newSalePaymentSymbol2');
+
+        if (!paymentSelect || !tribAmtInput || !forAmtInput || !previewDiv) return;
+
+        let paymentSymbol = paymentSelect.value.toUpperCase();
+        if (paymentSymbol === 'CUSTOM') paymentSymbol = 'TOKEN';
+
+        if (paymentSymbol1) paymentSymbol1.textContent = paymentSymbol;
+        if (paymentSymbol2) paymentSymbol2.textContent = paymentSymbol;
+
+        const tribAmt = parseFloat(tribAmtInput.value) || 0;
+        const forAmt = parseFloat(forAmtInput.value) || 0;
+
+        if (tribAmt > 0 && forAmt > 0) {
+          const pricePerToken = tribAmt / forAmt;
+          const tokenType = document.getElementById('newSaleTokenType')?.value === 'loot' ? 'LOOT' : 'SHARES';
+          previewDiv.innerHTML = `
+            <div>Ratio: ${tribAmt} ${paymentSymbol} = ${forAmt} ${tokenType}</div>
+            <div>Price per token: ${pricePerToken.toFixed(6)} ${paymentSymbol}</div>
+          `;
+        }
+      }
+
+      function clearNewSaleHelper() {
+        const helperDiv = document.getElementById('newSaleHelper');
+        if (helperDiv) helperDiv.remove();
+      }
+
+      async function populateNewDaicoSaleProposal(sharesAddr, lootAddr, daoSymbol) {
+        try {
+          const tokenType = document.getElementById('newSaleTokenType').value;
+          const paymentToken = document.getElementById('newSalePaymentToken').value;
+          const tribAmtInput = document.getElementById('newSaleTribAmt').value.trim();
+          const forAmtInput = document.getElementById('newSaleForAmt').value.trim();
+          const deadlineInput = document.getElementById('newSaleDeadline').value;
+
+          // Validate inputs
+          if (!tribAmtInput || isNaN(parseFloat(tribAmtInput)) || parseFloat(tribAmtInput) <= 0) {
+            showStatus('Please enter a valid price amount', true);
+            return;
+          }
+          if (!forAmtInput || isNaN(parseFloat(forAmtInput)) || parseFloat(forAmtInput) <= 0) {
+            showStatus('Please enter a valid token amount', true);
+            return;
+          }
+
+          // Get payment token address and decimals
+          let tribTknAddr, tribTknDecimals, tribTknSymbol;
+          switch (paymentToken) {
+            case 'eth':
+              tribTknAddr = ethers.ZeroAddress;
+              tribTknDecimals = 18;
+              tribTknSymbol = 'ETH';
+              break;
+            case 'usdc':
+              tribTknAddr = TOKEN_ADDRESSES.usdc;
+              tribTknDecimals = 6;
+              tribTknSymbol = 'USDC';
+              break;
+            case 'usdt':
+              tribTknAddr = TOKEN_ADDRESSES.usdt;
+              tribTknDecimals = 6;
+              tribTknSymbol = 'USDT';
+              break;
+            case 'dai':
+              tribTknAddr = TOKEN_ADDRESSES.dai;
+              tribTknDecimals = 18;
+              tribTknSymbol = 'DAI';
+              break;
+            case 'custom':
+              tribTknAddr = document.getElementById('newSaleCustomTokenAddr').value.trim();
+              tribTknDecimals = parseInt(document.getElementById('newSaleCustomTokenDecimals').value) || 18;
+              tribTknSymbol = 'TOKEN';
+              if (!ethers.isAddress(tribTknAddr)) {
+                showStatus('Please enter a valid custom token address', true);
+                return;
+              }
+              break;
+          }
+
+          // Get forTkn (shares or loot)
+          const forTkn = tokenType === 'loot' ? lootAddr : sharesAddr;
+          const forTknSymbol = tokenType === 'loot' ? `${daoSymbol}-LOOT` : daoSymbol;
+
+          // Parse amounts
+          const tribAmt = ethers.parseUnits(tribAmtInput, tribTknDecimals);
+          const forAmt = ethers.parseEther(forAmtInput); // Shares/Loot are 18 decimals
+          const deadline = deadlineInput ? Math.floor(new Date(deadlineInput).getTime() / 1000) : 0;
+
+          // Encode setSale(address tribTkn, uint256 tribAmt, address forTkn, uint256 forAmt, uint40 deadline)
+          const setSaleIface = new ethers.Interface(['function setSale(address tribTkn, uint256 tribAmt, address forTkn, uint256 forAmt, uint40 deadline)']);
+          const calldata = setSaleIface.encodeFunctionData('setSale', [tribTknAddr, tribAmt, forTkn, forAmt, deadline]);
+
+          // Target is DAICO contract
+          document.getElementById('proposalTo').value = DAICO_ADDRESS;
+          document.getElementById('proposalValue').value = '0';
+          document.getElementById('proposalData').value = calldata;
+
+          const description = `Create DAICO sale: ${tribAmtInput} ${tribTknSymbol} = ${forAmtInput} ${forTknSymbol}`;
+
+          // Machine-readable metadata for sale description (allows DAO to set sale-specific description)
+          const metadata = `<<<DAICO_SALE action="create" tribToken="${tribTknAddr}" tribDecimals="${tribTknDecimals}" tribSymbol="${tribTknSymbol}" tribAmt="${tribAmt.toString()}" forToken="${forTkn}" forSymbol="${forTknSymbol}" forAmt="${forAmt.toString()}" deadline="${deadline}" DAICO_SALE>>>`;
+          const fullDescription = `${description}\n\n${metadata}`;
+
+          setLockedProposalDescription(fullDescription, description);
+
+          // Update UI hints and translations
+          updateTargetAddressHint();
+          updateCalldataTranslation();
+          updateCalldataPreview();
+
+          showStatus('Proposal form populated! Remember to also grant DAICO minting permission.', false);
+          clearNewSaleHelper();
+
+          // Scroll to show the populated form
+          setTimeout(() => {
+            document.getElementById('proposalDescription').scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 300);
+
+        } catch (error) {
+          console.error('Error populating new sale proposal:', error);
+          showStatus('Failed to populate form: ' + error.message, true);
+        }
+      }
+
+      // Internal Moloch sale proposal helper - for 1:1 token upgrades or DAI continuous fundraise
+      async function prepareInternalSaleProposal() {
+        if (!currentDAO || !currentDAO.dao) {
+          showStatus('Please select a DAO first', true);
+          return;
+        }
+
+        // Switch to DAO view and scroll to proposal form
+        switchDaoView('dao');
+
+        const proposalForm = document.querySelector('.proposal-form');
+        if (proposalForm) {
+          setTimeout(() => {
+            proposalForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 100);
+        }
+
+        // Remove any existing helpers first
+        clearSaleHelper();
+        clearNewSaleHelper();
+        clearTapRateHelper();
+        clearTapOpsHelper();
+        clearInternalSaleHelper();
+
+        // Add internal sale helper UI
+        let helperDiv = document.createElement('div');
+        helperDiv.id = 'internalSaleHelper';
+        helperDiv.style.cssText = 'margin-bottom: 1rem; padding: 1rem; background: rgba(157, 123, 255, 0.1); border: 1px solid rgba(157, 123, 255, 0.3); border-radius: 4px;';
+
+        setTimeout(() => {
+          const proposalFormEl = document.querySelector('.proposal-form');
+          if (proposalFormEl) {
+            proposalFormEl.insertBefore(helperDiv, proposalFormEl.querySelector('.proposal-form-group'));
+          }
+        }, 150);
+
+        const daoSymbol = currentDAO.dao.meta.symbol;
+
+        helperDiv.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <div style="font-family: 'Cinzel', serif; font-size: 0.85rem; color: #9d7bff; letter-spacing: 0.1em;">
+              INTERNAL SALE
+            </div>
+            <button onclick="clearInternalSaleHelper()" style="background: none; border: none; color: rgba(230, 217, 255, 0.6); cursor: pointer; font-size: 1.2rem; padding: 0; line-height: 1;">&times;</button>
+          </div>
+
+          <div style="margin-bottom: 0.75rem;">
+            <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Sale Type</label>
+            <select id="internalSaleType" onchange="updateInternalSaleUI()"
+                    style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;">
+              <option value="upgrade">Token Upgrade (1:1 migration)</option>
+              <option value="dai">DAI Continuous Fundraise (1:1)</option>
+              <option value="custom">Custom Sale</option>
+            </select>
+          </div>
+
+          <div id="internalSaleDescription" style="margin-bottom: 0.75rem; padding: 0.6rem; background: rgba(157, 123, 255, 0.08); border-radius: 4px; font-size: 0.8rem; color: rgba(230, 217, 255, 0.85); line-height: 1.5;">
+            <strong style="color: #9d7bff;">Token Upgrade:</strong> Allow holders of an existing ERC20 token to stake/upgrade to ${daoSymbol} shares at 1:1 ratio. Users can ragequit to reclaim their original tokens.
+          </div>
+
+          <div id="upgradeTokenFields" style="margin-bottom: 0.75rem;">
+            <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Token Address (18-decimal ERC20)</label>
+            <div style="display: flex; gap: 0.5rem;">
+              <input type="text" id="internalSaleTokenAddr" placeholder="0x..."
+                     style="flex: 1; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
+              <button onclick="validateInternalSaleToken()" type="button"
+                      style="padding: 0.6rem 1rem; background: rgba(157, 123, 255, 0.2); border: 1px solid rgba(157, 123, 255, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.1em; cursor: pointer; white-space: nowrap; min-height: 44px;">
+                Check
+              </button>
+            </div>
+            <div id="internalSaleTokenInfo" style="margin-top: 0.35rem; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6);"></div>
+          </div>
+
+          <div id="daiFields" style="display: none; margin-bottom: 0.75rem;">
+            <div style="padding: 0.6rem; background: rgba(255, 180, 100, 0.1); border: 1px solid rgba(255, 180, 100, 0.3); border-radius: 4px; font-size: 0.75rem; color: rgba(255, 200, 120, 0.95);">
+              DAI address will be used automatically: ${TOKEN_ADDRESSES.dai}
+            </div>
+          </div>
+
+          <div id="customSaleFields" style="display: none;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+              <div>
+                <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Price per Token</label>
+                <input type="number" id="internalSalePrice" placeholder="1.0" step="any" min="0" value="1"
+                       style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Cap (0 = unlimited)</label>
+                <input type="number" id="internalSaleCap" placeholder="0" step="any" min="0" value="0"
+                       style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
+              </div>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+            <div>
+              <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Token to Issue</label>
+              <select id="internalSaleTokenType"
+                      style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;">
+                <option value="shares">${daoSymbol} (Shares)</option>
+                <option value="loot">${daoSymbol}-LOOT (Loot)</option>
+              </select>
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Status</label>
+              <select id="internalSaleStatus"
+                      style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;">
+                <option value="active">Active</option>
+                <option value="inactive">Inactive (cancel sale)</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="internalSalePreview" style="margin-bottom: 0.75rem; padding: 0.5rem; background: rgba(157, 123, 255, 0.1); border-radius: 4px; font-size: 0.75rem; color: rgba(230, 217, 255, 0.8);">
+            <div>1 TOKEN = 1 ${daoSymbol} (shares)</div>
+            <div style="font-size: 0.7rem; color: rgba(230, 217, 255, 0.6);">Users can ragequit to reclaim their tokens</div>
+          </div>
+
+          <button onclick="populateInternalSaleProposal('${currentDAO.dao.dao}')"
+                  onmouseover="this.style.background='rgba(157, 123, 255, 0.35)'; this.style.borderColor='#9d7bff'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(157, 123, 255, 0.3)';"
+                  onmouseout="this.style.background='rgba(157, 123, 255, 0.2)'; this.style.borderColor='rgba(157, 123, 255, 0.4)'; this.style.transform='translateY(0)'; this.style.boxShadow='none';"
+                  style="width: 100%; padding: 0.75rem; background: rgba(157, 123, 255, 0.2); border: 1px solid rgba(157, 123, 255, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.75rem; letter-spacing: 0.15em; cursor: pointer; text-transform: uppercase; transition: all 0.2s ease; font-weight: 600;">
+            Populate Proposal Form
+          </button>
+        `;
+
+        // Initialize UI
+        setTimeout(() => updateInternalSaleUI(), 200);
+      }
+
+      function updateInternalSaleUI() {
+        const saleType = document.getElementById('internalSaleType')?.value;
+        const descriptionDiv = document.getElementById('internalSaleDescription');
+        const upgradeFields = document.getElementById('upgradeTokenFields');
+        const daiFields = document.getElementById('daiFields');
+        const customFields = document.getElementById('customSaleFields');
+        const previewDiv = document.getElementById('internalSalePreview');
+        const tokenType = document.getElementById('internalSaleTokenType')?.value || 'shares';
+        const daoSymbol = currentDAO?.dao?.meta?.symbol || 'TOKEN';
+        const tokenSymbol = tokenType === 'loot' ? `${daoSymbol}-LOOT` : daoSymbol;
+
+        if (!descriptionDiv) return;
+
+        switch (saleType) {
+          case 'upgrade':
+            descriptionDiv.innerHTML = `<strong style="color: #9d7bff;">Token Upgrade:</strong> Allow holders of an existing ERC20 token to stake/upgrade to ${tokenSymbol} at 1:1 ratio. Users can ragequit to reclaim their original tokens.`;
+            upgradeFields.style.display = 'block';
+            daiFields.style.display = 'none';
+            customFields.style.display = 'none';
+            previewDiv.innerHTML = `
+              <div>1 TOKEN = 1 ${tokenSymbol}</div>
+              <div style="font-size: 0.7rem; color: rgba(230, 217, 255, 0.6);">Users can ragequit to reclaim their tokens</div>
+            `;
+            break;
+          case 'dai':
+            descriptionDiv.innerHTML = `<strong style="color: #9d7bff;">DAI Continuous Fundraise:</strong> Accept DAI at 1:1 ratio for ${tokenSymbol}. Ideal for continuous capital formation. DAI goes to treasury and can be ragequit.`;
+            upgradeFields.style.display = 'none';
+            daiFields.style.display = 'block';
+            customFields.style.display = 'none';
+            previewDiv.innerHTML = `
+              <div>1 DAI = 1 ${tokenSymbol}</div>
+              <div style="font-size: 0.7rem; color: rgba(230, 217, 255, 0.6);">Continuous fundraise - DAI redeemable via ragequit</div>
+            `;
+            break;
+          case 'custom':
+            descriptionDiv.innerHTML = `<strong style="color: #9d7bff;">Custom Sale:</strong> Configure a custom sale with any price and cap. For non-1:1 ratios or limited sales.`;
+            upgradeFields.style.display = 'block';
+            daiFields.style.display = 'none';
+            customFields.style.display = 'block';
+            previewDiv.innerHTML = `
+              <div>Custom ratio - configure price and cap below</div>
+            `;
+            break;
+        }
+      }
+
+      async function validateInternalSaleToken() {
+        const tokenAddr = document.getElementById('internalSaleTokenAddr')?.value?.trim();
+        const infoDiv = document.getElementById('internalSaleTokenInfo');
+        if (!infoDiv) return;
+
+        if (!tokenAddr || !ethers.isAddress(tokenAddr)) {
+          infoDiv.innerHTML = '<span style="color: #ff6b6b;">Invalid address</span>';
+          return;
+        }
+
+        try {
+          infoDiv.innerHTML = '<span style="color: rgba(230, 217, 255, 0.6);">Checking...</span>';
+          const tokenContract = new ethers.Contract(tokenAddr, ERC20_ABI, provider);
+          const [symbol, decimals] = await Promise.all([
+            tokenContract.symbol(),
+            tokenContract.decimals()
+          ]);
+
+          if (decimals !== 18n) {
+            infoDiv.innerHTML = `<span style="color: #ff6b6b;">${symbol} has ${decimals} decimals (must be 18)</span>`;
+          } else {
+            infoDiv.innerHTML = `<span style="color: #64c896;">✓ ${symbol} (18 decimals)</span>`;
+            // Update preview
+            const previewDiv = document.getElementById('internalSalePreview');
+            const tokenType = document.getElementById('internalSaleTokenType')?.value || 'shares';
+            const daoSymbol = currentDAO?.dao?.meta?.symbol || 'TOKEN';
+            const tokenSymbol = tokenType === 'loot' ? `${daoSymbol}-LOOT` : daoSymbol;
+            if (previewDiv && document.getElementById('internalSaleType')?.value !== 'custom') {
+              previewDiv.innerHTML = `
+                <div>1 ${symbol} = 1 ${tokenSymbol}</div>
+                <div style="font-size: 0.7rem; color: rgba(230, 217, 255, 0.6);">Users can ragequit to reclaim their ${symbol}</div>
+              `;
+            }
+          }
+        } catch (e) {
+          infoDiv.innerHTML = '<span style="color: #ff6b6b;">Could not read token info</span>';
+        }
+      }
+
+      function clearInternalSaleHelper() {
+        const helperDiv = document.getElementById('internalSaleHelper');
+        if (helperDiv) helperDiv.remove();
+      }
+
+      async function populateInternalSaleProposal(daoAddress) {
+        try {
+          const saleType = document.getElementById('internalSaleType').value;
+          const tokenType = document.getElementById('internalSaleTokenType').value;
+          const status = document.getElementById('internalSaleStatus').value;
+          const isLoot = tokenType === 'loot';
+          const daoSymbol = currentDAO.dao.meta.symbol;
+          const tokenSymbol = isLoot ? `${daoSymbol}-LOOT` : daoSymbol;
+
+          let payTokenAddr, price, cap;
+
+          if (saleType === 'dai') {
+            payTokenAddr = TOKEN_ADDRESSES.dai;
+            price = '1';
+            cap = '0';
+          } else if (saleType === 'upgrade') {
+            payTokenAddr = document.getElementById('internalSaleTokenAddr')?.value?.trim();
+            if (!payTokenAddr || !ethers.isAddress(payTokenAddr)) {
+              showStatus('Please enter a valid token address', true);
+              return;
+            }
+            price = '1';
+            cap = '0';
+          } else {
+            // Custom
+            payTokenAddr = document.getElementById('internalSaleTokenAddr')?.value?.trim();
+            if (!payTokenAddr || !ethers.isAddress(payTokenAddr)) {
+              showStatus('Please enter a valid token address', true);
+              return;
+            }
+            price = document.getElementById('internalSalePrice')?.value?.trim() || '1';
+            cap = document.getElementById('internalSaleCap')?.value?.trim() || '0';
+          }
+
+          const active = status === 'active';
+
+          // Encode setSale(address token, bool loot, uint256 price, uint256 cap, bool minting, bool active)
+          // Internal Moloch sale always uses minting=true
+          const priceWei = ethers.parseEther(price);
+          const capWei = ethers.parseEther(cap);
+
+          const setSaleIface = new ethers.Interface(['function setSale(address token, bool loot, uint256 price, uint256 cap, bool minting, bool active)']);
+          const calldata = setSaleIface.encodeFunctionData('setSale', [payTokenAddr, isLoot, priceWei, capWei, true, active]);
+
+          // Target is the DAO itself (Moloch.setSale)
+          document.getElementById('proposalTo').value = daoAddress;
+          document.getElementById('proposalValue').value = '0';
+          document.getElementById('proposalData').value = calldata;
+
+          let description;
+          if (!active) {
+            description = `Cancel internal sale for ${tokenSymbol}`;
+          } else if (saleType === 'dai') {
+            description = `Enable DAI continuous fundraise: 1 DAI = 1 ${tokenSymbol}`;
+          } else if (saleType === 'upgrade') {
+            description = `Enable token upgrade: 1:1 migration to ${tokenSymbol}`;
+          } else {
+            description = `Configure custom sale for ${tokenSymbol}`;
+          }
+
+          setLockedProposalDescription(description);
+
+          // Update UI hints and translations
+          updateTargetAddressHint();
+          updateCalldataTranslation();
+          updateCalldataPreview();
+
+          showStatus('Proposal form populated!', false);
+          clearInternalSaleHelper();
+
+          // Scroll to show the populated form
+          setTimeout(() => {
+            document.getElementById('proposalDescription').scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 300);
+
+        } catch (error) {
+          console.error('Error populating internal sale proposal:', error);
+          showStatus('Failed to populate form: ' + error.message, true);
+        }
+      }
+
+      // TAP Ops proposal helper - for changing the tap beneficiary via governance
+      async function prepareTapOpsProposal(currentOps) {
+        if (!currentDAO || !currentDAO.dao) {
+          showStatus('Please select a DAO first', true);
+          return;
+        }
+
+        const daoAddress = currentDAO.dao.dao;
+        const currentOpsShort = currentOps.slice(0, 10) + '...' + currentOps.slice(-8);
+
+        // Scroll to proposal form
+        const proposalForm = document.querySelector('.proposal-form');
+        if (proposalForm) {
+          proposalForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Add tap ops helper UI if not already present
+        let helperDiv = document.getElementById('tapOpsHelper');
+        if (!helperDiv) {
+          helperDiv = document.createElement('div');
+          helperDiv.id = 'tapOpsHelper';
+          helperDiv.style.cssText = 'margin-bottom: 1rem; padding: 1rem; background: rgba(255, 180, 100, 0.1); border: 1px solid rgba(255, 180, 100, 0.3); border-radius: 4px;';
+          proposalForm.insertBefore(helperDiv, proposalForm.querySelector('.proposal-form-group'));
+        }
+
+        helperDiv.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <div style="font-family: 'Cinzel', serif; font-size: 0.85rem; color: #ffb464; letter-spacing: 0.1em;">
+              CHANGE TAP OPS
+            </div>
+            <button onclick="clearTapOpsHelper()" style="background: none; border: none; color: rgba(230, 217, 255, 0.6); cursor: pointer; font-size: 1.2rem; padding: 0; line-height: 1;">&times;</button>
+          </div>
+          <div style="margin-bottom: 0.75rem; padding: 0.75rem; background: rgba(255, 180, 100, 0.1); border-radius: 4px;">
+            <div style="font-size: 0.85rem; color: rgba(230, 217, 255, 0.8); margin-bottom: 0.35rem;">
+              Current Ops: <a href="https://etherscan.io/address/${currentOps}" target="_blank" rel="noopener" style="color: #ffb464; text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${currentOpsShort}</a>
+            </div>
+            <div style="font-size: 0.75rem; color: rgba(230, 217, 255, 0.6);">
+              The ops address receives claimed tap funds
+            </div>
+          </div>
+          <div style="margin-bottom: 0.5rem; padding: 0.5rem; background: rgba(255, 180, 100, 0.05); border-radius: 4px; font-size: 0.75rem; color: rgba(255, 180, 100, 0.9);">
+            <strong>Note:</strong> Setting ops to address(0) will disable tap claiming until a new ops is set.
+          </div>
+          <div style="margin-bottom: 0.75rem;">
+            <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">New Ops Address</label>
+            <input type="text" id="tapOpsInput" placeholder="0x..."
+                   oninput="updateTapOpsPreview()"
+                   style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 180, 100, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
+            <div style="margin-top: 0.35rem; font-size: 0.7rem; color: rgba(230, 217, 255, 0.5);">
+              Enter the new beneficiary address (EOA, multisig, or contract)
+            </div>
+            <div id="tapOpsPreview" style="margin-top: 0.5rem; display: none;"></div>
+          </div>
+          <button onclick="populateTapOpsProposal('${daoAddress}', '${currentOps}')"
+                  onmouseover="this.style.background='rgba(255, 180, 100, 0.35)'; this.style.borderColor='#ffb464'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(255, 180, 100, 0.3)';"
+                  onmouseout="this.style.background='rgba(255, 180, 100, 0.2)'; this.style.borderColor='rgba(255, 180, 100, 0.4)'; this.style.transform='translateY(0)'; this.style.boxShadow='none';"
+                  style="width: 100%; padding: 0.75rem; background: rgba(255, 180, 100, 0.2); border: 1px solid rgba(255, 180, 100, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.75rem; letter-spacing: 0.15em; cursor: pointer; text-transform: uppercase; transition: all 0.2s ease; font-weight: 600;">
+            Populate Proposal Form
+          </button>
+        `;
+
+        // Focus on input
+        setTimeout(() => {
+          const input = document.getElementById('tapOpsInput');
+          if (input) input.focus();
+        }, 100);
+      }
+
+      function updateTapOpsPreview() {
+        const previewDiv = document.getElementById('tapOpsPreview');
+        const opsInput = document.getElementById('tapOpsInput');
+        if (!previewDiv || !opsInput) return;
+
+        const newOps = opsInput.value.trim();
+
+        if (!newOps) {
+          previewDiv.style.display = 'none';
+          return;
+        }
+
+        previewDiv.style.display = 'block';
+
+        // Check if it's a valid address
+        if (!ethers.isAddress(newOps)) {
+          previewDiv.innerHTML = `
+            <div style="padding: 0.5rem; background: rgba(255, 100, 100, 0.15); border: 1px solid rgba(255, 100, 100, 0.3); border-radius: 4px; font-size: 0.75rem; color: #ff6b6b;">
+              ⚠️ Invalid address format
+            </div>
+          `;
+          return;
+        }
+
+        // Check for zero address
+        if (newOps === ethers.ZeroAddress) {
+          previewDiv.innerHTML = `
+            <div style="padding: 0.5rem; background: rgba(255, 180, 100, 0.15); border: 1px solid rgba(255, 180, 100, 0.3); border-radius: 4px; font-size: 0.75rem; color: #ffb464;">
+              ⚠️ Setting ops to zero address will disable tap claiming
+            </div>
+          `;
+          return;
+        }
+
+        previewDiv.innerHTML = `
+          <div style="padding: 0.5rem; background: rgba(100, 200, 150, 0.1); border: 1px solid rgba(100, 200, 150, 0.3); border-radius: 4px; font-size: 0.75rem; color: rgba(230, 217, 255, 0.8);">
+            ✓ Valid address: <a href="https://etherscan.io/address/${newOps}" target="_blank" rel="noopener" style="color: #64c896; text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${newOps.slice(0, 10)}...${newOps.slice(-8)}</a>
+          </div>
+        `;
+      }
+
+      function clearTapOpsHelper() {
+        const helperDiv = document.getElementById('tapOpsHelper');
+        if (helperDiv) helperDiv.remove();
+      }
+
+      async function populateTapOpsProposal(daoAddress, currentOps) {
+        try {
+          const opsInput = document.getElementById('tapOpsInput').value.trim();
+
+          if (!opsInput) {
+            showStatus('Please enter a new ops address', true);
+            return;
+          }
+
+          // Resolve ENS if needed
+          let newOps = opsInput;
+          if (opsInput.endsWith('.eth')) {
+            try {
+              showStatus('Resolving ENS name...', false);
+              newOps = await provider.resolveName(opsInput);
+              if (!newOps) {
+                showStatus('Could not resolve ENS name', true);
+                return;
+              }
+            } catch (e) {
+              showStatus('Failed to resolve ENS name', true);
+              return;
+            }
+          }
+
+          if (!ethers.isAddress(newOps)) {
+            showStatus('Please enter a valid Ethereum address or ENS name', true);
+            return;
+          }
+
+          // Check if same as current
+          if (newOps.toLowerCase() === currentOps.toLowerCase()) {
+            showStatus('New ops address is the same as current ops', true);
+            return;
+          }
+
+          // Encode setTapOps(address newOps) - called by DAO on DAICO contract
+          const setTapOpsIface = new ethers.Interface(['function setTapOps(address newOps)']);
+          const calldata = setTapOpsIface.encodeFunctionData('setTapOps', [newOps]);
+
+          // Target is DAICO contract (DAO calls DAICO.setTapOps)
+          document.getElementById('proposalTo').value = DAICO_ADDRESS;
+          document.getElementById('proposalValue').value = '0';
+          document.getElementById('proposalData').value = calldata;
+
+          const newOpsShort = newOps.slice(0, 10) + '...' + newOps.slice(-6);
+          const description = newOps === ethers.ZeroAddress
+            ? `Disable tap claiming (set ops to zero address)`
+            : `Change tap ops to ${newOpsShort}`;
+
+          // Machine-readable metadata for tap ops change
+          const metadata = `<<<DAICO_TAP action="setOps" newOps="${newOps}" previousOps="${currentOps}" DAICO_TAP>>>`;
+          const fullDescription = `${description}\n\n${metadata}`;
+
+          setLockedProposalDescription(fullDescription, description);
+
+          // Update UI hints and translations
+          updateTargetAddressHint();
+          updateCalldataTranslation();
+          updateCalldataPreview();
+
+          showStatus('Proposal form populated!', false);
+          clearTapOpsHelper();
+
+          // Scroll to show the populated form
+          setTimeout(() => {
+            document.getElementById('proposalDescription').scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 300);
+
+        } catch (error) {
+          console.error('Error populating tap ops proposal:', error);
+          showStatus('Failed to populate form: ' + error.message, true);
+        }
+      }
+
+      async function populateTapRateProposal(daoAddress, decimals, symbol) {
+        try {
+          const rateInput = document.getElementById('tapRateInput').value.trim().replace(/,/g, '');
+
+          if (!rateInput || isNaN(parseFloat(rateInput)) || parseFloat(rateInput) < 0) {
+            showStatus('Please enter a valid rate (0 or positive number)', true);
+            return;
+          }
+
+          const newRatePerMonth = parseFloat(rateInput);
+
+          // Convert monthly rate to rate per second (smallest units)
+          // ratePerSec = (ratePerMonth * 10^decimals) / SECONDS_PER_MONTH
+          const SECONDS_PER_MONTH = 2629746n;
+          const ratePerMonthWei = ethers.parseUnits(newRatePerMonth.toString(), decimals);
+          const ratePerSec = ratePerMonthWei / SECONDS_PER_MONTH;
+
+          // Encode setTapRate(uint128 newRate) - called by DAO on DAICO contract
+          const setTapRateIface = new ethers.Interface(['function setTapRate(uint128 newRate)']);
+          const calldata = setTapRateIface.encodeFunctionData('setTapRate', [ratePerSec]);
+
+          // Target is DAICO contract (DAO calls DAICO.setTapRate)
+          document.getElementById('proposalTo').value = DAICO_ADDRESS;
+          document.getElementById('proposalValue').value = '0';
+          document.getElementById('proposalData').value = calldata;
+
+          const description = newRatePerMonth === 0
+            ? `Freeze tap (set rate to 0)`
+            : `Change tap rate to ${newRatePerMonth.toLocaleString()} ${symbol}/month`;
+
+          // Machine-readable metadata for tap rate change
+          const metadata = `<<<DAICO_TAP action="setRate" ratePerSec="${ratePerSec.toString()}" ratePerMonth="${newRatePerMonth}" symbol="${symbol}" decimals="${decimals}" DAICO_TAP>>>`;
+          const fullDescription = `${description}\n\n${metadata}`;
+
+          setLockedProposalDescription(fullDescription, description);
+
+          // Update UI hints and translations
+          updateTargetAddressHint();
+          updateCalldataTranslation();
+          updateCalldataPreview();
+
+          showStatus('Proposal form populated!', false);
+          clearTapRateHelper();
+
+          // Scroll to show the populated form
+          setTimeout(() => {
+            document.getElementById('proposalDescription').scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 300);
+
+        } catch (error) {
+          console.error('Error populating tap rate proposal:', error);
+          showStatus('Failed to populate form: ' + error.message, true);
+        }
+      }
+
       // Populate sale proposal from Send/Sale toggle
       async function populateSaleProposalFromToggle(symbol, address, decimals) {
         try {
@@ -16029,8 +17306,8 @@
         }
       }
 
-      // Sale proposal helper
-      async function prepareSaleProposal() {
+      // Legacy internal sale proposal helper (now superseded by prepareInternalSaleProposal)
+      async function prepareLegacySaleProposal() {
         if (!currentDAO || !currentDAO.dao) {
           showStatus('Please select a DAO first', true);
           return;
@@ -18846,8 +20123,8 @@
         if (!emblem) return;
 
         try {
-          // Clear any previous url-image class
-          emblem.classList.remove('url-image');
+          // Clear any previous styling classes
+          emblem.classList.remove('url-image', 'description-only');
 
           const molochContract = new ethers.Contract(daoAddress, MOLOCH_ABI, provider);
           const contractURI = await molochContract.contractURI();
@@ -18874,6 +20151,9 @@
           if (contractURI.startsWith('data:application/json;base64,')) {
             const json = atob(contractURI.slice(29));
             metadata = JSON.parse(json);
+          } else if (contractURI.startsWith('data:application/json;utf8,')) {
+            // UTF-8 encoded JSON (used by DAICO.html buildContractURI)
+            metadata = JSON.parse(contractURI.slice(27));
           } else if (contractURI.startsWith('data:application/json,')) {
             metadata = JSON.parse(decodeURIComponent(contractURI.slice(22)));
           } else if (contractURI.startsWith('data:image/')) {
@@ -18906,6 +20186,15 @@
             if (!metadata.image.startsWith('data:')) {
               emblem.classList.add('url-image');
             }
+            emblem.style.display = 'block';
+            emblem.onclick = () => openNFTModal(metadata, 'DAO Contract');
+          } else if (metadata && metadata.description) {
+            // No image but has description - show description text elegantly
+            emblem.classList.add('description-only');
+            const truncatedDesc = metadata.description.length > 150
+              ? metadata.description.slice(0, 147) + '...'
+              : metadata.description;
+            emblem.innerHTML = `<div class="dao-emblem-description">${escapeHtml(truncatedDesc)}</div>`;
             emblem.style.display = 'block';
             emblem.onclick = () => openNFTModal(metadata, 'DAO Contract');
           } else {
@@ -19013,8 +20302,8 @@
         if (!emblem) return;
 
         try {
-          // Clear any previous url-image class
-          emblem.classList.remove('url-image');
+          // Clear any previous styling classes
+          emblem.classList.remove('url-image', 'description-only');
 
           const molochContract = new ethers.Contract(daoAddress, MOLOCH_ABI, provider);
           const contractURI = await molochContract.contractURI();
@@ -19036,6 +20325,9 @@
           if (contractURI.startsWith('data:application/json;base64,')) {
             const json = atob(contractURI.slice(29));
             metadata = JSON.parse(json);
+          } else if (contractURI.startsWith('data:application/json;utf8,')) {
+            // UTF-8 encoded JSON (used by DAICO.html buildContractURI)
+            metadata = JSON.parse(contractURI.slice(27));
           } else if (contractURI.startsWith('data:application/json,')) {
             metadata = JSON.parse(decodeURIComponent(contractURI.slice(22)));
           } else if (contractURI.startsWith('data:image/')) {
@@ -19064,6 +20356,13 @@
             if (!metadata.image.startsWith('data:')) {
               emblem.classList.add('url-image');
             }
+          } else if (metadata && metadata.description) {
+            // No image but has description - show truncated description in tile
+            emblem.classList.add('description-only');
+            const truncatedDesc = metadata.description.length > 80
+              ? metadata.description.slice(0, 77) + '...'
+              : metadata.description;
+            emblem.innerHTML = `<div class="tile-emblem-description">${escapeHtml(truncatedDesc)}</div>`;
           }
         } catch (error) {
           console.error('Error rendering tile emblem:', error);
@@ -22167,7 +23466,11 @@
           // Gather form data
           const daoName = document.getElementById('daoName').value;
           const daoSymbol = document.getElementById('daoSymbol').value;
-          const daoURI = document.getElementById('daoURI').value || '';
+          const daoDescription = document.getElementById('daoDescription').value.trim();
+          const daoImageURI = document.getElementById('daoImageURI')?.value.trim() || '';
+
+          // Build contractURI with description (defaults to DUNA if empty) and optional image
+          const daoURI = buildContractURI(daoName, daoSymbol, daoDescription, daoImageURI);
           const quorumBps = Math.floor(parseFloat(document.getElementById('quorumBps').value || 50) * 100);
           const ragequittable = document.getElementById('ragequittable').checked;
 
