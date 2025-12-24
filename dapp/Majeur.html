@@ -10351,6 +10351,16 @@
           "outputs": [],
           "stateMutability": "nonpayable",
           "type": "function"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {"indexed": true, "name": "from", "type": "address"},
+            {"indexed": true, "name": "index", "type": "uint256"},
+            {"indexed": false, "name": "text", "type": "string"}
+          ],
+          "name": "Message",
+          "type": "event"
         }
       ];
 
@@ -13693,13 +13703,14 @@
         let transferabilityText = 'Loading...';
         try {
           const tokenABI = ['function transfersLocked() view returns (bool)'];
-          const sharesContract = new ethers.Contract(currentDAO.dao.meta.sharesToken, tokenABI, provider);
-          const lootContract = new ethers.Contract(currentDAO.dao.meta.lootToken, tokenABI, provider);
-
-          const [sharesLocked, lootLocked] = await Promise.all([
-            sharesContract.transfersLocked(),
-            lootContract.transfersLocked()
-          ]);
+          const [sharesLocked, lootLocked] = await withRpcFallback(async (activeProvider) => {
+            const sharesContract = new ethers.Contract(currentDAO.dao.meta.sharesToken, tokenABI, activeProvider);
+            const lootContract = new ethers.Contract(currentDAO.dao.meta.lootToken, tokenABI, activeProvider);
+            return await Promise.all([
+              sharesContract.transfersLocked(),
+              lootContract.transfersLocked()
+            ]);
+          });
 
           // Store for use in proposal helper
           currentDAO._transferLocks = { sharesLocked, lootLocked };
@@ -13714,7 +13725,7 @@
             transferabilityText = 'Shares transferable, Loot locked';
           }
         } catch (error) {
-          console.error('Error fetching transferability:', error);
+          console.warn('Error fetching transferability:', error.message);
           transferabilityText = 'Unknown';
         }
 
@@ -13886,8 +13897,6 @@
         if (!salesInfo || !salesSection || !currentDAO) return;
 
         try {
-          const molochContract = new ethers.Contract(currentDAO.dao.dao, MOLOCH_ABI, provider);
-
           // Check sales for all supported tokens (network-specific)
           const tokens = getNetworkTokens();
 
@@ -13944,16 +13953,18 @@
           const allTokens = [...tokens, ...customTokens];
 
           // Batch all sales queries in parallel to reduce RPC calls
-          const salePromises = allTokens.map(token =>
-            molochContract.sales(token.address)
-              .then(sale => ({ token, sale }))
-              .catch(err => {
-                console.error(`Error fetching sale for ${token.symbol} (${token.address}):`, err);
-                return { token, sale: { active: false } }; // Return inactive on error
-              })
-          );
-
-          const salesResults = await Promise.all(salePromises);
+          const salesResults = await withRpcFallback(async (activeProvider) => {
+            const molochContract = new ethers.Contract(currentDAO.dao.dao, MOLOCH_ABI, activeProvider);
+            const salePromises = allTokens.map(token =>
+              molochContract.sales(token.address)
+                .then(sale => ({ token, sale }))
+                .catch(err => {
+                  console.warn(`Error fetching sale for ${token.symbol}:`, err.message);
+                  return { token, sale: { active: false } }; // Return inactive on error
+                })
+            );
+            return await Promise.all(salePromises);
+          });
 
           const activeSales = [];
           for (const result of salesResults) {
@@ -21171,8 +21182,10 @@
           // Clear any previous styling classes
           emblem.classList.remove('url-image', 'description-only');
 
-          const molochContract = new ethers.Contract(daoAddress, MOLOCH_ABI, provider);
-          const contractURI = await molochContract.contractURI();
+          const contractURI = await withRpcFallback(async (activeProvider) => {
+            const molochContract = new ethers.Contract(daoAddress, MOLOCH_ABI, activeProvider);
+            return await molochContract.contractURI();
+          });
 
           if (!contractURI) {
             emblem.style.display = 'none';
@@ -21762,24 +21775,66 @@
       }
 
       // Render chatroom messages
-      function renderChatroom() {
+      let chatroomRenderId = 0; // Counter to track the most recent render
+      async function renderChatroom() {
         const chatroomMessages = document.getElementById('chatroomMessages');
         if (!chatroomMessages || !currentDAO) return;
 
-        chatroomMessages.innerHTML = '';
+        // Increment render ID and capture it - only the most recent render should update DOM
+        const thisRenderId = ++chatroomRenderId;
 
-        if (currentDAO.dao.messages.length === 0) {
+        // Capture DAO state at start to avoid race conditions with async operations
+        const daoAddress = currentDAO.dao.dao;
+        const messages = [...currentDAO.dao.messages];
+
+        // Show loading state immediately (clears old DAO's messages)
+        if (messages.length === 0) {
           chatroomMessages.innerHTML = '<p style="text-align: center; color: rgba(230, 217, 255, 0.6); font-style: italic;">No messages yet. Be the first to chat!</p>';
           return;
         }
+        chatroomMessages.innerHTML = '<p style="text-align: center; color: rgba(230, 217, 255, 0.5); font-style: italic;">Loading messages...</p>';
+
+        // Query Message events to get senders (chunked to respect RPC block limits)
+        const messageSenders = {};
+        try {
+          await withRpcFallback(async (activeProvider) => {
+            const molochContract = new ethers.Contract(daoAddress, MOLOCH_ABI, activeProvider);
+            const currentBlock = await activeProvider.getBlockNumber();
+            const chunkSize = 10000;
+
+            // Query backwards until we find all senders or reach block 0
+            for (let toBlock = currentBlock; toBlock >= 0; toBlock -= chunkSize) {
+              const fromBlock = Math.max(0, toBlock - chunkSize + 1);
+              const events = await molochContract.queryFilter(molochContract.filters.Message(), fromBlock, toBlock);
+              events.forEach(e => { messageSenders[String(e.args.index)] = e.args.from; });
+              if (Object.keys(messageSenders).length >= messages.length || fromBlock === 0) break;
+            }
+          });
+        } catch (e) {
+          console.warn('Could not fetch message senders:', e.message);
+        }
+
+        // Check if this render is stale (newer render started, or DAO changed)
+        if (thisRenderId !== chatroomRenderId || currentDAO?.dao?.dao !== daoAddress) {
+          return; // A newer render is in progress, skip this stale one
+        }
+
+        // Clear and render - do this after async work to prevent duplicates from concurrent renders
+        chatroomMessages.innerHTML = '';
 
         // Reverse to show most recent first
-        const messagesReversed = [...currentDAO.dao.messages].reverse();
+        const messagesReversed = [...messages].reverse();
         messagesReversed.forEach(message => {
           const msgDiv = document.createElement('div');
           const proposalData = decodeProposalMessage(message.text);
 
           msgDiv.className = 'chatroom-message' + (proposalData ? ' proposal' : '');
+
+          // Get sender address for this message
+          const senderAddress = messageSenders[String(message.index)];
+          const senderDisplay = senderAddress
+            ? ` (${senderAddress.slice(0, 10)}...${senderAddress.slice(-8)})`
+            : '';
 
           let messageContent = escapeHtml(message.text);
           if (proposalData) {
@@ -21857,7 +21912,7 @@
 
           msgDiv.innerHTML = `
             <div class="chatroom-message-header">
-              <span>Message #${message.index}</span>
+              <span>Message #${message.index}${senderDisplay}</span>
             </div>
             <div class="chatroom-message-text">
               ${messageContent}
@@ -21865,6 +21920,18 @@
           `;
 
           chatroomMessages.appendChild(msgDiv);
+
+          // Resolve ENS name asynchronously and update display
+          if (senderAddress) {
+            lookupENS(senderAddress).then(ensName => {
+              if (ensName) {
+                const headerSpan = msgDiv.querySelector('.chatroom-message-header span');
+                if (headerSpan) {
+                  headerSpan.textContent = `Message #${message.index} (${ensName})`;
+                }
+              }
+            }).catch(() => {});
+          }
         });
 
         // No auto-scroll since newest messages are now at the top
@@ -21946,11 +22013,13 @@
         let daoConfig;
         let configFetched = false;
         try {
-          const molochContract = new ethers.Contract(currentDAO.dao.dao, MOLOCH_ABI, provider);
-          daoConfig = await molochContract.config();
+          daoConfig = await withRpcFallback(async (activeProvider) => {
+            const molochContract = new ethers.Contract(currentDAO.dao.dao, MOLOCH_ABI, activeProvider);
+            return await molochContract.config();
+          });
           configFetched = true;
         } catch (e) {
-          console.error('Error getting DAO config:', e);
+          console.warn('Error getting DAO config:', e.message);
           daoConfig = 0n; // fallback (but we know it failed)
         }
 
