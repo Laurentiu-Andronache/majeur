@@ -9382,8 +9382,11 @@
           // Check if summoner is in viewport (hide line when form is visible)
           const summonerInView = summonerRect.top < windowHeight && summonerRect.bottom > 0;
 
-          // Show journey line when past intro but before summoner
-          if (scrollY >= introPanelBottom - windowHeight && !summonerInView) {
+          // Check if we've scrolled past the summoner section
+          const pastSummoner = scrollY > summonerBottom - windowHeight * 0.5;
+
+          // Show journey line when past intro but before summoner (and not past it)
+          if (scrollY >= introPanelBottom - windowHeight && !summonerInView && !pastSummoner) {
             journeyLineContainer.style.opacity = '1';
 
             // Calculate progress from intro bottom to summoner top
