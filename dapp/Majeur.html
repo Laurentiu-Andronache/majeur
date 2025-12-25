@@ -400,13 +400,14 @@
       }
 
       /* Hide fixed nav buttons when in DAO view */
+      /* !important needed to override animation-fill-mode: both which sets opacity: 1 */
       .hide-nav-buttons .nav-links-container,
       .hide-nav-buttons .hamburger-toggle,
       .hide-nav-buttons .mobile-menu,
       .hide-nav-buttons .wallet-button,
       .hide-nav-buttons .network-selector {
-        opacity: 0;
-        pointer-events: none;
+        opacity: 0 !important;
+        pointer-events: none !important;
       }
 
       /* WALLET & NETWORK CONNECTION */
@@ -20216,6 +20217,15 @@
           return;
         }
 
+        // Hide navigation buttons early (before rendering which might fail)
+        document.body.classList.add('hide-nav-buttons');
+
+        // Hide center journey line when viewing DAO dashboard
+        const journeyLineContainer = document.getElementById('journey-line-container');
+        if (journeyLineContainer) {
+          journeyLineContainer.style.display = 'none';
+        }
+
         const dashboardTitle = DOMCache.dashboardTitle;
         if (dashboardTitle) {
           dashboardTitle.textContent = currentDAO.dao.meta.name;
@@ -20254,15 +20264,6 @@
         DOMCache.daoGallery.classList.remove('show');
         DOMCache.allDaosGallery.classList.remove('show');
         DOMCache.daoDashboard.classList.add('show');
-
-        // Hide navigation buttons when viewing DAO
-        document.body.classList.add('hide-nav-buttons');
-
-        // Hide center journey line when viewing DAO dashboard
-        const journeyLineContainer = document.getElementById('journey-line-container');
-        if (journeyLineContainer) {
-          journeyLineContainer.style.display = 'none';
-        }
 
         // Add special gif for index 0, 1, 2, 3, and 4 DAOs
         // Find global index by matching DAO address to ensure correct GIF assignment
@@ -25665,15 +25666,37 @@
             // Check if we need to switch networks first
             if (deepLink.chainId) {
               const linkNetwork = getNetworkByChainId(BigInt(deepLink.chainId));
-              if (linkNetwork && linkNetwork.network.chainId !== getNetwork().chainId) {
-                // Prompt user to switch networks
-                const switched = await promptNetworkSwitch(linkNetwork.key, linkNetwork.network);
-                if (!switched) {
-                  // User declined, just show default view
-                  return;
+              if (linkNetwork) {
+                // Check actual wallet network if available, not just app state
+                // (app state defaults to ethereum before wallet detection runs)
+                let actualWalletChainId = null;
+                if (window.ethereum) {
+                  try {
+                    const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+                    actualWalletChainId = BigInt(chainIdHex);
+                    // Also update app state to match wallet
+                    const walletNetwork = getNetworkByChainId(actualWalletChainId);
+                    if (walletNetwork) {
+                      currentNetwork = walletNetwork.key;
+                      updateNetworkUI();
+                      readOnlyProvider = new ethers.JsonRpcProvider(getNetwork().rpcs[0]);
+                    }
+                  } catch (e) {
+                    // Wallet not accessible, fall back to app state
+                  }
                 }
-                // Update read-only provider for new network
-                readOnlyProvider = new ethers.JsonRpcProvider(getNetwork().rpcs[0]);
+
+                const currentChainId = actualWalletChainId || getNetwork().chainId;
+                if (linkNetwork.network.chainId !== currentChainId) {
+                  // Prompt user to switch networks
+                  const switched = await promptNetworkSwitch(linkNetwork.key, linkNetwork.network);
+                  if (!switched) {
+                    // User declined, just show default view
+                    return;
+                  }
+                  // Update read-only provider for new network
+                  readOnlyProvider = new ethers.JsonRpcProvider(getNetwork().rpcs[0]);
+                }
               }
             }
 
