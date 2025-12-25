@@ -165,91 +165,125 @@
         50% { opacity: 0.5; }
       }
 
-      /* SUMMON LINK */
-      .summon-link {
+      /* TOP LEFT NAVIGATION CONTAINER */
+      .nav-links-container {
         position: fixed;
         top: 20px;
         left: 20px;
         z-index: 1000;
-        padding: 10px 18px;
-        background: transparent;
-        border: 1px solid rgba(157, 123, 255, 0.3);
-        color: rgba(230, 217, 255, 0.7);
-        font-family: "EB Garamond", serif;
-        font-style: italic;
-        font-size: 0.9rem;
-        letter-spacing: 0.15em;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        text-transform: uppercase;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        align-items: flex-start;
       }
 
+      /* SHARED NAV LINK STYLES */
+      .nav-link,
+      .summon-link {
+        padding: 8px 14px;
+        background: rgba(10, 0, 21, 0.7);
+        border: 1px solid rgba(157, 123, 255, 0.2);
+        color: rgba(230, 217, 255, 0.6);
+        font-family: "EB Garamond", serif;
+        font-size: 0.75rem;
+        letter-spacing: 0.1em;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: block;
+        text-transform: uppercase;
+        backdrop-filter: blur(10px);
+        text-align: left;
+      }
+
+      .nav-link:hover,
       .summon-link:hover {
         border-color: rgba(157, 123, 255, 0.5);
-        color: #e6d9ff;
-        background: rgba(157, 123, 255, 0.05);
-      }
-
-      /* LITE PAPER LINK */
-      .litepaper-link {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        z-index: 1000;
-        padding: 8px 14px;
-        background: rgba(10, 0, 21, 0.7);
-        border: 1px solid rgba(157, 123, 255, 0.2);
-        color: rgba(230, 217, 255, 0.6);
-        font-family: "EB Garamond", serif;
-        font-size: 0.75rem;
-        letter-spacing: 0.1em;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        text-decoration: none;
-        display: inline-block;
-        text-transform: uppercase;
-        backdrop-filter: blur(10px);
-      }
-
-      .litepaper-link:hover {
-        border-color: rgba(157, 123, 255, 0.5);
         color: rgba(230, 217, 255, 0.9);
         background: rgba(10, 0, 21, 0.9);
         box-shadow: 0 0 15px rgba(157, 123, 255, 0.3);
       }
 
-      /* GITHUB LINK */
-      .github-link {
+      /* Summon link - italic style only */
+      .summon-link {
+        font-style: italic;
+      }
+
+      /* HAMBURGER MENU TOGGLE (hidden on desktop, top-left on mobile) */
+      .hamburger-toggle {
+        display: none;
         position: fixed;
-        bottom: 20px;
+        top: 20px;
         left: 20px;
-        z-index: 1000;
-        padding: 8px 14px;
-        background: rgba(10, 0, 21, 0.7);
-        border: 1px solid rgba(157, 123, 255, 0.2);
-        color: rgba(230, 217, 255, 0.6);
-        font-family: "EB Garamond", serif;
-        font-size: 0.75rem;
-        letter-spacing: 0.1em;
+        z-index: 1001;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        width: 36px;
+        height: 36px;
+        padding: 6px;
+        background: rgba(10, 0, 21, 0.9);
+        border: 1px solid rgba(157, 123, 255, 0.3);
         cursor: pointer;
+        gap: 4px;
         transition: all 0.3s ease;
-        text-decoration: none;
-        display: inline-block;
-        text-transform: uppercase;
-        backdrop-filter: blur(10px);
       }
 
-      .github-link:hover {
+      .hamburger-toggle:hover {
         border-color: rgba(157, 123, 255, 0.5);
-        color: rgba(230, 217, 255, 0.9);
-        background: rgba(10, 0, 21, 0.9);
-        box-shadow: 0 0 15px rgba(157, 123, 255, 0.3);
+        background: rgba(157, 123, 255, 0.1);
+      }
+
+      .hamburger-toggle span {
+        display: block;
+        width: 18px;
+        height: 2px;
+        background: rgba(230, 217, 255, 0.7);
+        transition: all 0.3s ease;
+      }
+
+      .hamburger-toggle.active span:nth-child(1) {
+        transform: rotate(45deg) translate(4px, 4px);
+      }
+
+      .hamburger-toggle.active span:nth-child(2) {
+        opacity: 0;
+      }
+
+      .hamburger-toggle.active span:nth-child(3) {
+        transform: rotate(-45deg) translate(4px, -4px);
+      }
+
+      /* MOBILE MENU DROPDOWN (top-left, below hamburger) */
+      .mobile-menu {
+        display: none;
+        position: fixed;
+        top: 60px;
+        left: 20px;
+        z-index: 999;
+        flex-direction: column;
+        gap: 4px;
+        padding: 8px;
+        background: rgba(10, 0, 21, 0.95);
+        border: 1px solid rgba(157, 123, 255, 0.3);
+        backdrop-filter: blur(10px);
+        min-width: 140px;
+      }
+
+      .mobile-menu.open {
+        display: flex;
+      }
+
+      .mobile-menu .nav-link,
+      .mobile-menu .summon-link {
+        width: 100%;
+        text-align: left;
       }
 
       /* Hide fixed nav buttons when in DAO view */
-      .hide-nav-buttons .summon-link,
-      .hide-nav-buttons .litepaper-link,
-      .hide-nav-buttons .github-link,
+      .hide-nav-buttons .nav-links-container,
+      .hide-nav-buttons .hamburger-toggle,
+      .hide-nav-buttons .mobile-menu,
       .hide-nav-buttons .wallet-button,
       .hide-nav-buttons .network-selector {
         opacity: 0;
@@ -1504,6 +1538,17 @@
         }
       }
 
+      /* Navigation mobile breakpoint - triggers earlier for zoom on 4K displays */
+      @media (max-width: 1600px) {
+        .nav-links-container {
+          display: none;
+        }
+
+        .hamburger-toggle {
+          display: flex;
+        }
+      }
+
       @media (max-width: 600px) {
         .hero-moloch-text {
           font-size: 38px;
@@ -1566,25 +1611,9 @@
           display: inline;
         }
 
-        .summon-link {
-          font-size: 0.75rem;
-          padding: 6px 10px;
-          top: 12px;
+        .mobile-menu {
+          top: 55px;
           left: 12px;
-        }
-
-        .litepaper-link {
-          font-size: 0.7rem;
-          padding: 7px 12px;
-          bottom: 15px;
-          right: 15px;
-        }
-
-        .github-link {
-          font-size: 0.7rem;
-          padding: 7px 12px;
-          bottom: 15px;
-          left: 15px;
         }
 
         /* Smaller feature pages for mobile */
@@ -1635,25 +1664,6 @@
         .hero-subtitle-text {
           font-size: 12px;
           letter-spacing: 1px;
-        }
-
-        .summon-link {
-          font-size: 0.75rem;
-          padding: 7px 12px;
-        }
-
-        .litepaper-link {
-          font-size: 0.65rem;
-          padding: 6px 10px;
-          bottom: 12px;
-          right: 12px;
-        }
-
-        .github-link {
-          font-size: 0.65rem;
-          padding: 6px 10px;
-          bottom: 12px;
-          left: 12px;
         }
 
         /* Extra small mobile optimizations for feature pages */
@@ -5215,10 +5225,27 @@
       <div class="stars-layer"></div>
     </div>
 
-    <!-- Summon Link Button (top left) -->
-    <button class="summon-link" onclick="document.getElementById('summoner').scrollIntoView({ behavior: 'smooth' });">
-      Summon
+    <!-- Hamburger menu toggle (mobile only, top left) -->
+    <button class="hamburger-toggle" id="hamburgerToggle" onclick="toggleMobileMenu()">
+      <span></span>
+      <span></span>
+      <span></span>
     </button>
+
+    <!-- Top Left Navigation (Desktop) -->
+    <div class="nav-links-container">
+      <button class="summon-link" onclick="document.getElementById('summoner').scrollIntoView({ behavior: 'smooth' });">
+        Summon
+      </button>
+      <button class="nav-link" onclick="scrollToYourDAOs()">Your DAOs</button>
+      <button class="nav-link" onclick="scrollToAllDAOs()">All DAOs</button>
+      <a href="https://wp.majeurdao.eth.limo" target="_blank" rel="noopener noreferrer" class="nav-link" title="Read the Majeur lite paper">
+        Lite Paper
+      </a>
+      <a href="https://github.com/z0r0z/majeur" target="_blank" rel="noopener noreferrer" class="nav-link" title="View on GitHub">
+        GitHub
+      </a>
+    </div>
 
     <!-- Network & Wallet (top right) -->
     <div class="wallet-network-container">
@@ -5249,15 +5276,20 @@
       </button>
     </div>
 
-    <!-- Lite Paper Link (bottom right) -->
-    <a href="https://wp.majeurdao.eth.limo" target="_blank" rel="noopener noreferrer" class="litepaper-link" title="Read the Majeur lite paper">
-      Lite Paper
-    </a>
-
-    <!-- GitHub Link (bottom left) -->
-    <a href="https://github.com/z0r0z/majeur" target="_blank" rel="noopener noreferrer" class="github-link" title="View on GitHub">
-      GitHub
-    </a>
+    <!-- Mobile Menu Dropdown -->
+    <div class="mobile-menu" id="mobileMenu">
+      <button class="summon-link" onclick="document.getElementById('summoner').scrollIntoView({ behavior: 'smooth' }); toggleMobileMenu();">
+        Summon
+      </button>
+      <button class="nav-link" onclick="scrollToYourDAOs(); toggleMobileMenu();">Your DAOs</button>
+      <button class="nav-link" onclick="scrollToAllDAOs(); toggleMobileMenu();">All DAOs</button>
+      <a href="https://wp.majeurdao.eth.limo" target="_blank" rel="noopener noreferrer" class="nav-link" title="Read the Majeur lite paper">
+        Lite Paper
+      </a>
+      <a href="https://github.com/z0r0z/majeur" target="_blank" rel="noopener noreferrer" class="nav-link" title="View on GitHub">
+        GitHub
+      </a>
+    </div>
 
     <!-- Wallet Selection Modal -->
     <div class="wallet-modal-overlay" id="walletModal">
@@ -9367,7 +9399,38 @@
         if (selector && !selector.contains(e.target)) {
           selector.classList.remove('open');
         }
+        // Also close mobile menu when clicking outside
+        const mobileMenu = document.getElementById('mobileMenu');
+        const hamburger = document.getElementById('hamburgerToggle');
+        if (mobileMenu && hamburger && !mobileMenu.contains(e.target) && !hamburger.contains(e.target)) {
+          mobileMenu.classList.remove('open');
+          hamburger.classList.remove('active');
+        }
       });
+
+      // ==================== MOBILE MENU FUNCTIONS ====================
+      function toggleMobileMenu() {
+        const mobileMenu = document.getElementById('mobileMenu');
+        const hamburger = document.getElementById('hamburgerToggle');
+        if (mobileMenu) mobileMenu.classList.toggle('open');
+        if (hamburger) hamburger.classList.toggle('active');
+      }
+
+      function scrollToYourDAOs() {
+        const daoGallery = document.getElementById('daoGallery');
+        if (daoGallery) {
+          daoGallery.classList.add('show');
+          daoGallery.scrollIntoView({ behavior: 'smooth' });
+        }
+      }
+
+      function scrollToAllDAOs() {
+        const allDaosGallery = document.getElementById('allDaosGallery');
+        if (allDaosGallery) {
+          allDaosGallery.classList.add('show');
+          allDaosGallery.scrollIntoView({ behavior: 'smooth' });
+        }
+      }
 
       function updateNetworkUI() {
         const networkBadge = document.getElementById('networkBadge');
@@ -11537,6 +11600,15 @@
             }
           } else {
             showStatus(`Connected to ${wallet?.name || 'wallet'}`, false);
+            // Auto-scroll to "Your DAOs" section if user is a member of any DAOs
+            if (userDAOs.length > 0) {
+              setTimeout(() => {
+                const daoGallery = document.getElementById('daoGallery');
+                if (daoGallery) {
+                  daoGallery.scrollIntoView({ behavior: 'smooth' });
+                }
+              }, 100);
+            }
           }
         } catch (error) {
           console.error(error);
