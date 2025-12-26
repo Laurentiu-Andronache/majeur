@@ -8123,7 +8123,7 @@
             <div class="treasury-assets" id="treasuryAssets">
               <!-- Treasury assets will be dynamically rendered here -->
             </div>
-            <button class="ragequit-button" onclick="openRagequitModal()">Ragequit</button>
+            <button class="ragequit-button" id="ragequitBtn" onclick="openRagequitModal()">Ragequit</button>
           </div>
 
           <!-- Tributes Section -->
@@ -14408,6 +14408,12 @@
         customAssetDiv.onclick = () => prepareCustomTokenProposal();
 
         treasuryAssets.appendChild(customAssetDiv);
+
+        // Show/hide ragequit button based on ragequittable setting
+        const ragequitBtn = document.getElementById('ragequitBtn');
+        if (ragequitBtn) {
+          ragequitBtn.style.display = currentDAO.dao.gov.ragequittable ? 'block' : 'none';
+        }
       }
 
       // Render tributes
