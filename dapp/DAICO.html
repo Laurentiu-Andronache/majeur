@@ -251,6 +251,7 @@
         .network-icon.ethereum { background: #627EEA; }
         .network-icon.base { background: #0052FF; }
         .network-icon.sepolia { background: var(--orange); }
+        .network-icon.arbitrum { background: #28a0f0; }
 
         /* HERO SECTION */
         .hero {
@@ -4683,6 +4684,10 @@
                     <span class="network-icon base">B</span>
                     Base
                 </button>
+                <button class="network-option" data-network="arbitrum" onclick="switchNetwork('arbitrum')">
+                    <span class="network-icon arbitrum">A</span>
+                    Arbitrum
+                </button>
                 <button class="network-option" data-network="sepolia" onclick="switchNetwork('sepolia')">
                     <span class="network-icon sepolia">S</span>
                     Sepolia
@@ -5004,7 +5009,7 @@
         </div>
         <div class="summary-description-wrapper">
             <textarea id="summaryDescription" class="summary-description" placeholder="vision..." rows="1"></textarea>
-            <div class="summary-duna-hint">defaults to <a href="https://github.com/z0r0z/majeur?tab=readme-ov-file#wyoming-duna" target="_blank" rel="noopener">DUNA</a></div>
+            <div class="summary-duna-hint">defaults to <a href="https://github.com/z0r0z/majeur?tab=readme-ov-file#wyoming-duna-compliance" target="_blank" rel="noopener">DUNA</a></div>
         </div>
 
         <div class="summary-launch-container">
@@ -5189,7 +5194,7 @@
                 <div class="wizard-input-group" style="margin-top: 0.5rem;">
                     <label class="wizard-label" style="opacity: 0.6;">Description <span style="font-weight: normal; font-size: 0.75rem;">(optional)</span></label>
                     <textarea id="wizardDescription" class="wizard-input" placeholder="Brief description of your project..." style="resize: vertical; min-height: 50px; max-height: 120px; font-family: inherit;"></textarea>
-                    <small style="color: rgba(255, 255, 255, 0.35); font-size: 0.7rem; margin-top: 0.25rem; display: block;">defaults to <a href="https://github.com/z0r0z/majeur?tab=readme-ov-file#wyoming-duna" target="_blank" rel="noopener" style="color: var(--cyan); opacity: 0.7;">DUNA</a></small>
+                    <small style="color: rgba(255, 255, 255, 0.35); font-size: 0.7rem; margin-top: 0.25rem; display: block;">defaults to <a href="https://github.com/z0r0z/majeur?tab=readme-ov-file#wyoming-duna-compliance" target="_blank" rel="noopener" style="color: var(--cyan); opacity: 0.7;">DUNA</a></small>
                 </div>
                 <div class="wizard-nav">
                     <button class="wizard-btn back" onclick="wizardBack()">Back</button>
@@ -5516,7 +5521,7 @@
                                 <span class="hint">Optional - stored as on-chain metadata</span>
                             </label>
                             <textarea id="daoDescription" class="form-input" placeholder="Brief description of your project..." style="resize: vertical; min-height: 50px; max-height: 100px; font-family: inherit;"></textarea>
-                            <small style="color: rgba(255, 255, 255, 0.35); font-size: 0.7rem; margin-top: 0.25rem; display: block;">defaults to <a href="https://github.com/z0r0z/majeur?tab=readme-ov-file#wyoming-duna" target="_blank" rel="noopener" style="color: var(--cyan); opacity: 0.7;">DUNA</a> charter</small>
+                            <small style="color: rgba(255, 255, 255, 0.35); font-size: 0.7rem; margin-top: 0.25rem; display: block;">defaults to <a href="https://github.com/z0r0z/majeur?tab=readme-ov-file#wyoming-duna-compliance" target="_blank" rel="noopener" style="color: var(--cyan); opacity: 0.7;">DUNA</a> charter</small>
                         </div>
                     </div>
 
@@ -5758,6 +5763,38 @@
                 tokenMeta: {
                     [ethers.ZeroAddress]: { symbol: 'ETH', decimals: 18 }
                 }
+            },
+            arbitrum: {
+                chainId: 42161n,
+                chainIdHex: '0xa4b1',
+                name: 'Arbitrum',
+                shortName: 'ARB',
+                rpcs: [
+                    'https://arb1.arbitrum.io/rpc',
+                    'https://arbitrum.publicnode.com',
+                    'https://1rpc.io/arb',
+                    'https://arbitrum.drpc.org',
+                    'https://arbitrum.meowrpc.com',
+                    'https://arbitrum.llamarpc.com'
+                ],
+                explorer: 'https://arbiscan.io',
+                swissKnifeChainId: 42161,
+                treasuryTokens: [
+                    ethers.ZeroAddress, // ETH
+                    '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', // USDC (native)
+                    '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9', // USDT
+                    '0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1', // DAI
+                    '0x5979D7b546E38E414F7E9822514be443A4800529', // wstETH
+                    '0xEC70Dcb4A1EFa46b8F2D97C310C9c4790ba5ffA8'  // rETH
+                ],
+                tokenMeta: {
+                    [ethers.ZeroAddress]: { symbol: 'ETH', decimals: 18 },
+                    '0xaf88d065e77c8cC2239327C5EDb3A432268e5831': { symbol: 'USDC', decimals: 6 },
+                    '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9': { symbol: 'USDT', decimals: 6 },
+                    '0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1': { symbol: 'DAI', decimals: 18 },
+                    '0x5979D7b546E38E414F7E9822514be443A4800529': { symbol: 'wstETH', decimals: 18 },
+                    '0xEC70Dcb4A1EFa46b8F2D97C310C9c4790ba5ffA8': { symbol: 'rETH', decimals: 18 }
+                }
             }
         };
 
@@ -5810,6 +5847,11 @@
                 moloch: '0x643A45B599D81be3f3A68F37EB3De55fF10673C1',
                 shares: '0x71E9b38d301b5A58cb998C1295045FE276Acf600',
                 loot: '0x6f1f2aF76a3aDD953277e9F369242697C87bc6A5'
+            },
+            arbitrum: {
+                moloch: '0x0c969b771afded8e7c1bec050b2472b1f00a033d',
+                shares: '0x36aeeb011e66ddb191d18124c8096b8c35451b77',
+                loot: '0x44fe15d5d2913e654c699e08c7bbbd65faf529cc'
             }
         };
 
@@ -5850,6 +5892,7 @@
                                 params: [{
                                     chainId: targetNetwork.chainIdHex,
                                     chainName: targetNetwork.name,
+                                    nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
                                     rpcUrls: targetNetwork.rpcs,
                                     blockExplorerUrls: [targetNetwork.explorer]
                                 }]
@@ -6402,11 +6445,12 @@
                     walletConnectProvider = await WCProvider.init({
                         projectId: '1e8390ef1c1d8a185e035912a1409749',
                         chains: [1], // Required: at least one chain
-                        optionalChains: [8453, 11155111], // Base, Sepolia
+                        optionalChains: [8453, 42161, 11155111], // Base, Arbitrum, Sepolia
                         showQrModal: true,
                         rpcMap: {
                             1: 'https://1rpc.io/eth',
                             8453: 'https://mainnet.base.org',
+                            42161: 'https://arb1.arbitrum.io/rpc',
                             11155111: 'https://1rpc.io/sepolia'
                         },
                         metadata: {
@@ -10097,6 +10141,7 @@
                                 params: [{
                                     chainId: targetNetwork.chainIdHex,
                                     chainName: targetNetwork.name,
+                                    nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
                                     rpcUrls: targetNetwork.rpcs,
                                     blockExplorerUrls: [targetNetwork.explorer]
                                 }]
