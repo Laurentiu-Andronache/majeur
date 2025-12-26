@@ -13,7 +13,7 @@
     <!-- WalletConnect v2 for mobile QR code scanning -->
     <script src="https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.10.0/dist/index.umd.js" integrity="sha384-ACTo60vL1/AfeYkCCXRvB1G0ugjHF0/SHU9YN7e4/KH/mitAIYpLcw5PKXW/+ekM" crossorigin="anonymous"></script>
     <style>
-      @import url("https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Cinzel:wght@400;500;600&display=swap");
+      @import url("https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,400&display=swap");
 
       :root {
         /* Primary Colors */
@@ -22,6 +22,15 @@
         --dark-bg: #0a0015;
         --pure-black: #000000;
         --dark-purple: #2a1a4a;
+
+        /* Accent Gold - for CTAs and highlights */
+        --accent-gold: #d4a574;
+        --accent-gold-light: #e8c9a0;
+        --accent-gold-dark: #b88a5c;
+        --accent-gold-1: rgba(212, 165, 116, 0.1);
+        --accent-gold-2: rgba(212, 165, 116, 0.2);
+        --accent-gold-3: rgba(212, 165, 116, 0.3);
+        --accent-gold-5: rgba(212, 165, 116, 0.5);
 
         /* Primary Purple Variations */
         --primary-purple-05: rgba(157, 123, 255, 0.05);
@@ -67,8 +76,9 @@
         --black-85: rgba(0, 0, 0, 0.85);
 
         /* Typography */
-        --font-serif: 'EB Garamond', serif;
+        --font-serif: 'EB Garamond', 'Cormorant Garamond', Georgia, serif;
         --font-display: 'Cinzel', serif;
+        --font-elegant: 'Cormorant Garamond', 'EB Garamond', Georgia, serif;
 
         /* Spacing & Sizing */
         --border-radius-sm: 4px;
@@ -78,6 +88,7 @@
         /* Transitions */
         --transition-fast: 0.2s ease;
         --transition-normal: 0.3s ease;
+        --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 
         /* Mobile viewport height (set by JS to handle mobile browser chrome) */
         --vh: 1vh;
@@ -165,95 +176,238 @@
         50% { opacity: 0.5; }
       }
 
-      /* SUMMON LINK */
-      .summon-link {
+      /* GRAIN TEXTURE OVERLAY - adds depth and sophistication */
+      .grain-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 1;
+        opacity: 0.035;
+        mix-blend-mode: overlay;
+      }
+
+      .grain-overlay::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+        animation: grain 8s steps(10) infinite;
+      }
+
+      @keyframes grain {
+        0%, 100% { transform: translate(0, 0); }
+        10% { transform: translate(-5%, -10%); }
+        20% { transform: translate(-15%, 5%); }
+        30% { transform: translate(7%, -25%); }
+        40% { transform: translate(-5%, 25%); }
+        50% { transform: translate(-15%, 10%); }
+        60% { transform: translate(15%, 0%); }
+        70% { transform: translate(0%, 15%); }
+        80% { transform: translate(3%, 35%); }
+        90% { transform: translate(-10%, 10%); }
+      }
+
+      /* VIGNETTE EFFECT - subtle edge darkening */
+      .vignette-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 1;
+        background: radial-gradient(
+          ellipse at center,
+          transparent 0%,
+          transparent 50%,
+          rgba(0, 0, 0, 0.3) 100%
+        );
+      }
+
+      /* AMBIENT GLOW - subtle purple bloom in corners */
+      .ambient-glow {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 0;
+        opacity: 0.4;
+        background:
+          radial-gradient(ellipse 80% 50% at 20% 90%, rgba(157, 123, 255, 0.15), transparent),
+          radial-gradient(ellipse 60% 40% at 85% 10%, rgba(157, 123, 255, 0.1), transparent),
+          radial-gradient(ellipse 40% 30% at 10% 20%, rgba(212, 165, 116, 0.05), transparent);
+      }
+
+      /* TOP LEFT NAVIGATION CONTAINER */
+      .nav-links-container {
         position: fixed;
         top: 20px;
         left: 20px;
         z-index: 1000;
-        padding: 10px 18px;
-        background: transparent;
-        border: 1px solid rgba(157, 123, 255, 0.3);
-        color: rgba(230, 217, 255, 0.7);
-        font-family: "EB Garamond", serif;
-        font-style: italic;
-        font-size: 0.9rem;
-        letter-spacing: 0.15em;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        align-items: flex-start;
+      }
+
+      /* SHARED NAV LINK STYLES */
+      .nav-link,
+      .summon-link {
+        padding: 10px 16px;
+        background: rgba(10, 0, 21, 0.75);
+        border: 1px solid rgba(157, 123, 255, 0.15);
+        color: rgba(230, 217, 255, 0.55);
+        font-family: var(--font-serif);
+        font-size: 0.78rem;
+        letter-spacing: 0.12em;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        text-decoration: none;
+        display: block;
         text-transform: uppercase;
+        backdrop-filter: blur(12px);
+        text-align: left;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .nav-link::before,
+      .summon-link::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 2px;
+        height: 100%;
+        background: var(--primary-purple);
+        transform: scaleY(0);
+        transition: transform 0.3s ease;
+        transform-origin: bottom;
+      }
+
+      .nav-link:hover,
+      .summon-link:hover {
+        border-color: rgba(157, 123, 255, 0.4);
+        color: rgba(230, 217, 255, 0.95);
+        background: rgba(10, 0, 21, 0.9);
+        box-shadow:
+          0 0 20px rgba(157, 123, 255, 0.2),
+          inset 0 0 30px rgba(157, 123, 255, 0.03);
+        padding-left: 20px;
+      }
+
+      .nav-link:hover::before,
+      .summon-link:hover::before {
+        transform: scaleY(1);
+      }
+
+      /* Summon link - prominent gold accent */
+      .summon-link {
+        font-style: italic;
+        border-color: var(--accent-gold-3);
+        color: var(--accent-gold-light);
+      }
+
+      .summon-link::before {
+        background: var(--accent-gold);
       }
 
       .summon-link:hover {
-        border-color: rgba(157, 123, 255, 0.5);
-        color: #e6d9ff;
-        background: rgba(157, 123, 255, 0.05);
+        border-color: var(--accent-gold-5);
+        color: var(--accent-gold-light);
+        box-shadow:
+          0 0 20px rgba(212, 165, 116, 0.2),
+          inset 0 0 30px rgba(212, 165, 116, 0.03);
       }
 
-      /* LITE PAPER LINK */
-      .litepaper-link {
+      /* HAMBURGER MENU TOGGLE (hidden on desktop, top-left on mobile) */
+      .hamburger-toggle {
+        display: none;
         position: fixed;
-        bottom: 20px;
-        right: 20px;
-        z-index: 1000;
-        padding: 8px 14px;
-        background: rgba(10, 0, 21, 0.7);
-        border: 1px solid rgba(157, 123, 255, 0.2);
-        color: rgba(230, 217, 255, 0.6);
-        font-family: "EB Garamond", serif;
-        font-size: 0.75rem;
-        letter-spacing: 0.1em;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        text-decoration: none;
-        display: inline-block;
-        text-transform: uppercase;
-        backdrop-filter: blur(10px);
-      }
-
-      .litepaper-link:hover {
-        border-color: rgba(157, 123, 255, 0.5);
-        color: rgba(230, 217, 255, 0.9);
-        background: rgba(10, 0, 21, 0.9);
-        box-shadow: 0 0 15px rgba(157, 123, 255, 0.3);
-      }
-
-      /* GITHUB LINK */
-      .github-link {
-        position: fixed;
-        bottom: 20px;
+        top: 20px;
         left: 20px;
-        z-index: 1000;
-        padding: 8px 14px;
-        background: rgba(10, 0, 21, 0.7);
-        border: 1px solid rgba(157, 123, 255, 0.2);
-        color: rgba(230, 217, 255, 0.6);
-        font-family: "EB Garamond", serif;
-        font-size: 0.75rem;
-        letter-spacing: 0.1em;
+        z-index: 1001;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        width: 36px;
+        height: 36px;
+        padding: 6px;
+        background: rgba(10, 0, 21, 0.9);
+        border: 1px solid rgba(157, 123, 255, 0.3);
         cursor: pointer;
+        gap: 4px;
         transition: all 0.3s ease;
-        text-decoration: none;
-        display: inline-block;
-        text-transform: uppercase;
-        backdrop-filter: blur(10px);
       }
 
-      .github-link:hover {
+      .hamburger-toggle:hover {
         border-color: rgba(157, 123, 255, 0.5);
-        color: rgba(230, 217, 255, 0.9);
-        background: rgba(10, 0, 21, 0.9);
-        box-shadow: 0 0 15px rgba(157, 123, 255, 0.3);
+        background: rgba(157, 123, 255, 0.1);
+      }
+
+      .hamburger-toggle span {
+        display: block;
+        width: 18px;
+        height: 2px;
+        background: rgba(230, 217, 255, 0.7);
+        transition: all 0.3s ease;
+      }
+
+      .hamburger-toggle.active span:nth-child(1) {
+        transform: rotate(45deg) translate(4px, 4px);
+      }
+
+      .hamburger-toggle.active span:nth-child(2) {
+        opacity: 0;
+      }
+
+      .hamburger-toggle.active span:nth-child(3) {
+        transform: rotate(-45deg) translate(4px, -4px);
+      }
+
+      /* MOBILE MENU DROPDOWN (top-left, below hamburger) */
+      .mobile-menu {
+        display: none;
+        position: fixed;
+        top: 60px;
+        left: 20px;
+        z-index: 999;
+        flex-direction: column;
+        gap: 4px;
+        padding: 8px;
+        background: rgba(10, 0, 21, 0.95);
+        border: 1px solid rgba(157, 123, 255, 0.3);
+        backdrop-filter: blur(10px);
+        min-width: 140px;
+      }
+
+      .mobile-menu.open {
+        display: flex;
+      }
+
+      .mobile-menu .nav-link,
+      .mobile-menu .summon-link {
+        width: 100%;
+        text-align: left;
       }
 
       /* Hide fixed nav buttons when in DAO view */
-      .hide-nav-buttons .summon-link,
-      .hide-nav-buttons .litepaper-link,
-      .hide-nav-buttons .github-link,
+      /* !important needed to override animation-fill-mode: both which sets opacity: 1 */
+      .hide-nav-buttons .nav-links-container,
+      .hide-nav-buttons .hamburger-toggle,
+      .hide-nav-buttons .mobile-menu,
       .hide-nav-buttons .wallet-button,
       .hide-nav-buttons .network-selector {
-        opacity: 0;
-        pointer-events: none;
+        opacity: 0 !important;
+        pointer-events: none !important;
       }
 
       /* WALLET & NETWORK CONNECTION */
@@ -394,31 +548,56 @@
       }
 
       .wallet-button {
-        padding: 10px 18px;
-        background: rgba(10, 0, 21, 0.9);
-        border: 1px solid #9d7bff;
-        color: #e6d9ff;
+        padding: 12px 20px;
+        background: rgba(10, 0, 21, 0.85);
+        border: 1px solid var(--accent-gold-5);
+        color: var(--accent-gold-light);
         font-family: "Cinzel", serif;
         font-size: 0.75rem;
-        letter-spacing: 0.1em;
+        letter-spacing: 0.12em;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         will-change: transform, opacity;
+        position: relative;
+        overflow: hidden;
+        backdrop-filter: blur(10px);
+      }
+
+      .wallet-button::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, var(--accent-gold-1), transparent);
+        opacity: 0;
+        transition: opacity 0.3s ease;
       }
 
       .wallet-button:hover {
-        background: rgba(157, 123, 255, 0.2);
-        box-shadow: 0 0 20px rgba(157, 123, 255, 0.4);
+        background: rgba(10, 0, 21, 0.95);
+        border-color: var(--accent-gold);
+        box-shadow:
+          0 0 25px rgba(212, 165, 116, 0.3),
+          inset 0 0 20px rgba(212, 165, 116, 0.05);
+        transform: translateY(-1px);
+      }
+
+      .wallet-button:hover::after {
+        opacity: 1;
       }
 
       .wallet-button.connected {
-        color: #9d7bff;
+        color: var(--accent-gold);
+        border-color: var(--accent-gold);
+        box-shadow: 0 0 15px rgba(212, 165, 116, 0.2);
       }
 
       /* SUMMONER SECTION */
       .summoner-section {
         min-height: 100vh;
-        padding: 4rem 2rem;
+        padding: 5rem 2rem;
         position: relative;
         z-index: 1;
         background: transparent;
@@ -429,41 +608,69 @@
       }
 
       .summoner-container {
-        max-width: 600px;
+        max-width: 620px;
         width: 100%;
-        padding: 3rem;
-        background: rgba(10, 0, 21, 0.6);
-        border: 1px solid rgba(157, 123, 255, 0.3);
-        backdrop-filter: blur(10px);
+        padding: 3.5rem;
+        background:
+          linear-gradient(135deg, rgba(10, 0, 21, 0.8) 0%, rgba(20, 5, 35, 0.7) 100%);
+        border: 1px solid rgba(157, 123, 255, 0.25);
+        backdrop-filter: blur(20px);
+        box-shadow:
+          0 25px 80px rgba(0, 0, 0, 0.5),
+          0 0 1px rgba(230, 217, 255, 0.1),
+          inset 0 1px 0 rgba(230, 217, 255, 0.05);
+        position: relative;
+      }
+
+      .summoner-container::before {
+        content: '';
+        position: absolute;
+        top: -1px;
+        left: 20%;
+        right: 20%;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, var(--accent-gold-5), transparent);
       }
 
       .summoner-title {
         font-family: "Cinzel", serif;
-        font-size: 1.8rem;
+        font-size: 2rem;
         text-align: center;
-        letter-spacing: 0.3em;
-        margin-bottom: 0.5rem;
+        letter-spacing: 0.35em;
+        margin-bottom: 0.75rem;
         color: #e6d9ff;
         text-transform: uppercase;
+        position: relative;
+      }
+
+      .summoner-title::after {
+        content: '';
+        display: block;
+        width: 60px;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, var(--accent-gold), transparent);
+        margin: 1rem auto 0;
       }
 
       .summoner-subtitle {
-        font-family: "EB Garamond", serif;
-        font-size: 1rem;
+        font-family: var(--font-elegant);
+        font-size: 1.1rem;
         text-align: center;
-        margin-bottom: 2rem;
-        color: rgba(230, 217, 255, 0.7);
+        margin-bottom: 2.5rem;
+        color: rgba(230, 217, 255, 0.65);
         font-style: italic;
+        font-weight: 300;
+        letter-spacing: 0.02em;
       }
 
       .form-group {
-        margin-bottom: 1.5rem;
+        margin-bottom: 1.75rem;
       }
 
       .form-label {
         display: block;
         font-family: "Cinzel", serif;
-        font-size: 0.7rem;
+        font-size: 0.72rem;
         letter-spacing: 0.15em;
         text-transform: uppercase;
         color: rgba(230, 217, 255, 0.8);
@@ -472,23 +679,33 @@
 
       .form-input {
         width: 100%;
-        padding: 10px 14px;
-        background: rgba(0, 0, 0, 0.5);
-        border: 1px solid rgba(157, 123, 255, 0.3);
+        padding: 12px 16px;
+        background: rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(157, 123, 255, 0.2);
         color: #e6d9ff;
-        font-family: "EB Garamond", serif;
+        font-family: var(--font-serif);
         font-size: 1rem;
-        transition: all 0.3s ease;
+        transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 2px;
+      }
+
+      .form-input:hover {
+        border-color: rgba(157, 123, 255, 0.4);
+        background: rgba(0, 0, 0, 0.5);
       }
 
       .form-input:focus {
         outline: none;
-        border-color: #9d7bff;
-        box-shadow: 0 0 10px rgba(157, 123, 255, 0.2);
+        border-color: var(--primary-purple);
+        background: rgba(0, 0, 0, 0.55);
+        box-shadow:
+          0 0 0 3px rgba(157, 123, 255, 0.1),
+          0 4px 20px rgba(157, 123, 255, 0.15);
       }
 
       .form-input::placeholder {
-        color: rgba(230, 217, 255, 0.4);
+        color: rgba(230, 217, 255, 0.35);
+        font-style: italic;
       }
 
       /* Reusable modal input styling - replaces inline styles */
@@ -571,33 +788,66 @@
 
       .summon-button {
         width: 100%;
-        padding: 14px;
+        padding: 16px 24px;
         margin-top: 2rem;
-        background: linear-gradient(135deg, #9d7bff 0%, #6b4fb8 100%);
+        background: linear-gradient(135deg, var(--accent-gold) 0%, var(--accent-gold-dark) 100%);
         border: none;
-        color: #000;
+        color: #0a0015;
         font-family: "Cinzel", serif;
         font-size: 1rem;
         letter-spacing: 0.3em;
         text-transform: uppercase;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         font-weight: 600;
+        position: relative;
+        overflow: hidden;
+        box-shadow:
+          0 4px 20px rgba(212, 165, 116, 0.3),
+          inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      }
+
+      .summon-button::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 255, 255, 0.2),
+          transparent
+        );
+        transition: left 0.5s ease;
+      }
+
+      .summon-button:hover:not(:disabled)::before {
+        left: 100%;
       }
 
       .summon-button:hover:not(:disabled) {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 30px rgba(157, 123, 255, 0.4);
+        transform: translateY(-3px);
+        box-shadow:
+          0 12px 40px rgba(212, 165, 116, 0.4),
+          0 4px 15px rgba(212, 165, 116, 0.3),
+          inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        background: linear-gradient(135deg, var(--accent-gold-light) 0%, var(--accent-gold) 100%);
       }
 
       .summon-button:disabled {
         opacity: 0.5;
         cursor: not-allowed;
+        background: linear-gradient(135deg, #888 0%, #666 100%);
+        box-shadow: none;
       }
 
       .summon-button:active:not(:disabled) {
-        transform: translateY(0);
-        box-shadow: 0 5px 15px rgba(157, 123, 255, 0.3);
+        transform: translateY(-1px);
+        box-shadow:
+          0 6px 20px rgba(212, 165, 116, 0.35),
+          inset 0 1px 0 rgba(255, 255, 255, 0.2);
       }
 
       /* Universal button enhancements */
@@ -692,6 +942,155 @@
 
       .card-appear {
         animation: cardFadeIn 0.4s ease-out forwards;
+      }
+
+      /* ORCHESTRATED PAGE REVEAL ANIMATIONS */
+      @keyframes revealUp {
+        from {
+          opacity: 0;
+          transform: translateY(40px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes revealFade {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      @keyframes revealScale {
+        from {
+          opacity: 0;
+          transform: scale(0.95);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      @keyframes revealLeft {
+        from {
+          opacity: 0;
+          transform: translateX(-30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      @keyframes revealRight {
+        from {
+          opacity: 0;
+          transform: translateX(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      /* Reveal animation classes with staggered delays */
+      .reveal {
+        opacity: 0;
+        animation-fill-mode: forwards;
+        animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .reveal-up {
+        animation-name: revealUp;
+        animation-duration: 0.8s;
+      }
+
+      .reveal-fade {
+        animation-name: revealFade;
+        animation-duration: 0.6s;
+      }
+
+      .reveal-scale {
+        animation-name: revealScale;
+        animation-duration: 0.7s;
+      }
+
+      .reveal-left {
+        animation-name: revealLeft;
+        animation-duration: 0.7s;
+      }
+
+      .reveal-right {
+        animation-name: revealRight;
+        animation-duration: 0.7s;
+      }
+
+      /* Staggered delay classes */
+      .delay-1 { animation-delay: 0.1s; }
+      .delay-2 { animation-delay: 0.2s; }
+      .delay-3 { animation-delay: 0.3s; }
+      .delay-4 { animation-delay: 0.4s; }
+      .delay-5 { animation-delay: 0.5s; }
+      .delay-6 { animation-delay: 0.6s; }
+      .delay-7 { animation-delay: 0.7s; }
+      .delay-8 { animation-delay: 0.8s; }
+
+      /* Apply reveal to navigation on load */
+      .nav-links-container {
+        animation: revealLeft 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.3s both;
+      }
+
+      .wallet-network-container {
+        animation: revealRight 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.4s both;
+      }
+
+      /* Feature pages scroll reveal */
+      .feature-page .feature-tag {
+        opacity: 0;
+        transform: translateY(20px);
+        transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .feature-page .feature-title {
+        opacity: 0;
+        transform: translateY(30px);
+        transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1) 0.1s;
+      }
+
+      .feature-page .feature-copy {
+        opacity: 0;
+        transform: translateY(25px);
+        transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1) 0.2s;
+      }
+
+      .feature-page .feature-meta {
+        opacity: 0;
+        transform: translateY(20px);
+        transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.3s;
+      }
+
+      .feature-page .feature-art {
+        opacity: 0;
+        transform: scale(0.9) translateX(30px);
+        transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s;
+      }
+
+      .feature-page.in-view .feature-tag,
+      .feature-page.in-view .feature-title,
+      .feature-page.in-view .feature-copy,
+      .feature-page.in-view .feature-meta {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .feature-page.in-view .feature-art {
+        opacity: 1;
+        transform: scale(1) translateX(0);
       }
 
       /* Mobile touch feedback */
@@ -1243,25 +1642,31 @@
       }
 
       .intro-text h2 {
-        font-size: 2.5rem;
+        font-family: var(--font-elegant);
+        font-size: 2.8rem;
         color: #e6d9ff;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1.75rem;
         font-weight: 400;
-        letter-spacing: -0.02em;
+        letter-spacing: -0.01em;
+        line-height: 1.2;
+        text-shadow: 0 0 60px rgba(157, 123, 255, 0.2);
       }
 
       .intro-text p {
-        font-size: 1.2rem;
-        line-height: 1.8;
-        color: rgba(230, 217, 255, 0.8);
+        font-size: 1.15rem;
+        line-height: 1.85;
+        color: rgba(230, 217, 255, 0.75);
         margin-bottom: 1.5rem;
+        font-family: var(--font-serif);
       }
 
       .intro-highlight {
-        color: #9d7bff !important;
+        color: var(--accent-gold) !important;
         font-weight: 500;
-        font-size: 1.3rem !important;
+        font-size: 1.25rem !important;
         margin-top: 2rem !important;
+        font-style: italic;
+        letter-spacing: 0.01em;
       }
 
       .scroll-hint {
@@ -1413,14 +1818,15 @@
 
       .feature-title {
         position: relative;
-        font-family: "EB Garamond", serif;
+        font-family: var(--font-elegant);
         font-style: italic;
         font-weight: 400;
         text-transform: uppercase;
-        letter-spacing: 0.35em;
-        font-size: clamp(2.2rem, 4vw, 3.3rem);
+        letter-spacing: 0.4em;
+        font-size: clamp(2.4rem, 4.5vw, 3.5rem);
         color: #e6d9ff;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1.75rem;
+        text-shadow: 0 0 40px rgba(157, 123, 255, 0.3);
       }
 
       .feature-title::before {
@@ -1429,9 +1835,19 @@
         inset: 0;
         color: #000000;
         transform: translate(3px, 4px);
-        filter: blur(8px);
-        opacity: 0.9;
+        filter: blur(10px);
+        opacity: 0.85;
         z-index: -1;
+      }
+
+      .feature-title::after {
+        content: '';
+        position: absolute;
+        bottom: -8px;
+        left: 0;
+        width: 40px;
+        height: 1px;
+        background: linear-gradient(90deg, var(--accent-gold), transparent);
       }
 
       .feature-copy {
@@ -1504,6 +1920,17 @@
         }
       }
 
+      /* Navigation mobile breakpoint - triggers earlier for zoom on 4K displays */
+      @media (max-width: 1600px) {
+        .nav-links-container {
+          display: none;
+        }
+
+        .hamburger-toggle {
+          display: flex;
+        }
+      }
+
       @media (max-width: 600px) {
         .hero-moloch-text {
           font-size: 38px;
@@ -1566,25 +1993,9 @@
           display: inline;
         }
 
-        .summon-link {
-          font-size: 0.75rem;
-          padding: 6px 10px;
-          top: 12px;
+        .mobile-menu {
+          top: 55px;
           left: 12px;
-        }
-
-        .litepaper-link {
-          font-size: 0.7rem;
-          padding: 7px 12px;
-          bottom: 15px;
-          right: 15px;
-        }
-
-        .github-link {
-          font-size: 0.7rem;
-          padding: 7px 12px;
-          bottom: 15px;
-          left: 15px;
         }
 
         /* Smaller feature pages for mobile */
@@ -1635,25 +2046,6 @@
         .hero-subtitle-text {
           font-size: 12px;
           letter-spacing: 1px;
-        }
-
-        .summon-link {
-          font-size: 0.75rem;
-          padding: 7px 12px;
-        }
-
-        .litepaper-link {
-          font-size: 0.65rem;
-          padding: 6px 10px;
-          bottom: 12px;
-          right: 12px;
-        }
-
-        .github-link {
-          font-size: 0.65rem;
-          padding: 6px 10px;
-          bottom: 12px;
-          left: 12px;
         }
 
         /* Extra small mobile optimizations for feature pages */
@@ -5235,10 +5627,32 @@
       <div class="stars-layer"></div>
     </div>
 
-    <!-- Summon Link Button (top left) -->
-    <button class="summon-link" onclick="document.getElementById('summoner').scrollIntoView({ behavior: 'smooth' });">
-      Summon
+    <!-- Atmospheric Overlays -->
+    <div class="ambient-glow"></div>
+    <div class="vignette-overlay"></div>
+    <div class="grain-overlay"></div>
+
+    <!-- Hamburger menu toggle (mobile only, top left) -->
+    <button class="hamburger-toggle" id="hamburgerToggle" onclick="toggleMobileMenu()">
+      <span></span>
+      <span></span>
+      <span></span>
     </button>
+
+    <!-- Top Left Navigation (Desktop) -->
+    <div class="nav-links-container">
+      <button class="summon-link" onclick="document.getElementById('summoner').scrollIntoView({ behavior: 'smooth' });">
+        Summon
+      </button>
+      <button class="nav-link" onclick="scrollToYourDAOs()">Your DAOs</button>
+      <button class="nav-link" onclick="scrollToAllDAOs()">All DAOs</button>
+      <a href="https://wp.majeurdao.eth.limo" target="_blank" rel="noopener noreferrer" class="nav-link" title="Read the Majeur lite paper">
+        Lite Paper
+      </a>
+      <a href="https://github.com/z0r0z/majeur" target="_blank" rel="noopener noreferrer" class="nav-link" title="View on GitHub">
+        GitHub
+      </a>
+    </div>
 
     <!-- Network & Wallet (top right) -->
     <div class="wallet-network-container">
@@ -5269,15 +5683,20 @@
       </button>
     </div>
 
-    <!-- Lite Paper Link (bottom right) -->
-    <a href="https://wp.majeurdao.eth.limo" target="_blank" rel="noopener noreferrer" class="litepaper-link" title="Read the Majeur lite paper">
-      Lite Paper
-    </a>
-
-    <!-- GitHub Link (bottom left) -->
-    <a href="https://github.com/z0r0z/majeur" target="_blank" rel="noopener noreferrer" class="github-link" title="View on GitHub">
-      GitHub
-    </a>
+    <!-- Mobile Menu Dropdown -->
+    <div class="mobile-menu" id="mobileMenu">
+      <button class="summon-link" onclick="document.getElementById('summoner').scrollIntoView({ behavior: 'smooth' }); toggleMobileMenu();">
+        Summon
+      </button>
+      <button class="nav-link" onclick="scrollToYourDAOs(); toggleMobileMenu();">Your DAOs</button>
+      <button class="nav-link" onclick="scrollToAllDAOs(); toggleMobileMenu();">All DAOs</button>
+      <a href="https://wp.majeurdao.eth.limo" target="_blank" rel="noopener noreferrer" class="nav-link" title="Read the Majeur lite paper">
+        Lite Paper
+      </a>
+      <a href="https://github.com/z0r0z/majeur" target="_blank" rel="noopener noreferrer" class="nav-link" title="View on GitHub">
+        GitHub
+      </a>
+    </div>
 
     <!-- Wallet Selection Modal -->
     <div class="wallet-modal-overlay" id="walletModal">
@@ -8471,6 +8890,52 @@
           .replace(/'/g, '&#039;');
       }
 
+      // Convert IPFS URLs to gateway URLs (browsers don't support ipfs:// natively)
+      function toGatewayUrl(url) {
+        if (!url || typeof url !== 'string') return url;
+
+        // Check if URL contains any IPFS reference
+        if (!url.includes('ipfs://') && !url.includes('ipfs/') && !url.includes('ipns/')) {
+          return url;
+        }
+
+        // Check for IPNS first (ipfs://ipns/NAME or ipns/NAME)
+        // IPNS names can be long (k51... keys) or domain names
+        const ipnsMatch = url.match(/ipns\/([a-zA-Z0-9._-]+)/);
+        if (ipnsMatch) {
+          return 'https://ipfs.io/ipns/' + ipnsMatch[1];
+        }
+
+        // Extract IPFS CID - look for common CID formats
+        // CIDv0: Qm followed by 44 base58 chars
+        // CIDv1: bafy/bafk followed by base32 chars
+        const cidMatch = url.match(/(Qm[1-9A-HJ-NP-Za-km-z]{44}|baf[yk][a-zA-Z2-7]{50,})/);
+        if (cidMatch) {
+          return 'https://ipfs.io/ipfs/' + cidMatch[1];
+        }
+
+        // Fallback: strip all ipfs:// prefixes and path segments, use whatever remains
+        let path = url;
+        // Remove any http(s) prefix first
+        path = path.replace(/^https?:\/\/[^\/]+\//, '');
+        // Remove all ipfs:// occurrences
+        while (path.includes('ipfs://')) {
+          path = path.replace('ipfs://', '');
+        }
+        // Remove ipfs/ path segments
+        while (path.includes('ipfs/')) {
+          path = path.replace('ipfs/', '');
+        }
+        // Clean up leading slashes
+        path = path.replace(/^\/+/, '');
+
+        if (path && path.length > 0) {
+          return 'https://ipfs.io/ipfs/' + path;
+        }
+
+        return url;
+      }
+
       // Build contractURI metadata JSON (ERC-7572 compatible)
       // Returns data URI with JSON for on-chain storage, or empty string if no description/image
       // Note: If empty, the on-chain renderer displays default DUNA charter
@@ -8984,8 +9449,11 @@
           // Check if summoner is in viewport (hide line when form is visible)
           const summonerInView = summonerRect.top < windowHeight && summonerRect.bottom > 0;
 
-          // Show journey line when past intro but before summoner
-          if (scrollY >= introPanelBottom - windowHeight && !summonerInView) {
+          // Check if we've scrolled past the summoner section
+          const pastSummoner = scrollY > summonerBottom - windowHeight * 0.5;
+
+          // Show journey line when past intro but before summoner (and not past it)
+          if (scrollY >= introPanelBottom - windowHeight && !summonerInView && !pastSummoner) {
             journeyLineContainer.style.opacity = '1';
 
             // Calculate progress from intro bottom to summoner top
@@ -9234,6 +9702,29 @@
         console.warn('Network connection lost');
         alert('Network connection lost. Please check your internet connection.');
       });
+
+      // Feature page scroll reveal with IntersectionObserver
+      (function initFeatureReveal() {
+        const featurePages = document.querySelectorAll('.feature-page');
+        if (!featurePages.length) return;
+
+        const observerOptions = {
+          root: null,
+          rootMargin: '0px 0px -15% 0px',
+          threshold: 0.1
+        };
+
+        const featureObserver = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('in-view');
+            }
+          });
+        }, observerOptions);
+
+        featurePages.forEach(page => featureObserver.observe(page));
+      })();
+
       const SUMMONER_ADDRESS = '0x0000000000330B8df9E3bc5E553074DA58eE9138';
       const SUMMONER_ABI = [
         {
@@ -9387,7 +9878,38 @@
         if (selector && !selector.contains(e.target)) {
           selector.classList.remove('open');
         }
+        // Also close mobile menu when clicking outside
+        const mobileMenu = document.getElementById('mobileMenu');
+        const hamburger = document.getElementById('hamburgerToggle');
+        if (mobileMenu && hamburger && !mobileMenu.contains(e.target) && !hamburger.contains(e.target)) {
+          mobileMenu.classList.remove('open');
+          hamburger.classList.remove('active');
+        }
       });
+
+      // ==================== MOBILE MENU FUNCTIONS ====================
+      function toggleMobileMenu() {
+        const mobileMenu = document.getElementById('mobileMenu');
+        const hamburger = document.getElementById('hamburgerToggle');
+        if (mobileMenu) mobileMenu.classList.toggle('open');
+        if (hamburger) hamburger.classList.toggle('active');
+      }
+
+      function scrollToYourDAOs() {
+        const daoGallery = document.getElementById('daoGallery');
+        if (daoGallery) {
+          daoGallery.classList.add('show');
+          daoGallery.scrollIntoView({ behavior: 'smooth' });
+        }
+      }
+
+      function scrollToAllDAOs() {
+        const allDaosGallery = document.getElementById('allDaosGallery');
+        if (allDaosGallery) {
+          allDaosGallery.classList.add('show');
+          allDaosGallery.scrollIntoView({ behavior: 'smooth' });
+        }
+      }
 
       function updateNetworkUI() {
         const networkBadge = document.getElementById('networkBadge');
@@ -11567,6 +12089,15 @@
             }
           } else {
             showStatus(`Connected to ${wallet?.name || 'wallet'}`, false);
+            // Auto-scroll to "Your DAOs" section if user is a member of any DAOs
+            if (userDAOs.length > 0) {
+              setTimeout(() => {
+                const daoGallery = document.getElementById('daoGallery');
+                if (daoGallery) {
+                  daoGallery.scrollIntoView({ behavior: 'smooth' });
+                }
+              }, 100);
+            }
           }
         } catch (error) {
           console.error(error);
@@ -19769,6 +20300,15 @@
           return;
         }
 
+        // Hide navigation buttons early (before rendering which might fail)
+        document.body.classList.add('hide-nav-buttons');
+
+        // Hide center journey line when viewing DAO dashboard
+        const journeyLineContainer = document.getElementById('journey-line-container');
+        if (journeyLineContainer) {
+          journeyLineContainer.style.display = 'none';
+        }
+
         const dashboardTitle = DOMCache.dashboardTitle;
         if (dashboardTitle) {
           dashboardTitle.textContent = currentDAO.dao.meta.name;
@@ -19807,15 +20347,6 @@
         DOMCache.daoGallery.classList.remove('show');
         DOMCache.allDaosGallery.classList.remove('show');
         DOMCache.daoDashboard.classList.add('show');
-
-        // Hide navigation buttons when viewing DAO
-        document.body.classList.add('hide-nav-buttons');
-
-        // Hide center journey line when viewing DAO dashboard
-        const journeyLineContainer = document.getElementById('journey-line-container');
-        if (journeyLineContainer) {
-          journeyLineContainer.style.display = 'none';
-        }
 
         // Add special gif for index 0, 1, 2, 3, and 4 DAOs
         // Find global index by matching DAO address to ensure correct GIF assignment
@@ -20007,16 +20538,11 @@
             metadata = await response.json();
           }
 
-          // Render badge
+          // Render badge (convert IPFS URLs to gateway URLs)
           let imageHTML = '';
           if (metadata.image) {
-            if (metadata.image.startsWith('data:image/svg+xml')) {
-              imageHTML = `<img src="${metadata.image}" class="badge-image" alt="Badge #${seatId}" />`;
-            } else if (metadata.image.startsWith('data:')) {
-              imageHTML = `<img src="${metadata.image}" class="badge-image" alt="Badge #${seatId}" />`;
-            } else {
-              imageHTML = `<img src="${metadata.image}" class="badge-image" alt="Badge #${seatId}" />`;
-            }
+            const imageUrl = toGatewayUrl(metadata.image);
+            imageHTML = `<img src="${imageUrl}" class="badge-image" alt="Badge #${seatId}" />`;
           }
 
           // OpenSea link (network-aware)
@@ -20186,7 +20712,8 @@
 
             if (receipt.metadata) {
               if (receipt.metadata.image) {
-                imageHTML = `<img src="${receipt.metadata.image}" class="receipt-image" alt="Receipt" />`;
+                const imageUrl = toGatewayUrl(receipt.metadata.image);
+                imageHTML = `<img src="${imageUrl}" class="receipt-image" alt="Receipt" />`;
               }
               if (receipt.metadata.name) {
                 nameHTML = `<div class="receipt-name">${receipt.metadata.name}</div>`;
@@ -20317,10 +20844,11 @@
 
             const usesText = Number(permitBalance) === 1 ? '1 use' : `${Number(permitBalance)} uses`;
 
-            // Build image HTML from metadata if available
+            // Build image HTML from metadata if available (convert IPFS URLs to gateway URLs)
             let imageHTML = '';
             if (permitMetadata?.image) {
-              imageHTML = `<img src="${permitMetadata.image}" class="receipt-image" alt="Emergency Permit" style="width: 100%; border-radius: 4px; margin-bottom: 0.75rem;" />`;
+              const imageUrl = toGatewayUrl(permitMetadata.image);
+              imageHTML = `<img src="${imageUrl}" class="receipt-image" alt="Emergency Permit" style="width: 100%; border-radius: 4px; margin-bottom: 0.75rem;" />`;
             }
 
             permitCard.innerHTML = `
@@ -20387,12 +20915,13 @@
 
         const usesText = balance === 1 ? '1 use remaining' : `${balance} uses remaining`;
 
-        // Build image HTML if metadata available
+        // Build image HTML if metadata available (convert IPFS URLs to gateway URLs)
         let imageHTML = '';
         if (metadata?.image) {
+          const imageUrl = toGatewayUrl(metadata.image);
           imageHTML = `
             <div style="text-align: center; margin-bottom: 1.5rem;">
-              <img src="${metadata.image}" alt="Emergency Permit" style="max-width: 100%; max-height: 400px; border-radius: 8px; border: 1px solid rgba(255, 123, 157, 0.3);" />
+              <img src="${imageUrl}" alt="Emergency Permit" style="max-width: 100%; max-height: 400px; border-radius: 8px; border: 1px solid rgba(255, 123, 157, 0.3);" />
             </div>
           `;
         }
@@ -21223,10 +21752,11 @@
 
           // If it's a direct image URL, use it directly
           if (isDirectImageURL) {
-            emblem.innerHTML = `<img src="${contractURI}" alt="DAO Emblem" />`;
+            const imageUrl = toGatewayUrl(contractURI);
+            emblem.innerHTML = `<img src="${imageUrl}" alt="DAO Emblem" />`;
             emblem.classList.add('url-image');
             emblem.style.display = 'block';
-            emblem.onclick = () => openNFTModal({ image: contractURI }, 'DAO Contract');
+            emblem.onclick = () => openNFTModal({ image: imageUrl }, 'DAO Contract');
             return;
           }
 
@@ -21247,16 +21777,30 @@
             emblem.onclick = () => openNFTModal({ image: contractURI }, 'DAO Contract');
             return;
           } else {
-            // Try to fetch as JSON
-            const response = await fetch(contractURI);
+            // Try to fetch as JSON (convert IPFS URLs to gateway URLs)
+            const fetchUrl = toGatewayUrl(contractURI);
+            const response = await fetch(fetchUrl);
+
+            // Check if fetch was successful
+            if (!response.ok) {
+              emblem.style.display = 'none';
+              return;
+            }
+
             const contentType = response.headers.get('content-type');
 
             // Check if response is an image
             if (contentType && contentType.startsWith('image/')) {
-              emblem.innerHTML = `<img src="${contractURI}" alt="DAO Emblem" />`;
+              emblem.innerHTML = `<img src="${fetchUrl}" alt="DAO Emblem" />`;
               emblem.classList.add('url-image');
               emblem.style.display = 'block';
-              emblem.onclick = () => openNFTModal({ image: contractURI }, 'DAO Contract');
+              emblem.onclick = () => openNFTModal({ image: fetchUrl }, 'DAO Contract');
+              return;
+            }
+
+            // Check if response is JSON before parsing
+            if (!contentType || !contentType.includes('application/json')) {
+              emblem.style.display = 'none';
               return;
             }
 
@@ -21265,13 +21809,14 @@
           }
 
           if (metadata && metadata.image) {
-            emblem.innerHTML = `<img src="${metadata.image}" alt="DAO Emblem" />`;
+            const imageUrl = toGatewayUrl(metadata.image);
+            emblem.innerHTML = `<img src="${imageUrl}" alt="DAO Emblem" />`;
             // Check if image URL is external (not data URI)
             if (!metadata.image.startsWith('data:')) {
               emblem.classList.add('url-image');
             }
             emblem.style.display = 'block';
-            emblem.onclick = () => openNFTModal(metadata, 'DAO Contract');
+            emblem.onclick = () => openNFTModal({ ...metadata, image: imageUrl }, 'DAO Contract');
           } else if (metadata && metadata.description) {
             // No image but has description - show description text elegantly
             emblem.classList.add('description-only');
@@ -21299,9 +21844,10 @@
 
         let imageHTML = '';
         if (metadata.image) {
-          // Add url-image class for external URLs (not data URIs)
-          const urlImageClass = metadata.image.startsWith('data:') ? '' : ' url-image';
-          imageHTML = `<img src="${metadata.image}" class="nft-modal-image${urlImageClass}" alt="${title}" />`;
+          // Convert IPFS URLs to gateway URLs and add url-image class for external URLs
+          const imageUrl = toGatewayUrl(metadata.image);
+          const urlImageClass = imageUrl.startsWith('data:') ? '' : ' url-image';
+          imageHTML = `<img src="${imageUrl}" class="nft-modal-image${urlImageClass}" alt="${title}" />`;
         }
 
         let attributesHTML = '';
@@ -21399,7 +21945,8 @@
 
           // If it's a direct image URL, use it directly
           if (isDirectImageURL) {
-            emblem.innerHTML = `<img src="${contractURI}" alt="DAO Emblem" />`;
+            const imageUrl = toGatewayUrl(contractURI);
+            emblem.innerHTML = `<img src="${imageUrl}" alt="DAO Emblem" />`;
             emblem.classList.add('url-image');
             return;
           }
@@ -21419,14 +21966,28 @@
             emblem.innerHTML = `<img src="${contractURI}" alt="DAO Emblem" />`;
             return;
           } else {
-            // Try to fetch as JSON
-            const response = await fetch(contractURI);
+            // Try to fetch as JSON (convert IPFS URLs to gateway URLs)
+            const fetchUrl = toGatewayUrl(contractURI);
+            const response = await fetch(fetchUrl);
+
+            // Check if fetch was successful
+            if (!response.ok) {
+              // Silently fail for tile emblems (non-critical)
+              return;
+            }
+
             const contentType = response.headers.get('content-type');
 
             // Check if response is an image
             if (contentType && contentType.startsWith('image/')) {
-              emblem.innerHTML = `<img src="${contractURI}" alt="DAO Emblem" />`;
+              emblem.innerHTML = `<img src="${fetchUrl}" alt="DAO Emblem" />`;
               emblem.classList.add('url-image');
+              return;
+            }
+
+            // Check if response is JSON before parsing
+            if (!contentType || !contentType.includes('application/json')) {
+              // Not JSON, can't parse metadata
               return;
             }
 
@@ -21435,7 +21996,8 @@
           }
 
           if (metadata && metadata.image) {
-            emblem.innerHTML = `<img src="${metadata.image}" alt="DAO Emblem" />`;
+            const imageUrl = toGatewayUrl(metadata.image);
+            emblem.innerHTML = `<img src="${imageUrl}" alt="DAO Emblem" />`;
             // Check if image URL is external (not data URI)
             if (!metadata.image.startsWith('data:')) {
               emblem.classList.add('url-image');
@@ -21673,7 +22235,8 @@
 
                 let imageHTML = '';
                 if (metadata.image) {
-                  imageHTML = `<img src="${metadata.image}" style="width: 100%; border-radius: 8px; margin-bottom: 1rem;" alt="Receipt" />`;
+                  const imageUrl = toGatewayUrl(metadata.image);
+                  imageHTML = `<img src="${imageUrl}" style="width: 100%; border-radius: 8px; margin-bottom: 1rem;" alt="Receipt" />`;
                 }
 
                 collectiblesHTML += `
@@ -21717,7 +22280,8 @@
 
                 let imageHTML = '';
                 if (metadata?.image) {
-                  imageHTML = `<img src="${metadata.image}" style="width: 100%; border-radius: 8px; margin-bottom: 1rem;" alt="Emergency Permit" />`;
+                  const imageUrl = toGatewayUrl(metadata.image);
+                  imageHTML = `<img src="${imageUrl}" style="width: 100%; border-radius: 8px; margin-bottom: 1rem;" alt="Emergency Permit" />`;
                 }
 
                 // Decode the permitData to show what action this permit can execute
@@ -25319,15 +25883,37 @@
             // Check if we need to switch networks first
             if (deepLink.chainId) {
               const linkNetwork = getNetworkByChainId(BigInt(deepLink.chainId));
-              if (linkNetwork && linkNetwork.network.chainId !== getNetwork().chainId) {
-                // Prompt user to switch networks
-                const switched = await promptNetworkSwitch(linkNetwork.key, linkNetwork.network);
-                if (!switched) {
-                  // User declined, just show default view
-                  return;
+              if (linkNetwork) {
+                // Check actual wallet network if available, not just app state
+                // (app state defaults to ethereum before wallet detection runs)
+                let actualWalletChainId = null;
+                if (window.ethereum) {
+                  try {
+                    const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+                    actualWalletChainId = BigInt(chainIdHex);
+                    // Also update app state to match wallet
+                    const walletNetwork = getNetworkByChainId(actualWalletChainId);
+                    if (walletNetwork) {
+                      currentNetwork = walletNetwork.key;
+                      updateNetworkUI();
+                      readOnlyProvider = new ethers.JsonRpcProvider(getNetwork().rpcs[0]);
+                    }
+                  } catch (e) {
+                    // Wallet not accessible, fall back to app state
+                  }
                 }
-                // Update read-only provider for new network
-                readOnlyProvider = new ethers.JsonRpcProvider(getNetwork().rpcs[0]);
+
+                const currentChainId = actualWalletChainId || getNetwork().chainId;
+                if (linkNetwork.network.chainId !== currentChainId) {
+                  // Prompt user to switch networks
+                  const switched = await promptNetworkSwitch(linkNetwork.key, linkNetwork.network);
+                  if (!switched) {
+                    // User declined, just show default view
+                    return;
+                  }
+                  // Update read-only provider for new network
+                  readOnlyProvider = new ethers.JsonRpcProvider(getNetwork().rpcs[0]);
+                }
               }
             }
 
