@@ -212,6 +212,117 @@
         90% { transform: translate(-10%, 10%); }
       }
 
+      /* DIVINE ILLUMINATION - Golden Pulse Animation for Radial Convergence */
+      #radial-group line {
+        transform-origin: 50% 25%;
+        transform-box: fill-box;
+        will-change: stroke, opacity, filter, transform;
+      }
+
+      @keyframes divineIllumination {
+        0% {
+          stroke: rgba(230, 217, 255, var(--line-base-opacity, 0.6));
+          filter: url(#goldenGlow) drop-shadow(0 0 0px transparent);
+          opacity: 1;
+          transform: scaleY(1) translateY(0);
+        }
+        15% {
+          stroke: rgba(232, 201, 160, 0.7);
+          filter: url(#goldenGlow) drop-shadow(0 0 2px rgba(212, 165, 116, 0.3));
+          opacity: 1;
+          transform: scaleY(1) translateY(0);
+        }
+        35% {
+          stroke: var(--accent-gold, #d4a574);
+          filter: url(#goldenGlow) drop-shadow(0 0 8px rgba(212, 165, 116, 0.8));
+          opacity: 1;
+          transform: scaleY(1.02) translateY(0);
+        }
+        50% {
+          stroke: var(--accent-gold-light, #e8c9a0);
+          filter: url(#goldenGlow) drop-shadow(0 0 12px rgba(232, 201, 160, 1))
+                  drop-shadow(0 0 20px rgba(212, 165, 116, 0.6));
+          opacity: 1;
+          transform: scaleY(1.04) translateY(-0.5px);
+        }
+        65% {
+          stroke: var(--accent-gold, #d4a574);
+          filter: url(#goldenGlow) drop-shadow(0 0 10px rgba(212, 165, 116, 0.7));
+          opacity: 0.9;
+          transform: scaleY(1.02) translateY(-1px);
+        }
+        80% {
+          stroke: rgba(212, 165, 116, 0.5);
+          filter: url(#goldenGlow) drop-shadow(0 0 6px rgba(212, 165, 116, 0.4));
+          opacity: 0.5;
+          transform: scaleY(0.95) translateY(-3px);
+        }
+        100% {
+          stroke: rgba(212, 165, 116, 0);
+          filter: url(#goldenGlow) drop-shadow(0 0 0px transparent);
+          opacity: 0;
+          transform: scaleY(0.8) translateY(-8px);
+        }
+      }
+
+      @keyframes goldenShimmer {
+        0%, 100% { stroke-opacity: var(--line-base-opacity, 0.6); }
+        25% { stroke-opacity: calc(var(--line-base-opacity, 0.6) * 1.2); }
+        50% { stroke-opacity: 1; }
+        75% { stroke-opacity: calc(var(--line-base-opacity, 0.6) * 1.1); }
+      }
+
+      @keyframes strokePulse {
+        0%, 100% { stroke-width: var(--line-base-width, 0.08); }
+        40%, 60% { stroke-width: calc(var(--line-base-width, 0.08) * 1.5); }
+      }
+
+      #radial-group.divine-awakening line {
+        animation:
+          divineIllumination 2.8s cubic-bezier(0.4, 0, 0.2, 1) forwards,
+          goldenShimmer 0.8s ease-in-out 0.3s 2,
+          strokePulse 1.4s ease-in-out 0.2s 1;
+      }
+
+      #radial-group.divine-awakening line:nth-child(3),
+      #radial-group.divine-awakening line:nth-child(4) {
+        animation-delay: 0s, 0.3s, 0.2s;
+        --line-base-opacity: 0.8;
+        --line-base-width: 0.1;
+      }
+
+      #radial-group.divine-awakening line:nth-child(2),
+      #radial-group.divine-awakening line:nth-child(5) {
+        animation-delay: 0.1s, 0.4s, 0.3s;
+        --line-base-opacity: 0.4;
+        --line-base-width: 0.06;
+      }
+
+      #radial-group.divine-awakening line:nth-child(1),
+      #radial-group.divine-awakening line:nth-child(6) {
+        animation-delay: 0.2s, 0.5s, 0.4s;
+        --line-base-opacity: 0.6;
+        --line-base-width: 0.08;
+      }
+
+      #radial-group.divine-complete {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        #radial-group.divine-awakening line {
+          animation: divineIlluminationSimple 1.5s ease-out forwards;
+        }
+
+        @keyframes divineIlluminationSimple {
+          0% { opacity: 1; stroke: rgba(230, 217, 255, 0.6); }
+          50% { opacity: 1; stroke: var(--accent-gold, #d4a574); }
+          100% { opacity: 0; stroke: var(--accent-gold, #d4a574); }
+        }
+      }
+
       /* VIGNETTE EFFECT - subtle edge darkening */
       .vignette-overlay {
         position: fixed;
@@ -5814,6 +5925,29 @@
     </style>
   </head>
   <body>
+    <!-- SVG Filter Definitions for Golden Glow Effect -->
+    <svg style="position: absolute; width: 0; height: 0; overflow: hidden;" aria-hidden="true">
+      <defs>
+        <filter id="goldenGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur" />
+          <feColorMatrix
+            in="blur"
+            type="matrix"
+            values="1.2  0.1  0    0  0.1
+                    0.1  0.9  0    0  0.05
+                    0    0    0.6  0  0
+                    0    0    0    1  0"
+            result="goldBlur"
+          />
+          <feMerge>
+            <feMergeNode in="goldBlur" />
+            <feMergeNode in="goldBlur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+    </svg>
+
     <!-- Progress Bar -->
     <div class="progress-bar" id="progressBar" style="display: none;">
       <div class="progress-bar-fill"></div>
@@ -9800,7 +9934,6 @@
         const journeyLineContainer = document.getElementById('journey-line-container');
         const journeyLine = document.getElementById('journey-line');
         const journeyEndpoint = document.getElementById('journey-endpoint');
-        const radialGroup = document.getElementById('radial-group');
         const introPanel = document.querySelector('.intro-panel');
         const summonerSection = getEl('summoner');
 
@@ -9819,12 +9952,6 @@
           const summonerRect = summonerSection.getBoundingClientRect();
           const summonerTop = window.pageYOffset + summonerRect.top;
           const summonerBottom = summonerTop + summonerRect.height;
-
-          // Radial convergence: fade out radials as we scroll past intro
-          const introProgress = Math.max(0, Math.min(1, (scrollY - introPanelTop) / introPanelRect.height));
-          if (radialGroup) {
-            radialGroup.style.opacity = Math.max(0, 0.8 * (1 - introProgress * 1.2));
-          }
 
           // Check if summoner is in viewport (hide line when form is visible)
           const summonerInView = summonerRect.top < windowHeight && summonerRect.bottom > 0;
@@ -9908,6 +10035,78 @@
         window.addEventListener('beforeunload', () => {
           if (rafId) cancelAnimationFrame(rafId);
         });
+      })();
+
+      // Divine Illumination - Golden pulse for radial convergence lines
+      (function initRadialDivineIllumination() {
+        const ANIMATION_DELAY_MS = 2000;
+        const ANIMATION_DURATION_MS = 3000;
+        let hasTriggered = false;
+        let scrollListenerActive = false;
+
+        function playDivineIllumination() {
+          if (hasTriggered) return;
+          const radialGroup = document.getElementById('radial-group');
+          const radialSvg = document.getElementById('radial-convergence');
+          if (!radialGroup || !radialSvg) return;
+
+          hasTriggered = true;
+          radialSvg.style.display = '';
+          radialGroup.style.opacity = '';
+          radialGroup.classList.add('divine-awakening');
+
+          setTimeout(() => {
+            radialGroup.classList.remove('divine-awakening');
+            radialGroup.classList.add('divine-complete');
+            setTimeout(() => { radialSvg.style.display = 'none'; }, 100);
+          }, ANIMATION_DURATION_MS);
+
+          if (scrollListenerActive) {
+            window.removeEventListener('scroll', handleScrollForAnimation);
+            scrollListenerActive = false;
+          }
+        }
+
+        function isIntroVisible() {
+          if (document.body.classList.contains('hide-intro')) return false;
+          const hero = document.querySelector('.hero');
+          if (!hero) return false;
+          const rect = hero.getBoundingClientRect();
+          return rect.bottom > window.innerHeight * 0.3 && rect.top < window.innerHeight * 0.5;
+        }
+
+        function didAutoScroll() {
+          if (window.location.hash && window.location.hash.includes('/dao/')) return true;
+          if (window.scrollY > 100) return true;
+          return false;
+        }
+
+        function handleScrollForAnimation() {
+          if (hasTriggered) {
+            window.removeEventListener('scroll', handleScrollForAnimation);
+            scrollListenerActive = false;
+            return;
+          }
+          if (isIntroVisible() && window.scrollY < 100) {
+            setTimeout(playDivineIllumination, 500);
+          }
+        }
+
+        function init() {
+          if (document.body.classList.contains('hide-intro')) return;
+          if (didAutoScroll()) {
+            scrollListenerActive = true;
+            window.addEventListener('scroll', handleScrollForAnimation, { passive: true });
+          } else {
+            setTimeout(playDivineIllumination, ANIMATION_DELAY_MS);
+          }
+        }
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', init);
+        } else {
+          setTimeout(init, 100);
+        }
       })();
 
       // Card Teaser Parallax Animation
@@ -12540,7 +12739,8 @@
             }
           } else {
             showStatus(`Connected to ${wallet?.name || 'wallet'}`, false);
-            // Smart scrolling: scroll to "Your DAOs" if user is a member, otherwise scroll to summoning form
+            // Only scroll to "Your DAOs" if user is a member of at least one DAO
+            // If user has no DAOs, let them stay where they are to see the intro/animation
             if (userDAOs.length > 0) {
               setTimeout(() => {
                 const daoGallery = document.getElementById('daoGallery');
@@ -12548,15 +12748,8 @@
                   daoGallery.scrollIntoView({ behavior: 'smooth' });
                 }
               }, 100);
-            } else {
-              // User is logged in but not in any DAO - scroll to summoning form
-              setTimeout(() => {
-                const summoner = document.getElementById('summoner');
-                if (summoner) {
-                  summoner.scrollIntoView({ behavior: 'smooth' });
-                }
-              }, 100);
             }
+            // No auto-scroll for users without DAOs - they can explore the intro
           }
         } catch (error) {
           logger.error(error);
@@ -26517,32 +26710,28 @@
         // Small delay to allow EIP-6963 providers to announce themselves
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        // Auto-reconnect logic with improved wallet preference handling
+        // Auto-reconnect logic - only reconnect if user has a stored wallet preference
+        // This ensures users who explicitly disconnected stay disconnected
         let autoReconnected = false;
         const preferredWallet = getWalletPreference();
 
         // WalletConnect sessions don't persist across page reloads - clear stale preference
         if (preferredWallet === 'walletconnect') {
           clearWalletPreference();
-        } else if (window.ethereum) {
+        } else if (preferredWallet && window.ethereum) {
+          // Only auto-reconnect if there's an explicit stored preference
           try {
             const accounts = await window.ethereum.request({ method: 'eth_accounts' });
             if (accounts.length > 0) {
               // Try to reconnect with the user's preferred wallet
               const wallets = detectWallets();
 
-              if (preferredWallet && wallets.some(w => w.key === preferredWallet)) {
+              if (wallets.some(w => w.key === preferredWallet)) {
                 // Reconnect with preferred wallet
                 await connectWithWallet(preferredWallet);
                 autoReconnected = true;
-              } else if (wallets.length > 0) {
-                // Fallback: connect with first detected wallet (skip walletconnect)
-                const nonWCWallet = wallets.find(w => w.key !== 'walletconnect');
-                if (nonWCWallet) {
-                  await connectWithWallet(nonWCWallet.key);
-                  autoReconnected = true;
-                }
               }
+              // No fallback - if preferred wallet is not available, user must connect manually
             }
           } catch (error) {
             logger.error('Auto-reconnect failed:', error);
