@@ -78,6 +78,51 @@ PROPOSAL_DATA>>>
 - Self-contained — no external indexer needed
 - Verifiable — ✓ badge shows when ID matches
 
+### Proposal Types
+
+The "Self" button in CREATE PROPOSAL auto-fills the DAO address and offers these governance actions:
+
+| Category | Action | Description |
+|----------|--------|-------------|
+| **Metadata** | Set Metadata | Update DAO name, symbol, description, image |
+| | Change Renderer | Set custom NFT renderer contract |
+| **Voting** | Set Quorum (BPS) | Minimum turnout as basis points (e.g., 1000 = 10%) |
+| | Set Absolute Quorum | Minimum total votes required (works with BPS) |
+| | Set Min YES Votes | Absolute minimum FOR votes to pass |
+| | Set Vote Threshold | Shares required to create proposals |
+| **Timing** | Set Proposal TTL | How long proposals stay open |
+| | Set Timelock Delay | Delay before execution after passing |
+| **Tokens** | Toggle Ragequit | Enable/disable member exit with funds |
+| | Toggle Transferability | Lock/unlock shares and loot transfers |
+| **Futarchy** | Configure Auto-Futarchy | Set prediction market parameters |
+| | Set Futarchy Reward Token | Default token for pool rewards |
+
+For custom actions, use "Just fill address" and manually specify calldata.
+
+## DAO Metadata
+
+DAOs can store metadata as a JSON URI (IPFS, HTTPS, or data URI). The METADATA tab displays and allows updating this info.
+
+See [`assets/dao-metadata-example.json`](../assets/dao-metadata-example.json) for a complete example:
+
+```json
+{
+  "name": "My DAO",
+  "symbol": "MYDAO",
+  "description": "A description of the DAO",
+  "image": "ipfs://... or data:image/svg+xml;base64,...",
+  "treasury_tokens": [
+    { "symbol": "USDC", "address": "0x..." },
+    { "symbol": "WETH", "address": "0x..." }
+  ]
+}
+```
+
+**Fields:**
+- `name`, `symbol`, `description` — Basic info shown in gallery and dashboard
+- `image` — Avatar (IPFS, HTTPS, or base64 data URI)
+- `treasury_tokens` — Custom tokens to display in Treasury (ETH is always first automatically)
+
 ## Key Functions
 
 ### Moloch DAO

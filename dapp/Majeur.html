@@ -2982,6 +2982,16 @@
         display: block;
       }
 
+      .dao-metadata-content {
+        display: none;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .dao-metadata-content.show {
+        display: block;
+      }
+
       @media (max-width: 1024px) {
         .dao-dashboard-content {
           grid-template-columns: 1fr;
@@ -3705,6 +3715,34 @@
         border-bottom: 1px solid rgba(157, 123, 255, 0.2);
       }
 
+      /* METADATA VIEW */
+      .metadata-fields {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+      }
+
+      .metadata-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+      }
+
+      .metadata-label {
+        font-family: 'Cinzel', serif;
+        font-size: 0.75rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: rgba(157, 123, 255, 0.8);
+      }
+
+      .metadata-value {
+        font-family: 'EB Garamond', serif;
+        font-size: 1rem;
+        color: rgba(230, 217, 255, 0.9);
+        line-height: 1.5;
+      }
+
       /* CHATROOM */
       .chatroom-messages {
         max-height: 400px;
@@ -4281,6 +4319,64 @@
       .proposal-form-textarea {
         min-height: 80px;
         resize: vertical;
+      }
+
+      .proposal-self-btn {
+        padding: 0.5rem 0.75rem;
+        background: rgba(157, 123, 255, 0.15);
+        border: 1px solid rgba(157, 123, 255, 0.4);
+        color: #9d7bff;
+        font-family: 'Cinzel', serif;
+        font-size: 0.75rem;
+        letter-spacing: 0.1em;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+      }
+
+      .proposal-self-btn:hover {
+        background: rgba(157, 123, 255, 0.25);
+        border-color: rgba(157, 123, 255, 0.6);
+      }
+
+      .self-proposal-menu {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        margin-top: 0.25rem;
+        background: rgba(20, 15, 35, 0.98);
+        border: 1px solid rgba(157, 123, 255, 0.4);
+        border-radius: 4px;
+        min-width: 180px;
+        z-index: 100;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      }
+
+      .self-proposal-menu-item {
+        padding: 0.6rem 0.85rem;
+        font-size: 0.8rem;
+        color: rgba(230, 217, 255, 0.9);
+        cursor: pointer;
+        transition: background 0.2s ease;
+        font-family: 'EB Garamond', serif;
+      }
+
+      .self-proposal-menu-item:hover {
+        background: rgba(157, 123, 255, 0.2);
+      }
+
+      .self-proposal-menu-item:first-child {
+        border-radius: 3px 3px 0 0;
+      }
+
+      .self-proposal-menu-item:last-child {
+        border-radius: 0 0 3px 3px;
+      }
+
+      .self-proposal-menu-divider {
+        height: 1px;
+        background: rgba(157, 123, 255, 0.2);
+        margin: 0.25rem 0;
       }
 
       /* MOBILE OPTIMIZATIONS FOR DAO DASHBOARD */
@@ -9017,6 +9113,7 @@
         <button class="view-toggle-btn active" id="viewToggleDao" onclick="switchDaoView('dao')">DAO Dashboard</button>
         <button class="view-toggle-btn" id="viewToggleMembership" onclick="switchDaoView('membership')">My Membership</button>
         <button class="view-toggle-btn" id="viewToggleMembers" onclick="switchDaoView('members')">Members</button>
+        <button class="view-toggle-btn" id="viewToggleMetadata" onclick="switchDaoView('metadata')" style="display: none;">Metadata</button>
       </div>
 
       <!-- DAO Dashboard Content -->
@@ -9129,7 +9226,32 @@
             <input type="hidden" id="proposalOp" value="0" />
             <div class="proposal-form-group">
               <label class="proposal-form-label">Target Address</label>
-              <input type="text" id="proposalTo" class="proposal-form-input" placeholder="0x..." oninput="updateTargetAddressHint()" />
+              <div style="display: flex; gap: 0.5rem; align-items: stretch;">
+                <input type="text" id="proposalTo" class="proposal-form-input" placeholder="0x..." oninput="updateTargetAddressHint()" style="flex: 1;" />
+                <div style="position: relative;">
+                  <button type="button" onclick="toggleSelfProposalMenu()" class="proposal-self-btn" title="DAO self-call proposals">Self ▾</button>
+                  <div id="selfProposalMenu" class="self-proposal-menu" style="display: none;">
+                    <div class="self-proposal-menu-item" onclick="selectSelfProposalType('address')">Just fill address</div>
+                    <div class="self-proposal-menu-divider"></div>
+                    <div class="self-proposal-menu-item" onclick="selectSelfProposalType('metadata')">Set Metadata</div>
+                    <div class="self-proposal-menu-item" onclick="selectSelfProposalType('renderer')">Change Renderer</div>
+                    <div class="self-proposal-menu-divider"></div>
+                    <div class="self-proposal-menu-item" onclick="selectSelfProposalType('quorum')">Set Quorum (BPS)</div>
+                    <div class="self-proposal-menu-item" onclick="selectSelfProposalType('quorumabs')">Set Absolute Quorum</div>
+                    <div class="self-proposal-menu-item" onclick="selectSelfProposalType('minyes')">Set Min YES Votes</div>
+                    <div class="self-proposal-menu-item" onclick="selectSelfProposalType('threshold')">Set Vote Threshold</div>
+                    <div class="self-proposal-menu-divider"></div>
+                    <div class="self-proposal-menu-item" onclick="selectSelfProposalType('ttl')">Set Proposal TTL</div>
+                    <div class="self-proposal-menu-item" onclick="selectSelfProposalType('timelock')">Set Timelock Delay</div>
+                    <div class="self-proposal-menu-divider"></div>
+                    <div class="self-proposal-menu-item" onclick="selectSelfProposalType('ragequit')">Toggle Ragequit</div>
+                    <div class="self-proposal-menu-item" onclick="selectSelfProposalType('transferability')">Toggle Transferability</div>
+                    <div class="self-proposal-menu-divider"></div>
+                    <div class="self-proposal-menu-item" onclick="selectSelfProposalType('futarchy')">Configure Auto-Futarchy</div>
+                    <div class="self-proposal-menu-item" onclick="selectSelfProposalType('futarchytoken')">Set Futarchy Reward Token</div>
+                  </div>
+                </div>
+              </div>
               <div id="targetAddressHint" style="margin-top: 0.35rem; display: none;">
                 <span id="targetAddressHintBadge" style="display: inline-block; padding: 0.25rem 0.5rem; background: rgba(157, 123, 255, 0.15); border: 1px solid rgba(157, 123, 255, 0.3); border-radius: 3px; font-size: 0.7rem; color: #9d7bff; font-family: 'Cinzel', serif; letter-spacing: 0.1em;"></span>
               </div>
@@ -9391,6 +9513,16 @@
           </div>
           <div class="members-list" id="membersList">
             <!-- Members will be dynamically rendered here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Metadata View Content -->
+      <div class="dao-metadata-content" id="daoMetadataView">
+        <div class="dao-panel">
+          <h3 class="dao-panel-title">DAO Metadata</h3>
+          <div id="metadataContent">
+            <!-- Metadata will be dynamically rendered here -->
           </div>
         </div>
       </div>
@@ -12157,6 +12289,9 @@
         setPermit: new ethers.Interface(['function setPermit(uint8,address,uint256,bytes,bytes32,address,uint256)']),
         bumpConfig: new ethers.Interface(['function bumpConfig()']),
         setAllowance: new ethers.Interface(['function setAllowance(address,address,uint256)']),
+        setMinYesVotesAbsolute: new ethers.Interface(['function setMinYesVotesAbsolute(uint96)']),
+        setQuorumAbsolute: new ethers.Interface(['function setQuorumAbsolute(uint96)']),
+        setFutarchyRewardToken: new ethers.Interface(['function setFutarchyRewardToken(address)']),
         // DAICO interfaces
         daicoSetSale: new ethers.Interface(['function setSale(address tribTkn, uint256 tribAmt, address forTkn, uint256 forAmt, uint40 deadline)']),
         daicoSetLPConfig: new ethers.Interface(['function setLPConfig(address tribTkn, uint16 lpBps, uint16 maxSlipBps, uint256 feeOrHook)']),
@@ -12316,6 +12451,8 @@
       let allDAOs = [];
       let allDAOsLoaded = false; // Track if All DAOs gallery has been loaded
       let currentDAO = null;
+      let currentDAOMetadata = null; // Parsed contractURI metadata for current DAO
+      let currentDAOContractURI = null; // Raw contractURI for current DAO
       let currentDAICO = null; // Cached DAICO data (sales, tap) for current DAO
       let currentActiveDaicoSales = []; // Active DAICO sales for current DAO (for purchase modal)
       let currentDaoTributes = [];
@@ -15265,6 +15402,23 @@
               </a>
             </div>
           </div>
+          <div style="margin-top: 0.75rem;">
+            <div style="font-size: 0.7rem; color: rgba(230, 217, 255, 0.5); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.35rem;">
+              Metadata
+              <a href="#" onclick="event.preventDefault(); prepareMetadataProposal(); switchDaoView('dao');"
+                 title="Create proposal to set DAO metadata"
+                 style="color: #9d7bff; opacity: 0.5; line-height: 1;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="16"></line>
+                  <line x1="8" y1="12" x2="16" y2="12"></line>
+                </svg>
+              </a>
+            </div>
+            <div style="font-size: 0.85rem; color: rgba(230, 217, 255, 0.6);">
+              Name, symbol, description, image
+            </div>
+          </div>
           <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(157, 123, 255, 0.2);">
             <div style="font-size: 0.7rem; color: rgba(255, 123, 157, 0.7); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.35rem;">
               Emergency Permits
@@ -15701,6 +15855,86 @@
         }
       }
 
+      // Fetch balances for custom treasury tokens from DAO metadata
+      async function fetchCustomTreasuryBalances(daoAddress, treasuryTokens) {
+        const assets = [];
+
+        // ETH is ALWAYS first - no need to specify in metadata
+        try {
+          const ethBalance = await provider.getBalance(daoAddress);
+          assets.push({
+            address: ethers.ZeroAddress,
+            balance: ethBalance,
+            symbol: 'ETH',
+            decimals: 18,
+            icon: TOKEN_ICONS.eth
+          });
+        } catch (error) {
+          logger.error('Error fetching ETH balance:', error);
+          assets.push({
+            address: ethers.ZeroAddress,
+            balance: 0n,
+            symbol: 'ETH',
+            decimals: 18,
+            icon: TOKEN_ICONS.eth
+          });
+        }
+
+        for (const tokenInfo of treasuryTokens) {
+          try {
+            const tokenAddress = tokenInfo.address;
+            const symbol = tokenInfo.symbol || '???';
+
+            // Skip ETH entries - already added above
+            if (tokenAddress.toLowerCase() === ethers.ZeroAddress.toLowerCase()) {
+              continue;
+            }
+
+            // Fetch ERC20 balance and decimals
+            const tokenContract = new ethers.Contract(tokenAddress, [
+              'function balanceOf(address) view returns (uint256)',
+              'function decimals() view returns (uint8)'
+            ], provider);
+
+            const [balance, decimals] = await Promise.all([
+              tokenContract.balanceOf(daoAddress),
+              tokenContract.decimals().catch(() => 18) // Default to 18 if decimals() fails
+            ]);
+
+            // Get icon based on symbol
+            const symbolLower = symbol.toLowerCase();
+            let icon = TOKEN_ICONS.defaultCoin;
+            if (symbolLower === 'eth') icon = TOKEN_ICONS.eth;
+            else if (symbolLower === 'usdc') icon = TOKEN_ICONS.usdc;
+            else if (symbolLower === 'usdt') icon = TOKEN_ICONS.usdt;
+            else if (symbolLower === 'dai') icon = TOKEN_ICONS.dai;
+            else if (symbolLower === 'wsteth') icon = TOKEN_ICONS.wsteth;
+            else if (symbolLower === 'reth') icon = TOKEN_ICONS.reth;
+            else if (symbolLower === 'weth') icon = TOKEN_ICONS.eth; // Use ETH icon for WETH
+
+            assets.push({
+              address: tokenAddress,
+              balance: balance,
+              symbol: symbol,
+              decimals: Number(decimals),
+              icon: icon
+            });
+          } catch (error) {
+            logger.error(`Error fetching balance for ${tokenInfo.symbol || tokenInfo.address}:`, error);
+            // Still add the token but with 0 balance
+            assets.push({
+              address: tokenInfo.address,
+              balance: 0n,
+              symbol: tokenInfo.symbol || '???',
+              decimals: 18,
+              icon: TOKEN_ICONS.defaultCoin
+            });
+          }
+        }
+
+        return assets;
+      }
+
       // Render treasury
       async function renderTreasury() {
         const treasuryAssets = document.getElementById('treasuryAssets');
@@ -15708,8 +15942,17 @@
 
         treasuryAssets.innerHTML = '';
 
-        const treasury = currentDAO.dao.treasury;
-        const assets = parseTreasuryBalances(treasury);
+        let assets = [];
+
+        // Check if DAO has custom treasury_tokens in metadata
+        if (currentDAOMetadata?.treasury_tokens && Array.isArray(currentDAOMetadata.treasury_tokens) && currentDAOMetadata.treasury_tokens.length > 0) {
+          // Fetch balances for custom treasury tokens
+          assets = await fetchCustomTreasuryBalances(currentDAO.dao.dao, currentDAOMetadata.treasury_tokens);
+        } else {
+          // Use default treasury balances from view helper
+          const treasury = currentDAO.dao.treasury;
+          assets = parseTreasuryBalances(treasury);
+        }
 
         // Add custom sale tokens if any
         if (customSaleTokens.length > 0) {
@@ -16915,6 +17158,211 @@
         }
       }
 
+      // Metadata proposal helper
+      async function prepareMetadataProposal() {
+        if (!currentDAO || !currentDAO.dao) {
+          showStatus('Please select a DAO first', true);
+          return;
+        }
+
+        const dao = currentDAO.dao;
+        const daoAddress = dao.dao;
+        const currentName = dao.meta.name || '';
+        const currentSymbol = dao.meta.symbol || '';
+
+        // Scroll to proposal form
+        const proposalForm = document.querySelector('.proposal-form');
+        if (proposalForm) {
+          proposalForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Add metadata helper UI if not already present
+        let helperDiv = document.getElementById('metadataHelper');
+        if (!helperDiv) {
+          helperDiv = document.createElement('div');
+          helperDiv.id = 'metadataHelper';
+          helperDiv.style.cssText = 'margin-bottom: 1rem; padding: 1rem; background: rgba(157, 123, 255, 0.1); border: 1px solid rgba(157, 123, 255, 0.3); border-radius: 4px;';
+          proposalForm.insertBefore(helperDiv, proposalForm.querySelector('.proposal-form-group'));
+        }
+
+        // Get current description and image from metadata if available
+        const currentDescription = currentDAOMetadata?.description || '';
+        const currentImage = currentDAOMetadata?.image || '';
+
+        // Show metadata helper
+        helperDiv.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <div style="font-family: 'Cinzel', serif; font-size: 0.85rem; color: #9d7bff; letter-spacing: 0.1em;">
+              SET DAO METADATA
+            </div>
+            <button onclick="clearMetadataHelper()" style="background: none; border: none; color: rgba(230, 217, 255, 0.6); cursor: pointer; font-size: 1.2rem; padding: 0; line-height: 1;">&times;</button>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+            <div>
+              <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">DAO Name</label>
+              <input type="text" id="metadataName" value="${escapeHtml(currentName)}" placeholder="DAO Name"
+                     style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-size: 0.9rem;" />
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">DAO Symbol</label>
+              <input type="text" id="metadataSymbol" value="${escapeHtml(currentSymbol)}" placeholder="SYMBOL"
+                     style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-size: 0.9rem;" />
+            </div>
+          </div>
+
+          <div style="margin-bottom: 0.75rem;">
+            <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Contract URI Strategy</label>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.85rem; color: rgba(230, 217, 255, 0.8);">
+                <input type="radio" name="uriStrategy" value="build" checked onchange="toggleMetadataURIFields()" style="accent-color: #9d7bff;">
+                Build JSON metadata (description + image)
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.85rem; color: rgba(230, 217, 255, 0.8);">
+                <input type="radio" name="uriStrategy" value="custom" onchange="toggleMetadataURIFields()" style="accent-color: #9d7bff;">
+                Provide custom URI (IPFS/HTTP)
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.85rem; color: rgba(230, 217, 255, 0.8);">
+                <input type="radio" name="uriStrategy" value="default" onchange="toggleMetadataURIFields()" style="accent-color: #9d7bff;">
+                Use default (DUNA covenant card)
+              </label>
+            </div>
+          </div>
+
+          <div id="metadataBuildFields" style="margin-bottom: 0.75rem;">
+            <div style="margin-bottom: 0.75rem;">
+              <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Description</label>
+              <textarea id="metadataDescription" placeholder="DAO description (displayed in dapps)" rows="3"
+                        style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-size: 0.9rem; resize: vertical;">${escapeHtml(currentDescription)}</textarea>
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Image URL (IPFS/HTTP/data URI)</label>
+              <input type="text" id="metadataImage" value="${escapeHtml(currentImage)}" placeholder="https://... or ipfs://... or data:image/..."
+                     style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-size: 0.85rem; font-family: monospace;" />
+            </div>
+          </div>
+
+          <div id="metadataCustomField" style="margin-bottom: 0.75rem; display: none;">
+            <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Custom Contract URI</label>
+            <input type="text" id="metadataCustomURI" placeholder="ipfs://... or https://..."
+                   style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-size: 0.85rem; font-family: monospace;" />
+            <div style="margin-top: 0.35rem; font-size: 0.7rem; color: rgba(230, 217, 255, 0.5);">
+              URI pointing to JSON metadata (or direct image URL)
+            </div>
+          </div>
+
+          <button onclick="populateMetadataProposal('${daoAddress}')"
+                  onmouseover="this.style.background='rgba(157, 123, 255, 0.35)'; this.style.borderColor='#9d7bff'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(157, 123, 255, 0.3)';"
+                  onmouseout="this.style.background='rgba(157, 123, 255, 0.2)'; this.style.borderColor='rgba(157, 123, 255, 0.4)'; this.style.transform='translateY(0)'; this.style.boxShadow='none';"
+                  style="width: 100%; padding: 0.75rem; background: rgba(157, 123, 255, 0.2); border: 1px solid rgba(157, 123, 255, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.75rem; letter-spacing: 0.15em; cursor: pointer; text-transform: uppercase; transition: all 0.2s ease; font-weight: 600;">
+            Populate Proposal Form
+          </button>
+        `;
+
+        // Focus on name input
+        setTimeout(() => {
+          const input = document.getElementById('metadataName');
+          if (input) {
+            input.focus();
+          }
+        }, 100);
+      }
+
+      function toggleMetadataURIFields() {
+        const strategy = document.querySelector('input[name="uriStrategy"]:checked')?.value;
+        const buildFields = document.getElementById('metadataBuildFields');
+        const customField = document.getElementById('metadataCustomField');
+
+        if (buildFields && customField) {
+          buildFields.style.display = strategy === 'build' ? 'block' : 'none';
+          customField.style.display = strategy === 'custom' ? 'block' : 'none';
+        }
+      }
+
+      function clearMetadataHelper() {
+        const helperDiv = document.getElementById('metadataHelper');
+        if (helperDiv) helperDiv.remove();
+      }
+
+      async function populateMetadataProposal(daoAddress) {
+        try {
+          const name = document.getElementById('metadataName')?.value.trim() || '';
+          const symbol = document.getElementById('metadataSymbol')?.value.trim() || '';
+          const strategy = document.querySelector('input[name="uriStrategy"]:checked')?.value || 'default';
+
+          if (!name) {
+            showStatus('Please enter a DAO name', true);
+            return;
+          }
+          if (!symbol) {
+            showStatus('Please enter a DAO symbol', true);
+            return;
+          }
+
+          let uri = '';
+
+          if (strategy === 'build') {
+            const description = document.getElementById('metadataDescription')?.value.trim() || '';
+            const image = document.getElementById('metadataImage')?.value.trim() || '';
+
+            if (description || image) {
+              // Build JSON metadata
+              const metadata = { name, symbol };
+              if (description) metadata.description = description;
+              if (image) metadata.image = image;
+              const json = JSON.stringify(metadata);
+              uri = 'data:application/json;utf8,' + json;
+            }
+            // If neither description nor image, uri stays empty (default renderer)
+          } else if (strategy === 'custom') {
+            uri = document.getElementById('metadataCustomURI')?.value.trim() || '';
+          }
+          // strategy === 'default' means uri stays empty
+
+          // Encode the setMetadata call
+          const iface = new ethers.Interface(['function setMetadata(string n, string s, string uri)']);
+          const calldata = iface.encodeFunctionData('setMetadata', [name, symbol, uri]);
+
+          getEl('proposalTo').value = daoAddress;
+          getEl('proposalValue').value = '0';
+          getEl('proposalData').value = calldata;
+
+          // Build description
+          let descParts = [`Set metadata: name="${name}", symbol="${symbol}"`];
+          if (uri) {
+            if (uri.startsWith('data:application/json')) {
+              descParts.push('with embedded JSON metadata');
+            } else if (uri.startsWith('ipfs://')) {
+              descParts.push(`URI: ${uri}`);
+            } else if (uri.startsWith('http')) {
+              descParts.push(`URI: ${uri}`);
+            } else {
+              descParts.push(`URI: ${uri.slice(0, 50)}...`);
+            }
+          } else {
+            descParts.push('(using default renderer)');
+          }
+          setLockedProposalDescription(descParts.join(' '));
+
+          // Update UI hints and translations
+          updateTargetAddressHint();
+          updateCalldataTranslation();
+          updateCalldataPreview();
+
+          showStatus('Proposal form populated!', false);
+          clearMetadataHelper();
+
+          // Scroll to show the populated form
+          setTimeout(() => {
+            getEl('proposalDescription').scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 300);
+
+        } catch (error) {
+          logger.error('Error populating metadata proposal:', error);
+          showStatus('Failed to populate form: ' + error.message, true);
+        }
+      }
+
       // Quorum proposal helper
       async function prepareQuorumProposal() {
         if (!currentDAO || !currentDAO.dao) {
@@ -17631,10 +18079,21 @@
         const dao = currentDAO.dao;
         const daoAddress = dao.dao;
 
-        // Get current lock status
+        // Fetch transfer locks dynamically if not already loaded
         if (!currentDAO._transferLocks) {
-          showStatus('Transfer lock status not loaded yet, please wait...', true);
-          return;
+          try {
+            showStatus('Loading transfer lock status...', false);
+            const sharesContract = new ethers.Contract(dao.meta.sharesToken, ['function transfersLocked() view returns (bool)'], provider);
+            const lootContract = new ethers.Contract(dao.meta.lootToken, ['function transfersLocked() view returns (bool)'], provider);
+            const [sharesLocked, lootLocked] = await Promise.all([
+              sharesContract.transfersLocked(),
+              lootContract.transfersLocked()
+            ]);
+            currentDAO._transferLocks = { sharesLocked, lootLocked };
+          } catch (error) {
+            showStatus('Failed to load transfer lock status: ' + error.message, true);
+            return;
+          }
         }
 
         const { sharesLocked, lootLocked } = currentDAO._transferLocks;
@@ -17948,6 +18407,310 @@
 
         } catch (error) {
           logger.error('Error populating emergency permit proposal:', error);
+          showStatus('Failed to populate form: ' + error.message, true);
+        }
+      }
+
+      // Min YES Votes proposal helper
+      async function prepareMinYesVotesProposal() {
+        if (!currentDAO || !currentDAO.dao) {
+          showStatus('Please select a DAO first', true);
+          return;
+        }
+
+        const dao = currentDAO.dao;
+        const daoAddress = dao.dao;
+        const currentMinYes = BigInt(dao.gov.minYesVotesAbsolute || 0);
+
+        // Scroll to proposal form
+        const proposalForm = document.querySelector('.proposal-form');
+        if (proposalForm) {
+          proposalForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Add helper UI
+        let helperDiv = document.getElementById('minYesHelper');
+        if (!helperDiv) {
+          helperDiv = document.createElement('div');
+          helperDiv.id = 'minYesHelper';
+          helperDiv.style.cssText = 'margin-bottom: 1rem; padding: 1rem; background: rgba(157, 123, 255, 0.1); border: 1px solid rgba(157, 123, 255, 0.3); border-radius: 4px;';
+          proposalForm.insertBefore(helperDiv, proposalForm.querySelector('.proposal-form-group'));
+        }
+
+        const currentFormatted = ethers.formatEther(currentMinYes);
+
+        helperDiv.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <div style="font-family: 'Cinzel', serif; font-size: 0.85rem; color: #9d7bff; letter-spacing: 0.1em;">
+              SET MINIMUM YES VOTES
+            </div>
+            <button onclick="clearMinYesHelper()" style="background: none; border: none; color: rgba(230, 217, 255, 0.6); cursor: pointer; font-size: 1.2rem; padding: 0; line-height: 1;">&times;</button>
+          </div>
+          <div style="margin-bottom: 0.75rem;">
+            <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Minimum YES Votes Required (in token units)</label>
+            <input type="text" id="minYesValue" placeholder="${currentFormatted}" value="${currentFormatted}"
+                   style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
+            <div style="margin-top: 0.5rem; font-size: 0.75rem; color: rgba(230, 217, 255, 0.5);">
+              Current: ${currentFormatted} votes. Set to 0 to disable. This is the absolute minimum FOR votes needed to pass, regardless of quorum.
+            </div>
+          </div>
+          <button onclick="populateMinYesVotesProposal('${daoAddress}')"
+                  onmouseover="this.style.background='rgba(157, 123, 255, 0.35)'; this.style.borderColor='#9d7bff'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(157, 123, 255, 0.3)';"
+                  onmouseout="this.style.background='rgba(157, 123, 255, 0.2)'; this.style.borderColor='rgba(157, 123, 255, 0.4)'; this.style.transform='translateY(0)'; this.style.boxShadow='none';"
+                  style="width: 100%; padding: 0.75rem; background: rgba(157, 123, 255, 0.2); border: 1px solid rgba(157, 123, 255, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.75rem; letter-spacing: 0.15em; cursor: pointer; text-transform: uppercase; transition: all 0.2s ease; font-weight: 600;">
+            Populate Proposal Form
+          </button>
+        `;
+      }
+
+      function clearMinYesHelper() {
+        const helperDiv = document.getElementById('minYesHelper');
+        if (helperDiv) helperDiv.remove();
+      }
+
+      async function populateMinYesVotesProposal(daoAddress) {
+        try {
+          const valueInput = document.getElementById('minYesValue').value.trim();
+
+          if (valueInput === '' || isNaN(valueInput) || parseFloat(valueInput) < 0) {
+            showStatus('Please enter a valid number (0 or more)', true);
+            return;
+          }
+
+          const minYesVotes = ethers.parseEther(valueInput);
+
+          // Encode setMinYesVotesAbsolute(uint96)
+          const calldata = INTERFACES.setMinYesVotesAbsolute.encodeFunctionData('setMinYesVotesAbsolute', [minYesVotes]);
+
+          getEl('proposalTo').value = daoAddress;
+          getEl('proposalValue').value = '0';
+          getEl('proposalData').value = calldata;
+
+          const description = minYesVotes === 0n
+            ? 'Disable minimum YES votes requirement'
+            : `Set minimum YES votes to ${valueInput}`;
+          setLockedProposalDescription(description);
+
+          updateTargetAddressHint();
+          updateCalldataTranslation();
+          updateCalldataPreview();
+
+          showStatus('Proposal form populated!', false);
+          clearMinYesHelper();
+
+          setTimeout(() => {
+            getEl('proposalDescriptionLocked').scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 300);
+
+        } catch (error) {
+          logger.error('Error populating min YES votes proposal:', error);
+          showStatus('Failed to populate form: ' + error.message, true);
+        }
+      }
+
+      // Absolute Quorum proposal helper
+      async function prepareQuorumAbsoluteProposal() {
+        if (!currentDAO || !currentDAO.dao) {
+          showStatus('Please select a DAO first', true);
+          return;
+        }
+
+        const dao = currentDAO.dao;
+        const daoAddress = dao.dao;
+        const currentQuorumAbs = BigInt(dao.gov.quorumAbsolute || 0);
+
+        // Scroll to proposal form
+        const proposalForm = document.querySelector('.proposal-form');
+        if (proposalForm) {
+          proposalForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Add helper UI
+        let helperDiv = document.getElementById('quorumAbsHelper');
+        if (!helperDiv) {
+          helperDiv = document.createElement('div');
+          helperDiv.id = 'quorumAbsHelper';
+          helperDiv.style.cssText = 'margin-bottom: 1rem; padding: 1rem; background: rgba(157, 123, 255, 0.1); border: 1px solid rgba(157, 123, 255, 0.3); border-radius: 4px;';
+          proposalForm.insertBefore(helperDiv, proposalForm.querySelector('.proposal-form-group'));
+        }
+
+        const currentFormatted = ethers.formatEther(currentQuorumAbs);
+        const quorumBps = dao.gov.quorumBps || 0;
+
+        helperDiv.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <div style="font-family: 'Cinzel', serif; font-size: 0.85rem; color: #9d7bff; letter-spacing: 0.1em;">
+              SET ABSOLUTE QUORUM
+            </div>
+            <button onclick="clearQuorumAbsHelper()" style="background: none; border: none; color: rgba(230, 217, 255, 0.6); cursor: pointer; font-size: 1.2rem; padding: 0; line-height: 1;">&times;</button>
+          </div>
+          <div style="margin-bottom: 0.75rem;">
+            <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Absolute Quorum (minimum turnout in token units)</label>
+            <input type="text" id="quorumAbsValue" placeholder="${currentFormatted}" value="${currentFormatted}"
+                   style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;" />
+            <div style="margin-top: 0.5rem; font-size: 0.75rem; color: rgba(230, 217, 255, 0.5);">
+              Current: ${currentFormatted} votes (plus ${quorumBps / 100}% BPS quorum). This sets a floor for minimum turnout regardless of supply.
+            </div>
+          </div>
+          <button onclick="populateQuorumAbsoluteProposal('${daoAddress}')"
+                  onmouseover="this.style.background='rgba(157, 123, 255, 0.35)'; this.style.borderColor='#9d7bff'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(157, 123, 255, 0.3)';"
+                  onmouseout="this.style.background='rgba(157, 123, 255, 0.2)'; this.style.borderColor='rgba(157, 123, 255, 0.4)'; this.style.transform='translateY(0)'; this.style.boxShadow='none';"
+                  style="width: 100%; padding: 0.75rem; background: rgba(157, 123, 255, 0.2); border: 1px solid rgba(157, 123, 255, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.75rem; letter-spacing: 0.15em; cursor: pointer; text-transform: uppercase; transition: all 0.2s ease; font-weight: 600;">
+            Populate Proposal Form
+          </button>
+        `;
+      }
+
+      function clearQuorumAbsHelper() {
+        const helperDiv = document.getElementById('quorumAbsHelper');
+        if (helperDiv) helperDiv.remove();
+      }
+
+      async function populateQuorumAbsoluteProposal(daoAddress) {
+        try {
+          const valueInput = document.getElementById('quorumAbsValue').value.trim();
+
+          if (valueInput === '' || isNaN(valueInput) || parseFloat(valueInput) < 0) {
+            showStatus('Please enter a valid number (0 or more)', true);
+            return;
+          }
+
+          const quorumAbs = ethers.parseEther(valueInput);
+
+          // Encode setQuorumAbsolute(uint96)
+          const calldata = INTERFACES.setQuorumAbsolute.encodeFunctionData('setQuorumAbsolute', [quorumAbs]);
+
+          getEl('proposalTo').value = daoAddress;
+          getEl('proposalValue').value = '0';
+          getEl('proposalData').value = calldata;
+
+          const description = quorumAbs === 0n
+            ? 'Disable absolute quorum floor'
+            : `Set absolute quorum to ${valueInput} votes`;
+          setLockedProposalDescription(description);
+
+          updateTargetAddressHint();
+          updateCalldataTranslation();
+          updateCalldataPreview();
+
+          showStatus('Proposal form populated!', false);
+          clearQuorumAbsHelper();
+
+          setTimeout(() => {
+            getEl('proposalDescriptionLocked').scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 300);
+
+        } catch (error) {
+          logger.error('Error populating absolute quorum proposal:', error);
+          showStatus('Failed to populate form: ' + error.message, true);
+        }
+      }
+
+      // Futarchy Reward Token proposal helper
+      async function prepareFutarchyRewardTokenProposal() {
+        if (!currentDAO || !currentDAO.dao) {
+          showStatus('Please select a DAO first', true);
+          return;
+        }
+
+        const dao = currentDAO.dao;
+        const daoAddress = dao.dao;
+        const currentRewardToken = dao.gov.rewardToken || ethers.ZeroAddress;
+        const sharesToken = dao.meta.sharesToken;
+        const lootToken = dao.meta.lootToken;
+
+        // Scroll to proposal form
+        const proposalForm = document.querySelector('.proposal-form');
+        if (proposalForm) {
+          proposalForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Add helper UI
+        let helperDiv = document.getElementById('futarchyTokenHelper');
+        if (!helperDiv) {
+          helperDiv = document.createElement('div');
+          helperDiv.id = 'futarchyTokenHelper';
+          helperDiv.style.cssText = 'margin-bottom: 1rem; padding: 1rem; background: rgba(157, 123, 255, 0.1); border: 1px solid rgba(157, 123, 255, 0.3); border-radius: 4px;';
+          proposalForm.insertBefore(helperDiv, proposalForm.querySelector('.proposal-form-group'));
+        }
+
+        // Determine current selection
+        let currentLabel = 'Not set';
+        if (currentRewardToken === ethers.ZeroAddress) currentLabel = 'ETH';
+        else if (currentRewardToken === daoAddress) currentLabel = 'Mint Shares';
+        else if (currentRewardToken === '0x00000000000000000000000000000000000003ef') currentLabel = 'Mint Loot (1007)';
+        else if (currentRewardToken.toLowerCase() === sharesToken.toLowerCase()) currentLabel = 'DAO Shares';
+        else if (currentRewardToken.toLowerCase() === lootToken.toLowerCase()) currentLabel = 'DAO Loot';
+
+        helperDiv.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <div style="font-family: 'Cinzel', serif; font-size: 0.85rem; color: #9d7bff; letter-spacing: 0.1em;">
+              SET FUTARCHY REWARD TOKEN
+            </div>
+            <button onclick="clearFutarchyTokenHelper()" style="background: none; border: none; color: rgba(230, 217, 255, 0.6); cursor: pointer; font-size: 1.2rem; padding: 0; line-height: 1;">&times;</button>
+          </div>
+          <div style="margin-bottom: 0.75rem;">
+            <label style="display: block; font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.35rem;">Reward Token</label>
+            <select id="futarchyRewardTokenSelect" style="width: 100%; padding: 0.6rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.95rem;">
+              <option value="${ethers.ZeroAddress}" ${currentRewardToken === ethers.ZeroAddress ? 'selected' : ''}>ETH</option>
+              <option value="${daoAddress}" ${currentRewardToken === daoAddress ? 'selected' : ''}>Mint Shares (DAO mints new shares)</option>
+              <option value="0x00000000000000000000000000000000000003ef" ${currentRewardToken === '0x00000000000000000000000000000000000003ef' ? 'selected' : ''}>Mint Loot (DAO mints new loot)</option>
+              <option value="${sharesToken}" ${currentRewardToken.toLowerCase() === sharesToken.toLowerCase() ? 'selected' : ''}>DAO Shares (from treasury)</option>
+              <option value="${lootToken}" ${currentRewardToken.toLowerCase() === lootToken.toLowerCase() ? 'selected' : ''}>DAO Loot (from treasury)</option>
+            </select>
+            <div style="margin-top: 0.5rem; font-size: 0.75rem; color: rgba(230, 217, 255, 0.5);">
+              Current: ${currentLabel}. This sets the default reward token for futarchy prediction market pools.
+            </div>
+          </div>
+          <button onclick="populateFutarchyRewardTokenProposal('${daoAddress}')"
+                  onmouseover="this.style.background='rgba(157, 123, 255, 0.35)'; this.style.borderColor='#9d7bff'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(157, 123, 255, 0.3)';"
+                  onmouseout="this.style.background='rgba(157, 123, 255, 0.2)'; this.style.borderColor='rgba(157, 123, 255, 0.4)'; this.style.transform='translateY(0)'; this.style.boxShadow='none';"
+                  style="width: 100%; padding: 0.75rem; background: rgba(157, 123, 255, 0.2); border: 1px solid rgba(157, 123, 255, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.75rem; letter-spacing: 0.15em; cursor: pointer; text-transform: uppercase; transition: all 0.2s ease; font-weight: 600;">
+            Populate Proposal Form
+          </button>
+        `;
+      }
+
+      function clearFutarchyTokenHelper() {
+        const helperDiv = document.getElementById('futarchyTokenHelper');
+        if (helperDiv) helperDiv.remove();
+      }
+
+      async function populateFutarchyRewardTokenProposal(daoAddress) {
+        try {
+          const rewardToken = document.getElementById('futarchyRewardTokenSelect').value;
+
+          // Encode setFutarchyRewardToken(address)
+          const calldata = INTERFACES.setFutarchyRewardToken.encodeFunctionData('setFutarchyRewardToken', [rewardToken]);
+
+          getEl('proposalTo').value = daoAddress;
+          getEl('proposalValue').value = '0';
+          getEl('proposalData').value = calldata;
+
+          let tokenLabel = 'Unknown';
+          if (rewardToken === ethers.ZeroAddress) tokenLabel = 'ETH';
+          else if (rewardToken === daoAddress) tokenLabel = 'Mint Shares';
+          else if (rewardToken === '0x00000000000000000000000000000000000003ef') tokenLabel = 'Mint Loot';
+          else if (currentDAO && currentDAO.dao && currentDAO.dao.meta) {
+            if (rewardToken.toLowerCase() === currentDAO.dao.meta.sharesToken.toLowerCase()) tokenLabel = 'Shares';
+            else if (rewardToken.toLowerCase() === currentDAO.dao.meta.lootToken.toLowerCase()) tokenLabel = 'Loot';
+          }
+
+          setLockedProposalDescription(`Set futarchy reward token to ${tokenLabel}`);
+
+          updateTargetAddressHint();
+          updateCalldataTranslation();
+          updateCalldataPreview();
+
+          showStatus('Proposal form populated!', false);
+          clearFutarchyTokenHelper();
+
+          setTimeout(() => {
+            getEl('proposalDescriptionLocked').scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 300);
+
+        } catch (error) {
+          logger.error('Error populating futarchy reward token proposal:', error);
           showStatus('Failed to populate form: ' + error.message, true);
         }
       }
@@ -21422,6 +22185,10 @@
           switchDaoView('dao');
         }
 
+        // Fetch and store metadata, then show/hide metadata tab
+        await fetchAndStoreDAOMetadata(daoAddress);
+        updateMetadataTabVisibility();
+
         // Hide All DAOs gallery (Your DAOs stays visible)
         DOMCache.allDaosGallery.classList.remove('show');
         DOMCache.daoDashboard.classList.add('show');
@@ -21516,25 +22283,29 @@
         }, 100);
       }
 
-      // Switch between DAO dashboard, membership, and members view
+      // Switch between DAO dashboard, membership, members, and metadata view
       function switchDaoView(view) {
         const daoView = document.getElementById('daoDashboardView');
         const membershipView = document.getElementById('daoMembershipView');
         const membersView = document.getElementById('daoMembersView');
+        const metadataView = document.getElementById('daoMetadataView');
         const daoBtn = document.getElementById('viewToggleDao');
         const membershipBtn = document.getElementById('viewToggleMembership');
         const membersBtn = document.getElementById('viewToggleMembers');
+        const metadataBtn = document.getElementById('viewToggleMetadata');
 
         // Hide all views
         daoView.classList.remove('show');
         daoView.classList.add('hide');
         membershipView.classList.remove('show');
         membersView.classList.remove('show');
+        if (metadataView) metadataView.classList.remove('show');
 
         // Deactivate all buttons
         daoBtn.classList.remove('active');
         membershipBtn.classList.remove('active');
         membersBtn.classList.remove('active');
+        if (metadataBtn) metadataBtn.classList.remove('active');
 
         if (view === 'membership') {
           membershipView.classList.add('show');
@@ -21544,6 +22315,10 @@
           membersView.classList.add('show');
           membersBtn.classList.add('active');
           renderMembers();
+        } else if (view === 'metadata') {
+          if (metadataView) metadataView.classList.add('show');
+          if (metadataBtn) metadataBtn.classList.add('active');
+          renderMetadataView();
         } else {
           daoView.classList.remove('hide');
           daoView.classList.add('show');
@@ -22939,6 +23714,187 @@
         }
       }
 
+      // Fetch and store DAO metadata from contractURI
+      async function fetchAndStoreDAOMetadata(daoAddress) {
+        // Reset stored metadata
+        currentDAOMetadata = null;
+        currentDAOContractURI = null;
+
+        try {
+          const contractURI = await withRpcFallback(async (activeProvider) => {
+            const molochContract = new ethers.Contract(daoAddress, MOLOCH_ABI, activeProvider);
+            return await molochContract.contractURI();
+          });
+
+          if (!contractURI) {
+            return null;
+          }
+
+          currentDAOContractURI = contractURI;
+
+          // Check if it's a direct image URL
+          if (/\.(svg|png|jpg|jpeg|gif|webp|avif)(\?.*)?$/i.test(contractURI)) {
+            currentDAOMetadata = { image: toGatewayUrl(contractURI) };
+            return currentDAOMetadata;
+          }
+
+          // Parse metadata
+          let metadata = null;
+          if (contractURI.startsWith('data:application/json;base64,')) {
+            const json = atob(contractURI.slice(29));
+            metadata = JSON.parse(json);
+          } else if (contractURI.startsWith('data:application/json;utf8,')) {
+            metadata = JSON.parse(contractURI.slice(27));
+          } else if (contractURI.startsWith('data:application/json,')) {
+            metadata = JSON.parse(decodeURIComponent(contractURI.slice(22)));
+          } else if (contractURI.startsWith('data:image/')) {
+            metadata = { image: contractURI };
+          } else {
+            // Try to fetch as JSON
+            const fetchUrl = toGatewayUrl(contractURI);
+            const response = await fetch(fetchUrl);
+            if (response.ok) {
+              const contentType = response.headers.get('content-type');
+              if (contentType && contentType.startsWith('image/')) {
+                metadata = { image: fetchUrl };
+              } else if (contentType && contentType.includes('application/json')) {
+                metadata = await response.json();
+              }
+            }
+          }
+
+          currentDAOMetadata = metadata;
+          return metadata;
+        } catch (error) {
+          logger.error('Error fetching DAO metadata:', error);
+          return null;
+        }
+      }
+
+      // Render metadata view
+      function renderMetadataView() {
+        const content = document.getElementById('metadataContent');
+        if (!content) return;
+
+        if (!currentDAOMetadata && !currentDAOContractURI) {
+          content.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: rgba(230, 217, 255, 0.6);">
+              <p style="font-style: italic;">No custom metadata set.</p>
+              <p style="font-size: 0.85rem; margin-top: 0.5rem;">This DAO is using the default renderer for its emblem.</p>
+            </div>
+          `;
+          return;
+        }
+
+        let html = '<div class="metadata-fields">';
+
+        // Name
+        if (currentDAOMetadata?.name) {
+          html += `
+            <div class="metadata-field">
+              <div class="metadata-label">Name</div>
+              <div class="metadata-value">${escapeHtml(currentDAOMetadata.name)}</div>
+            </div>
+          `;
+        }
+
+        // Symbol
+        if (currentDAOMetadata?.symbol) {
+          html += `
+            <div class="metadata-field">
+              <div class="metadata-label">Symbol</div>
+              <div class="metadata-value">${escapeHtml(currentDAOMetadata.symbol)}</div>
+            </div>
+          `;
+        }
+
+        // Description
+        if (currentDAOMetadata?.description) {
+          html += `
+            <div class="metadata-field">
+              <div class="metadata-label">Description</div>
+              <div class="metadata-value" style="white-space: pre-wrap;">${escapeHtml(currentDAOMetadata.description)}</div>
+            </div>
+          `;
+        }
+
+        // Image
+        if (currentDAOMetadata?.image) {
+          const imageUrl = toGatewayUrl(currentDAOMetadata.image);
+          html += `
+            <div class="metadata-field">
+              <div class="metadata-label">Image</div>
+              <div class="metadata-value">
+                <img src="${imageUrl}" alt="DAO Image" style="max-width: 200px; max-height: 200px; border: 1px solid rgba(157, 123, 255, 0.3); border-radius: 4px;" />
+              </div>
+            </div>
+          `;
+        }
+
+        // External Link
+        if (currentDAOMetadata?.external_link) {
+          html += `
+            <div class="metadata-field">
+              <div class="metadata-label">External Link</div>
+              <div class="metadata-value">
+                <a href="${escapeHtml(currentDAOMetadata.external_link)}" target="_blank" rel="noopener noreferrer" style="color: #9d7bff;">${escapeHtml(currentDAOMetadata.external_link)}</a>
+              </div>
+            </div>
+          `;
+        }
+
+        // Treasury Tokens
+        if (currentDAOMetadata?.treasury_tokens && Array.isArray(currentDAOMetadata.treasury_tokens)) {
+          html += `
+            <div class="metadata-field">
+              <div class="metadata-label">Treasury Tokens</div>
+              <div class="metadata-value">
+                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                  ${currentDAOMetadata.treasury_tokens.map(token => `
+                    <div style="padding: 0.35rem 0.6rem; background: rgba(157, 123, 255, 0.1); border: 1px solid rgba(157, 123, 255, 0.3); border-radius: 4px; font-size: 0.8rem;">
+                      <span style="font-weight: 600;">${escapeHtml(token.symbol || '???')}</span>
+                      <a href="${getNetwork().explorer}/token/${token.address}" target="_blank" rel="noopener noreferrer" style="color: rgba(157, 123, 255, 0.8); margin-left: 0.35rem; font-family: monospace; font-size: 0.75rem;">${formatAddress(token.address)}</a>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+          `;
+        }
+
+        // Raw URI (collapsible)
+        if (currentDAOContractURI) {
+          const truncatedURI = currentDAOContractURI.length > 80
+            ? currentDAOContractURI.slice(0, 77) + '...'
+            : currentDAOContractURI;
+          html += `
+            <div class="metadata-field" style="margin-top: 1.5rem; border-top: 1px solid rgba(157, 123, 255, 0.2); padding-top: 1rem;">
+              <div class="metadata-label">Raw Contract URI</div>
+              <div class="metadata-value" style="font-family: monospace; font-size: 0.8rem; word-break: break-all; color: rgba(230, 217, 255, 0.6);">
+                ${escapeHtml(truncatedURI)}
+                ${currentDAOContractURI.length > 80 ? `<button onclick="copyToClipboard('${escapeHtml(currentDAOContractURI.replace(/'/g, "\\'"))}')" style="margin-left: 0.5rem; padding: 0.2rem 0.5rem; font-size: 0.7rem; background: rgba(157, 123, 255, 0.15); border: 1px solid rgba(157, 123, 255, 0.3); color: #9d7bff; cursor: pointer; border-radius: 3px;">Copy Full URI</button>` : ''}
+              </div>
+            </div>
+          `;
+        }
+
+        html += '</div>';
+        content.innerHTML = html;
+      }
+
+      // Update metadata tab visibility
+      function updateMetadataTabVisibility() {
+        const metadataBtn = document.getElementById('viewToggleMetadata');
+        if (metadataBtn) {
+          // Show tab if there's any metadata or contractURI
+          if (currentDAOMetadata || currentDAOContractURI) {
+            metadataBtn.style.display = 'block';
+          } else {
+            metadataBtn.style.display = 'none';
+          }
+        }
+      }
+
       // Open NFT modal
       function openNFTModal(metadata, title, receiptData = null) {
         if (!metadata) return;
@@ -24295,6 +25251,89 @@
         }
       }
 
+      // Fill DAO address as target for self-referential proposals
+      function fillDaoAddressAsTarget() {
+        if (!currentDAO?.dao?.dao) return;
+        const addressInput = document.getElementById('proposalTo');
+        if (addressInput) {
+          addressInput.value = currentDAO.dao.dao;
+          updateTargetAddressHint();
+          updateCalldataTranslation();
+        }
+      }
+
+      // Toggle self-proposal menu visibility
+      function toggleSelfProposalMenu() {
+        const menu = document.getElementById('selfProposalMenu');
+        if (menu) {
+          const isVisible = menu.style.display === 'block';
+          menu.style.display = isVisible ? 'none' : 'block';
+
+          // Close menu when clicking outside
+          if (!isVisible) {
+            const closeHandler = (e) => {
+              if (!menu.contains(e.target) && !e.target.classList.contains('proposal-self-btn')) {
+                menu.style.display = 'none';
+                document.removeEventListener('click', closeHandler);
+              }
+            };
+            setTimeout(() => document.addEventListener('click', closeHandler), 10);
+          }
+        }
+      }
+
+      // Select self-proposal type and open corresponding helper
+      function selectSelfProposalType(type) {
+        const menu = document.getElementById('selfProposalMenu');
+        if (menu) menu.style.display = 'none';
+
+        // First fill the DAO address
+        fillDaoAddressAsTarget();
+
+        // Then open the corresponding helper
+        switch (type) {
+          case 'address':
+            // Just fill address, no helper
+            break;
+          case 'metadata':
+            prepareMetadataProposal();
+            break;
+          case 'renderer':
+            prepareRendererProposal();
+            break;
+          case 'quorum':
+            prepareQuorumProposal();
+            break;
+          case 'ttl':
+            prepareTTLProposal();
+            break;
+          case 'threshold':
+            prepareThresholdProposal();
+            break;
+          case 'ragequit':
+            prepareRagequitProposal();
+            break;
+          case 'transferability':
+            prepareTransferabilityProposal();
+            break;
+          case 'timelock':
+            prepareTimelockDelayProposal();
+            break;
+          case 'futarchy':
+            prepareFutarchyProposal();
+            break;
+          case 'minyes':
+            prepareMinYesVotesProposal();
+            break;
+          case 'quorumabs':
+            prepareQuorumAbsoluteProposal();
+            break;
+          case 'futarchytoken':
+            prepareFutarchyRewardTokenProposal();
+            break;
+        }
+      }
+
       // Update target address hint to show token symbol if recognized
       function updateTargetAddressHint() {
         const addressInput = getEl('proposalTo');
@@ -24576,6 +25615,43 @@
               <div style="margin-top: 0.25rem; font-size: 0.75rem; opacity: 0.7;">DAO self-call (governance)</div>
             `;
           }
+          // setMetadata(string,string,string) - 0x6f2d3098
+          else if (isDaoSelfCall && functionSelector === '0x6f2d3098') {
+            try {
+              const decoded = abiCoder.decode(['string', 'string', 'string'], '0x' + calldata.slice(10));
+              const newName = decoded[0];
+              const newSymbol = decoded[1];
+              const newUri = decoded[2];
+
+              let uriText = '(using default renderer)';
+              if (newUri) {
+                if (newUri.startsWith('data:application/json')) {
+                  uriText = 'Embedded JSON metadata';
+                } else if (newUri.startsWith('ipfs://')) {
+                  uriText = newUri.length > 40 ? newUri.slice(0, 37) + '...' : newUri;
+                } else if (newUri.startsWith('http')) {
+                  uriText = newUri.length > 40 ? newUri.slice(0, 37) + '...' : newUri;
+                } else {
+                  uriText = 'Custom URI';
+                }
+              }
+
+              translation = `
+                <div style="opacity: 0.8; margin-bottom: 0.35rem; font-size: 0.8rem;">Set DAO Metadata</div>
+                <div style="margin-bottom: 0.25rem;"><strong>Name:</strong> ${escapeHtml(newName)}</div>
+                <div style="margin-bottom: 0.25rem;"><strong>Symbol:</strong> ${escapeHtml(newSymbol)}</div>
+                <div style="margin-bottom: 0.25rem;"><strong>URI:</strong> ${escapeHtml(uriText)}</div>
+                <div style="margin-top: 0.25rem; font-size: 0.75rem; opacity: 0.7;">DAO self-call (governance)</div>
+              `;
+            } catch (e) {
+              // Fallback if decoding fails
+              translation = `
+                <div style="opacity: 0.8; margin-bottom: 0.35rem; font-size: 0.8rem;">Set DAO Metadata</div>
+                <div>Update name, symbol, and contract URI</div>
+                <div style="margin-top: 0.25rem; font-size: 0.75rem; opacity: 0.7;">DAO self-call (governance)</div>
+              `;
+            }
+          }
           // bumpConfig() - 0x7ec924db
           else if (isDaoSelfCall && functionSelector === '0x7ec924db') {
             translation = `
@@ -24660,6 +25736,54 @@
               <div style="opacity: 0.8; margin-bottom: 0.35rem; font-size: 0.8rem;">${action} Spending Allowance</div>
               <div style="margin-bottom: 0.25rem;"><strong>${tokenInfo.name}:</strong> ${formattedAmount}</div>
               <div style="margin-bottom: 0.25rem;"><strong>Spender:</strong> <code style="background: rgba(0,0,0,0.3); padding: 0.15rem 0.35rem;">${spender.slice(0, 6)}...${spender.slice(-4)}</code></div>
+              <div style="margin-top: 0.25rem; font-size: 0.75rem; opacity: 0.7;">DAO self-call (governance)</div>
+            `;
+          }
+          // setMinYesVotesAbsolute(uint96) - 0xb83b4137
+          else if (isDaoSelfCall && functionSelector === '0xb83b4137' && calldata.length >= 74) {
+            const decoded = abiCoder.decode(['uint96'], '0x' + calldata.slice(10));
+            const minYesVotes = decoded[0];
+            const formattedVotes = ethers.formatUnits(minYesVotes, 18);
+
+            translation = `
+              <div style="opacity: 0.8; margin-bottom: 0.35rem; font-size: 0.8rem;">⚙️ Set Min YES Votes (Absolute)</div>
+              <div style="margin-bottom: 0.25rem;"><strong>Minimum:</strong> ${formattedVotes} votes</div>
+              <div style="font-size: 0.75rem; opacity: 0.7;">Proposals must receive at least this many FOR votes to pass</div>
+              <div style="margin-top: 0.25rem; font-size: 0.75rem; opacity: 0.7;">DAO self-call (governance)</div>
+            `;
+          }
+          // setQuorumAbsolute(uint96) - 0xcf9d6ed6
+          else if (isDaoSelfCall && functionSelector === '0xcf9d6ed6' && calldata.length >= 74) {
+            const decoded = abiCoder.decode(['uint96'], '0x' + calldata.slice(10));
+            const quorumAbs = decoded[0];
+            const formattedQuorum = ethers.formatUnits(quorumAbs, 18);
+
+            translation = `
+              <div style="opacity: 0.8; margin-bottom: 0.35rem; font-size: 0.8rem;">⚙️ Set Absolute Quorum</div>
+              <div style="margin-bottom: 0.25rem;"><strong>Minimum Turnout:</strong> ${formattedQuorum} votes</div>
+              <div style="font-size: 0.75rem; opacity: 0.7;">Minimum total votes required (works alongside BPS quorum)</div>
+              <div style="margin-top: 0.25rem; font-size: 0.75rem; opacity: 0.7;">DAO self-call (governance)</div>
+            `;
+          }
+          // setFutarchyRewardToken(address) - 0x8fb66f42
+          else if (isDaoSelfCall && functionSelector === '0x8fb66f42' && calldata.length >= 74) {
+            const decoded = abiCoder.decode(['address'], '0x' + calldata.slice(10));
+            const rewardToken = decoded[0];
+
+            let tokenLabel = rewardToken;
+            if (rewardToken === ethers.ZeroAddress) {
+              tokenLabel = 'ETH';
+            } else if (currentDAO && currentDAO.dao) {
+              if (rewardToken === currentDAO.dao.dao) tokenLabel = 'Mint Shares';
+              else if (rewardToken === '0x00000000000000000000000000000000000003ef') tokenLabel = 'Mint Loot';
+              else if (currentDAO.dao.meta && rewardToken.toLowerCase() === currentDAO.dao.meta.sharesToken?.toLowerCase()) tokenLabel = 'Shares';
+              else if (currentDAO.dao.meta && rewardToken.toLowerCase() === currentDAO.dao.meta.lootToken?.toLowerCase()) tokenLabel = 'Loot';
+            }
+
+            translation = `
+              <div style="opacity: 0.8; margin-bottom: 0.35rem; font-size: 0.8rem;">🎰 Set Futarchy Reward Token</div>
+              <div style="margin-bottom: 0.25rem;"><strong>Reward Token:</strong> ${tokenLabel}</div>
+              <div style="font-size: 0.75rem; opacity: 0.7;">Default token for rewarding futarchy pool winners</div>
               <div style="margin-top: 0.25rem; font-size: 0.75rem; opacity: 0.7;">DAO self-call (governance)</div>
             `;
           }
@@ -25559,6 +26683,28 @@
           clearTimeout(statusTimeout);
           statusTimeout = null;
         }
+      }
+
+      // Generic clipboard copy utility with fallback for HTTP contexts
+      function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+          showStatus('Copied to clipboard!', false);
+        }).catch(err => {
+          // Fallback for HTTP/non-secure contexts (like live-server on localhost)
+          const textArea = document.createElement('textarea');
+          textArea.value = text;
+          textArea.style.position = 'fixed';
+          textArea.style.left = '-999999px';
+          document.body.appendChild(textArea);
+          textArea.select();
+          try {
+            document.execCommand('copy');
+            showStatus('Copied to clipboard!', false);
+          } catch (e) {
+            showStatus('Failed to copy: ' + e.message, true);
+          }
+          document.body.removeChild(textArea);
+        });
       }
 
       function copyProposalId(proposalId, proposalIdForButton) {
