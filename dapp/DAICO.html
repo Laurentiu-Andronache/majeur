@@ -5074,6 +5074,9 @@
                         <span class="progress-remaining" id="purchaseProgressRemaining">0 remaining</span>
                     </div>
                 </div>
+
+                <!-- LP Info (if applicable) -->
+                <div id="purchaseLpInfo" class="purchase-lp-info" style="display: none; margin-top: 0.75rem; padding: 0.5rem; background: rgba(85, 251, 155, 0.1); border-radius: 3px; font-size: 0.75rem; color: var(--green);"></div>
             </div>
 
             <!-- Swap Interface -->
@@ -5822,6 +5825,29 @@
 
         function isOnSupportedNetwork(chainId) {
             return getNetworkByChainId(chainId) !== null;
+        }
+
+        /**
+         * Compute ZAMM pool ID from PoolKey parameters
+         * PoolKey struct: { uint256 id0; uint256 id1; address token0; address token1; uint256 feeOrHook; }
+         * Pool ID = keccak256(abi.encodePacked(PoolKey))
+         */
+        function computeZammPoolId(tribToken, forToken, feeOrHook) {
+            try {
+                const addr0 = tribToken.toLowerCase();
+                const addr1 = forToken.toLowerCase();
+                // Sort tokens by address (ZAMM convention: lower address is token0)
+                const [token0, token1] = addr0 < addr1 ? [tribToken, forToken] : [forToken, tribToken];
+                // Encode PoolKey struct
+                const encoded = ethers.solidityPacked(
+                    ['uint256', 'uint256', 'address', 'address', 'uint256'],
+                    [0n, 0n, token0, token1, BigInt(feeOrHook || 30)]
+                );
+                return ethers.keccak256(encoded);
+            } catch (e) {
+                console.error('Error computing ZAMM pool ID:', e);
+                return null;
+            }
         }
 
         // Contract addresses (same on all supported networks)
@@ -8645,6 +8671,22 @@
                     </div>
                 ` : '';
 
+                // LP config HTML
+                let lpHtml = '';
+                if (sale.lpBps > 0) {
+                    const lpPct = (sale.lpBps / 100).toFixed(2).replace(/\.00$/, '');
+                    const buyerPct = (100 - sale.lpBps / 100).toFixed(2).replace(/\.00$/, '');
+                    const poolId = computeZammPoolId(sale.tribTkn, sale.forTkn, sale.feeOrHook || 30);
+                    const chainId = getNetwork().chainId;
+                    const zammPoolUrl = poolId ? `https://www.zamm.finance/p/${chainId}/${poolId}` : null;
+                    lpHtml = `
+                        <div class="daico-lp-info" style="margin-top: 0.5rem; padding: 0.4rem; background: rgba(85, 251, 155, 0.1); border-radius: 3px; font-size: 0.7rem; color: var(--green);">
+                            <span style="font-weight: 600;">LP:</span> ${lpPct}% to ZAMM • ${buyerPct}% rate
+                            ${zammPoolUrl ? `<a href="${zammPoolUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="margin-left: 0.35rem; color: var(--cyan); text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">Pool →</a>` : ''}
+                        </div>
+                    `;
+                }
+
                 return `
                     <div class="daico-card ${isCompleted ? 'completed' : ''}" onclick="openDAICODetail('${daoData.dao}', '${sale.tribTkn}')">
                         ${templateBadgeHtml}
@@ -8670,6 +8712,7 @@
                                 </div>
                                 <div class="daico-deadline">${timeRemaining}</div>
                                 ${tapHtml}
+                                ${lpHtml}
                             </div>
                         </div>
                     </div>
@@ -8840,6 +8883,23 @@
                 progressEl.classList.add('sold-out');
             } else {
                 progressEl.classList.remove('sold-out');
+            }
+
+            // LP Info display
+            const lpInfoEl = document.getElementById('purchaseLpInfo');
+            if (sale.lpBps > 0) {
+                const lpPct = (sale.lpBps / 100).toFixed(2).replace(/\.00$/, '');
+                const buyerPct = (100 - sale.lpBps / 100).toFixed(2).replace(/\.00$/, '');
+                const poolId = computeZammPoolId(tribTkn, sale.forTkn, sale.feeOrHook || 30);
+                const chainId = getNetwork().chainId;
+                const zammPoolUrl = poolId ? `https://www.zamm.finance/p/${chainId}/${poolId}` : null;
+                lpInfoEl.innerHTML = `
+                    <span style="font-weight: 600;">LP Enabled:</span> ${lpPct}% to ZAMM liquidity • Buyers receive ${buyerPct}% of quoted rate
+                    ${zammPoolUrl ? `<a href="${zammPoolUrl}" target="_blank" rel="noopener" style="margin-left: 0.5rem; color: var(--cyan); text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">View Pool →</a>` : ''}
+                `;
+                lpInfoEl.style.display = 'block';
+            } else {
+                lpInfoEl.style.display = 'none';
             }
 
             // Token displays

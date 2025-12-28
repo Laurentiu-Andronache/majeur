@@ -8829,15 +8829,103 @@
       <p class="wallet-prompt-networks">Supported networks: Ethereum, Base, Arbitrum, Sepolia</p>
     </div>
 
-    <!-- PURCHASE MODAL -->
+    <!-- PURCHASE MODAL (Full-featured like DAICO.html) -->
     <div class="wallet-modal-overlay" id="purchaseModal">
       <div class="wallet-modal" style="max-width: 500px;">
         <div class="wallet-modal-header">
-          <h3 style="font-family: 'Cinzel', serif; font-size: 1.2rem; color: #e6d9ff; letter-spacing: 0.1em;">Purchase Tokens</h3>
+          <h3 id="purchaseDaoName" style="font-family: 'Cinzel', serif; font-size: 1.2rem; color: #e6d9ff; letter-spacing: 0.1em;">Purchase Tokens</h3>
           <button onclick="closePurchaseModal()" style="background: none; border: none; color: rgba(230, 217, 255, 0.6); cursor: pointer; font-size: 1.5rem;">&times;</button>
         </div>
-        <div style="padding: 1.5rem;">
-          <div id="purchaseModalContent"></div>
+        <div id="purchaseStatus" style="display: none; padding: 0.75rem 1.5rem; font-size: 0.85rem;"></div>
+
+        <!-- Sale Info Section -->
+        <div style="padding: 1rem 1.5rem; background: rgba(157, 123, 255, 0.05); border-top: 1px solid rgba(157, 123, 255, 0.15); border-bottom: 1px solid rgba(157, 123, 255, 0.15);">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span style="color: rgba(230, 217, 255, 0.6); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em;">Remaining Supply</span>
+            <span id="purchaseRemaining" style="color: #e6d9ff; font-weight: 600;">--</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span style="color: rgba(230, 217, 255, 0.6); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em;">Time Left</span>
+            <span id="purchaseDeadline" style="color: #e6d9ff; font-weight: 600;">--</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
+            <span style="color: rgba(230, 217, 255, 0.6); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em;">Price</span>
+            <span id="purchasePrice" style="color: #e6d9ff; font-weight: 600;">--</span>
+          </div>
+
+          <!-- Progress Bar -->
+          <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(157, 123, 255, 0.2);">
+            <div id="purchaseProgress" style="height: 24px; background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(157, 123, 255, 0.25); position: relative; margin-bottom: 0.5rem; border-radius: 2px;">
+              <div id="purchaseProgressBar" style="height: 100%; background: linear-gradient(90deg, #64c896 0%, #9d7bff 100%); width: 0%; transition: width 0.5s ease-out;"></div>
+              <div id="purchaseProgressText" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: 'Cinzel', serif; font-size: 0.8rem; color: #e6d9ff; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">0% sold</div>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.75rem;">
+              <span id="purchaseProgressSold" style="color: #64c896;">0 sold</span>
+              <span id="purchaseProgressRemaining" style="color: #9d7bff;">0 remaining</span>
+            </div>
+          </div>
+
+          <!-- LP Info (if applicable) -->
+          <div id="purchaseLpInfo" style="display: none; margin-top: 0.75rem; padding: 0.5rem; background: rgba(100, 150, 255, 0.1); border-radius: 3px; font-size: 0.7rem; color: rgba(100, 150, 255, 0.9);"></div>
+        </div>
+
+        <!-- Swap Interface -->
+        <div style="padding: 1rem 1.5rem;">
+          <!-- Pay Input -->
+          <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(100, 200, 150, 0.3); padding: 1rem; border-radius: 4px 4px 0 0; overflow: hidden;">
+            <div style="font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.5rem;">You Pay</div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <input type="text" id="payAmountInput" placeholder="0.0" oninput="handleDaicoPayInput()"
+                     style="flex: 1; min-width: 0; background: transparent; border: none; font-size: 1.5rem; color: #e6d9ff; outline: none; font-family: 'EB Garamond', serif;">
+              <div id="payTokenDisplay" style="display: flex; align-items: center; gap: 0.35rem; padding: 0.4rem 0.5rem; background: rgba(100, 200, 150, 0.1); border: 1px solid rgba(100, 200, 150, 0.3); border-radius: 4px; flex-shrink: 0;">
+                <div id="payTokenIcon" style="width: 20px; height: 20px; flex-shrink: 0;"></div>
+                <span id="payTokenSymbol" style="color: #e6d9ff; font-weight: 600; font-size: 0.85rem;">ETH</span>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; font-size: 0.75rem; color: rgba(230, 217, 255, 0.5);">
+              Balance: <span id="payBalance">--</span>
+              <button onclick="setDaicoMaxPay()" style="padding: 0.2rem 0.5rem; background: rgba(100, 200, 150, 0.15); border: 1px solid rgba(100, 200, 150, 0.3); color: rgba(230, 217, 255, 0.8); cursor: pointer; font-size: 0.7rem; border-radius: 3px;">MAX</button>
+            </div>
+          </div>
+
+          <!-- Swap Arrow -->
+          <div style="text-align: center; font-size: 1.2rem; color: #64c896; margin: -0.5rem 0; position: relative; z-index: 1;">↓</div>
+
+          <!-- Receive Input -->
+          <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(100, 200, 150, 0.3); border-top: none; padding: 1rem; border-radius: 0 0 4px 4px; overflow: hidden;">
+            <div style="font-size: 0.75rem; color: rgba(230, 217, 255, 0.6); margin-bottom: 0.5rem;">You Receive</div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <input type="text" id="receiveAmountInput" placeholder="0.0" oninput="handleDaicoReceiveInput()"
+                     style="flex: 1; min-width: 0; background: transparent; border: none; font-size: 1.5rem; color: #e6d9ff; outline: none; font-family: 'EB Garamond', serif;">
+              <div id="receiveTokenDisplay" style="display: flex; align-items: center; gap: 0.35rem; padding: 0.4rem 0.5rem; background: rgba(157, 123, 255, 0.1); border: 1px solid rgba(157, 123, 255, 0.3); border-radius: 4px; flex-shrink: 0;">
+                <div id="receiveTokenIcon" style="width: 20px; height: 20px; flex-shrink: 0;"></div>
+                <span id="receiveTokenSymbol" style="color: #e6d9ff; font-weight: 600; font-size: 0.85rem;">SHARES</span>
+              </div>
+            </div>
+            <div style="font-size: 0.75rem; color: rgba(230, 217, 255, 0.5); margin-top: 0.5rem;">
+              Available: <span id="receiveAvailable">--</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Slippage -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 1.5rem 1rem; font-size: 0.85rem; color: rgba(230, 217, 255, 0.6);">
+          <span>Slippage Tolerance</span>
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="daico-slippage-btn active" onclick="setDaicoSlippage(0.5, this)" style="padding: 0.3rem 0.6rem; background: rgba(100, 200, 150, 0.1); border: 1px solid #64c896; color: #64c896; cursor: pointer; font-size: 0.75rem; border-radius: 3px;">0.5%</button>
+            <button class="daico-slippage-btn" onclick="setDaicoSlippage(1, this)" style="padding: 0.3rem 0.6rem; background: transparent; border: 1px solid rgba(230, 217, 255, 0.3); color: rgba(230, 217, 255, 0.6); cursor: pointer; font-size: 0.75rem; border-radius: 3px;">1%</button>
+            <button class="daico-slippage-btn" onclick="setDaicoSlippage(2, this)" style="padding: 0.3rem 0.6rem; background: transparent; border: 1px solid rgba(230, 217, 255, 0.3); color: rgba(230, 217, 255, 0.6); cursor: pointer; font-size: 0.75rem; border-radius: 3px;">2%</button>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="padding: 0 1.5rem 1.5rem;">
+          <button id="daicoApproveBtn" onclick="approveDaicoToken()" style="display: none; width: 100%; padding: 0.875rem; background: rgba(255, 180, 100, 0.2); border: 1px solid rgba(255, 180, 100, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.8rem; letter-spacing: 0.12em; cursor: pointer; text-transform: uppercase; margin-bottom: 0.5rem; border-radius: 4px;">
+            Approve <span id="daicoApproveTokenName">TOKEN</span>
+          </button>
+          <button id="daicoBuyBtn" onclick="executeDaicoPurchase()" style="width: 100%; padding: 1rem; background: rgba(100, 200, 150, 0.2); border: 1px solid rgba(100, 200, 150, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.8rem; letter-spacing: 0.15em; cursor: pointer; text-transform: uppercase; font-weight: 600; border-radius: 4px; min-height: 48px;">
+            Connect Wallet
+          </button>
         </div>
       </div>
     </div>
@@ -10506,6 +10594,29 @@
         return getNetworkByChainId(chainId) !== null;
       }
 
+      /**
+       * Compute ZAMM pool ID from PoolKey parameters
+       * PoolKey struct: { uint256 id0; uint256 id1; address token0; address token1; uint256 feeOrHook; }
+       * Pool ID = keccak256(abi.encodePacked(PoolKey))
+       */
+      function computeZammPoolId(tribToken, forToken, feeOrHook) {
+        try {
+          const addr0 = tribToken.toLowerCase();
+          const addr1 = forToken.toLowerCase();
+          // Sort tokens by address (ZAMM convention: lower address is token0)
+          const [token0, token1] = addr0 < addr1 ? [tribToken, forToken] : [forToken, tribToken];
+          // Encode PoolKey struct
+          const encoded = ethers.solidityPacked(
+            ['uint256', 'uint256', 'address', 'address', 'uint256'],
+            [0n, 0n, token0, token1, BigInt(feeOrHook || 30)]
+          );
+          return ethers.keccak256(encoded);
+        } catch (e) {
+          console.error('Error computing ZAMM pool ID:', e);
+          return null;
+        }
+      }
+
       // ==================== NETWORK UI FUNCTIONS ====================
       function toggleNetworkDropdown() {
         const selector = document.getElementById('networkSelector');
@@ -12168,6 +12279,7 @@
       let allDAOsLoaded = false; // Track if All DAOs gallery has been loaded
       let currentDAO = null;
       let currentDAICO = null; // Cached DAICO data (sales, tap) for current DAO
+      let currentActiveDaicoSales = []; // Active DAICO sales for current DAO (for purchase modal)
       let currentDaoTributes = [];
       let tributeRefreshTimestamp = 0;
 
@@ -15239,7 +15351,8 @@
           currentDAICO = await fetchDAICOData(daoAddress);
 
           // Process DAICO sales from batched response
-          const activeDaicoSales = [];
+          currentActiveDaicoSales = []; // Reset global array
+          const activeDaicoSales = currentActiveDaicoSales;
           let tapInfo = null;
           let claimableTap = 0n;
 
@@ -15269,7 +15382,7 @@
                   lpConfig = {
                     lpBps: Number(sale.lpBps),
                     maxSlipBps: Number(sale.maxSlipBps),
-                    feeOrHook: sale.feeOrHook
+                    feeOrHook: Number(sale.feeOrHook || 30)
                   };
                 }
 
@@ -15390,39 +15503,35 @@
           }
 
           // Render DAICO sales
-          for (const sale of activeDaicoSales) {
+          for (let saleIndex = 0; saleIndex < activeDaicoSales.length; saleIndex++) {
+            const sale = activeDaicoSales[saleIndex];
             const tokenType = sale.isLoot ? 'LOOT' : 'SHARES';
             const tokenSymbol = sale.isLoot ? `${currentDAO.dao.meta.symbol}-LOOT` : currentDAO.dao.meta.symbol;
 
             // Format the ratio: tribAmt of payment token -> forAmt of shares/loot
-            // Example: 1 ETH for 1000 shares = "0.001 ETH per token" or "1 ETH : 1000 tokens"
             const tribAmtFormatted = parseFloat(ethers.formatUnits(sale.tribAmt, sale.token.decimals));
             const forAmtFormatted = parseFloat(ethers.formatEther(sale.forAmt));
             const pricePerToken = tribAmtFormatted / forAmtFormatted;
+            const pricePerMillion = pricePerToken * 1_000_000;
 
-            // Format price nicely
-            let priceFormatted;
-            if (pricePerToken >= 0.01) {
-              priceFormatted = `${pricePerToken.toFixed(2).replace(/\.00$/, '')} ${sale.token.symbol}`;
-            } else if (pricePerToken >= 0.000001) {
-              priceFormatted = `${pricePerToken.toFixed(2).replace(/\.00$/, '')} ${sale.token.symbol}`;
-            } else {
-              // Very small prices - show as ratio
-              priceFormatted = `${tribAmtFormatted.toFixed(2).replace(/\.00$/, '')} ${sale.token.symbol} : ${forAmtFormatted.toFixed(2).replace(/\.00$/, '')}`;
-            }
+            // Format price as "X ETH / 1M Shares" like DAICO.html
+            const priceFormatted = `${pricePerMillion.toFixed(2).replace(/\.00$/, '')} ${sale.token.symbol} / 1M ${tokenType}`;
 
-            // Available supply based on allowance
-            const availableFormatted = parseFloat(ethers.formatEther(sale.available));
-            const capText = availableFormatted > 0 ? `${availableFormatted.toFixed(2).replace(/\.00$/, '')} available` : 'Check allowance';
+            // Remaining supply
+            const remainingNum = sale.remainingSupply ? parseFloat(ethers.formatEther(sale.remainingSupply)) : 0;
+            const remainingFormatted = remainingNum > 0 ? `${remainingNum.toFixed(2).replace(/\.00$/, '')} ${tokenType}` : 'Sold out';
 
-            // LP config display
+            // LP config display with ZAMM pool link
             let lpConfigHTML = '';
             if (sale.lpConfig && sale.lpConfig.lpBps > 0) {
               const lpPct = (sale.lpConfig.lpBps / 100).toFixed(2).replace(/\.00$/, '');
               const buyerPct = (100 - sale.lpConfig.lpBps / 100).toFixed(2).replace(/\.00$/, '');
+              const poolId = computeZammPoolId(sale.token.address, sale.forTkn, sale.lpConfig.feeOrHook);
+              const zammPoolUrl = poolId ? `https://www.zamm.finance/p/${getNetwork().chainId}/${poolId}` : null;
               lpConfigHTML = `
                 <div style="margin-bottom: 0.5rem; padding: 0.4rem; background: rgba(100, 150, 255, 0.1); border-radius: 3px; font-size: 0.7rem; color: rgba(100, 150, 255, 0.9);">
                   <span style="font-weight: 600;">LP Enabled:</span> ${lpPct}% to ZAMM liquidity • Buyers receive ${buyerPct}% of quoted rate
+                  ${zammPoolUrl ? `<a href="${zammPoolUrl}" target="_blank" rel="noopener" style="margin-left: 0.5rem; color: rgba(100, 150, 255, 0.9); text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">View Pool →</a>` : ''}
                 </div>
               `;
             }
@@ -15448,16 +15557,13 @@
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
                   <div>
-                    <div style="font-size: 0.7rem; color: rgba(230, 217, 255, 0.5);">Price per token</div>
+                    <div style="font-size: 0.7rem; color: rgba(230, 217, 255, 0.5);">Price</div>
                     <div style="font-size: 0.9rem; color: #e6d9ff;">${priceFormatted}</div>
                   </div>
                   <div>
-                    <div style="font-size: 0.7rem; color: rgba(230, 217, 255, 0.5);">Available</div>
-                    <div style="font-size: 0.9rem; color: #e6d9ff;">${capText}</div>
+                    <div style="font-size: 0.7rem; color: rgba(230, 217, 255, 0.5);">Remaining</div>
+                    <div style="font-size: 0.9rem; color: #e6d9ff;">${remainingFormatted}</div>
                   </div>
-                </div>
-                <div style="font-size: 0.7rem; color: rgba(230, 217, 255, 0.5); margin-bottom: 0.5rem;">
-                  Ratio: ${tribAmtFormatted} ${sale.token.symbol} = ${forAmtFormatted} ${tokenSymbol}
                 </div>
                 ${(() => {
                   // Deadline display with countdown
@@ -15480,7 +15586,7 @@
                   return '<div style="font-size: 0.7rem; color: rgba(100, 200, 150, 0.8); margin-bottom: 0.5rem;">⏳ Ends ' + dateStr + ' ' + timeStr + ' (' + countdown + ' left)</div>';
                 })()}
                 ${lpConfigHTML}
-                <button onclick="openDaicoPurchaseModal('${sale.token.address}', '${sale.token.symbol}', ${sale.token.decimals}, ${sale.isLoot}, '${sale.tribAmt}', '${sale.forAmt}')"
+                <button onclick="openDaicoPurchaseModal(${saleIndex})"
                         onmouseover="this.style.background='rgba(100, 200, 150, 0.25)'; this.style.borderColor='#64c896';"
                         onmouseout="this.style.background='rgba(100, 200, 150, 0.15)'; this.style.borderColor='rgba(100, 200, 150, 0.3)';"
                         style="width: 100%; padding: 0.75rem; background: rgba(100, 200, 150, 0.15); border: 1px solid rgba(100, 200, 150, 0.3); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.12em; cursor: pointer; text-transform: uppercase; transition: all 0.2s ease; font-weight: 600; border-radius: 4px; min-height: 44px; margin-top: 0.75rem;">
@@ -18004,220 +18110,447 @@
         }
       }
 
-      // DAICO Purchase Modal - for external OTC sales
-      async function openDaicoPurchaseModal(tribToken, tokenSymbol, tokenDecimals, isLoot, tribAmt, forAmt) {
+      // DAICO Purchase Modal State
+      let currentDaicoPurchase = {
+        dao: null,
+        tribTkn: null,
+        tokenSymbol: null,
+        tokenDecimals: 18,
+        isLoot: false,
+        tribAmt: 0n,
+        forAmt: 0n,
+        forTkn: null,
+        remainingSupply: 0n,
+        totalSupply: 0n,
+        deadline: 0,
+        lpConfig: null,
+        slippage: 0.5,
+        inputMode: 'pay',
+        payBalance: 0n,
+        allowance: 0n
+      };
+      let daicoQuoteDebounce = null;
+
+      // DAICO Purchase Modal - full-featured like DAICO.html
+      async function openDaicoPurchaseModal(saleIndex) {
         if (!signer) {
           showStatus('Please connect wallet first', true);
           return;
         }
 
+        // Get sale from global array
+        const sale = currentActiveDaicoSales[saleIndex];
+        if (!sale) {
+          showStatus('Sale not found', true);
+          return;
+        }
+
         const modal = getEl('purchaseModal');
-        const content = document.getElementById('purchaseModalContent');
-
-        const tokenType = isLoot ? 'LOOT' : 'SHARES';
-        const daoSymbol = currentDAO.dao.meta.symbol;
-        const targetSymbol = isLoot ? `${daoSymbol}-LOOT` : daoSymbol;
-
-        // Show loading state
-        content.innerHTML = `
-          <div style="text-align: center; padding: 2rem; color: rgba(230, 217, 255, 0.6);">
-            Loading DAICO sale info...
-          </div>
-        `;
         modal.classList.add('show');
 
-        try {
-          // Fetch user balance
-          let userBalance = 0n;
-          if (tribToken === ethers.ZeroAddress) {
-            userBalance = await provider.getBalance(connectedAddress);
+        const tokenType = sale.isLoot ? 'LOOT' : 'SHARES';
+        const daoSymbol = currentDAO.dao.meta.symbol;
+        const targetSymbol = sale.isLoot ? `${daoSymbol}-LOOT` : daoSymbol;
+
+        // Store sale data in state
+        currentDaicoPurchase = {
+          dao: currentDAO.dao.dao,
+          tribTkn: sale.token.address,
+          tokenSymbol: sale.token.symbol,
+          tokenDecimals: sale.token.decimals,
+          isLoot: sale.isLoot,
+          tribAmt: sale.tribAmt,
+          forAmt: sale.forAmt,
+          forTkn: sale.forTkn,
+          remainingSupply: sale.remainingSupply || 0n,
+          totalSupply: sale.totalSupply || 0n,
+          deadline: sale.deadline || 0,
+          lpConfig: sale.lpConfig,
+          slippage: 0.5,
+          inputMode: 'pay',
+          payBalance: 0n,
+          allowance: 0n
+        };
+
+        // Update modal header
+        document.getElementById('purchaseDaoName').textContent = `Purchase ${targetSymbol}`;
+
+        // Calculate and display sale info
+        const remainingNum = Number(ethers.formatEther(currentDaicoPurchase.remainingSupply));
+        const totalNum = Number(ethers.formatEther(currentDaicoPurchase.totalSupply));
+        const soldNum = totalNum > 0 ? totalNum - remainingNum : 0;
+        const progressPct = totalNum > 0 ? Math.min((soldNum / totalNum) * 100, 100) : 0;
+
+        // Price calculation
+        const tribAmtNum = Number(ethers.formatUnits(currentDaicoPurchase.tribAmt, currentDaicoPurchase.tokenDecimals));
+        const forAmtNum = Number(ethers.formatEther(currentDaicoPurchase.forAmt));
+        const pricePerMillion = forAmtNum > 0 ? (tribAmtNum / forAmtNum) * 1_000_000 : 0;
+
+        // Update Remaining Supply
+        document.getElementById('purchaseRemaining').textContent =
+          remainingNum > 0 ? `${remainingNum.toFixed(2).replace(/\.00$/, '')} ${tokenType}` : 'Sold out';
+
+        // Update Time Left
+        const deadline = Number(currentDaicoPurchase.deadline || 0);
+        if (!deadline || deadline === 0) {
+          document.getElementById('purchaseDeadline').textContent = 'No deadline';
+        } else {
+          const now = Math.floor(Date.now() / 1000);
+          const secsLeft = deadline - now;
+          if (secsLeft <= 0) {
+            document.getElementById('purchaseDeadline').textContent = 'Ended';
+            document.getElementById('purchaseDeadline').style.color = '#ff6464';
           } else {
-            const tokenContract = new ethers.Contract(tribToken, ERC20_ABI, provider);
-            userBalance = await tokenContract.balanceOf(connectedAddress);
+            const days = Math.floor(secsLeft / 86400);
+            const hours = Math.floor((secsLeft % 86400) / 3600);
+            const mins = Math.floor((secsLeft % 3600) / 60);
+            const countdown = days > 0 ? `${days}d ${hours}h` : hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+            document.getElementById('purchaseDeadline').textContent = countdown;
           }
+        }
 
-          const balanceFormatted = parseFloat(ethers.formatUnits(userBalance, tokenDecimals)).toFixed(2).replace(/\.00$/, '');
+        // Update Price
+        document.getElementById('purchasePrice').textContent =
+          `${pricePerMillion.toFixed(2).replace(/\.00$/, '')} ${sale.token.symbol} / 1M ${tokenType}`;
 
-          // Calculate the ratio and max affordable
-          const tribAmtBn = BigInt(tribAmt);
-          const forAmtBn = BigInt(forAmt);
+        // Update Progress Bar
+        document.getElementById('purchaseProgressBar').style.width = `${progressPct}%`;
+        document.getElementById('purchaseProgressText').textContent = `${progressPct.toFixed(2).replace(/\.00$/, '')}% sold`;
+        document.getElementById('purchaseProgressSold').textContent = `${soldNum.toFixed(2).replace(/\.00$/, '')} ${tokenType} sold`;
+        document.getElementById('purchaseProgressRemaining').textContent = `${remainingNum.toFixed(2).replace(/\.00$/, '')} remaining`;
 
-          // Max tokens user can buy = (userBalance * forAmt) / tribAmt
-          let maxAffordable = '0';
-          if (userBalance > 0n && tribAmtBn > 0n) {
-            const maxTokens = (userBalance * forAmtBn) / tribAmtBn;
-            maxAffordable = ethers.formatEther(maxTokens);
-          }
-
-          // Format ratio for display
-          const tribAmtFormatted = parseFloat(ethers.formatUnits(tribAmtBn, tokenDecimals)).toFixed(2).replace(/\.00$/, '');
-          const forAmtFormatted = parseFloat(ethers.formatEther(forAmtBn)).toFixed(2).replace(/\.00$/, '');
-
-          // Build DAICO sale page link
-          const chainId = getNetwork().chainId;
-          const daicoSaleUrl = `https://daicowtf.eth.limo/#/sale/${chainId}/${currentDAO.dao.dao}`;
-
-          content.innerHTML = `
-            <div style="margin-bottom: 1rem; padding: 0.75rem; background: rgba(100, 200, 150, 0.1); border-left: 3px solid #64c896; font-size: 0.85rem; color: rgba(230, 217, 255, 0.9);">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                  <strong style="color: #64c896;">DAICO Sale</strong><br>
-                  Ratio: ${tribAmtFormatted} ${tokenSymbol} = ${forAmtFormatted} ${targetSymbol}
-                </div>
-                <a href="${daicoSaleUrl}" target="_blank" rel="noopener noreferrer"
-                   style="display: flex; align-items: center; gap: 0.35rem; padding: 0.4rem 0.6rem; background: rgba(100, 200, 150, 0.15); border: 1px solid rgba(100, 200, 150, 0.3); border-radius: 4px; color: #64c896; text-decoration: none; font-size: 0.7rem; font-family: 'Cinzel', serif; letter-spacing: 0.05em; transition: all 0.2s ease;"
-                   onmouseover="this.style.background='rgba(100, 200, 150, 0.25)'; this.style.borderColor='#64c896';"
-                   onmouseout="this.style.background='rgba(100, 200, 150, 0.15)'; this.style.borderColor='rgba(100, 200, 150, 0.3)';">
-                  View on DAICO
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                    <polyline points="15 3 21 3 21 9"></polyline>
-                    <line x1="10" y1="14" x2="21" y2="3"></line>
-                  </svg>
-                </a>
-              </div>
-            </div>
-            <div style="margin-bottom: 1rem;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                <label style="font-size: 0.85rem; color: rgba(230, 217, 255, 0.7);">Amount to Purchase (${targetSymbol})</label>
-                <button onclick="setMaxPurchaseAmount('${maxAffordable}')"
-                        onmouseover="this.style.background='rgba(100, 200, 150, 0.25)'; this.style.color='#64c896';"
-                        onmouseout="this.style.background='rgba(100, 200, 150, 0.1)'; this.style.color='rgba(230, 217, 255, 0.7)';"
-                        style="padding: 0.35rem 0.65rem; background: rgba(100, 200, 150, 0.1); border: 1px solid rgba(100, 200, 150, 0.3); color: rgba(230, 217, 255, 0.7); font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.1em; cursor: pointer; text-transform: uppercase; font-weight: 600; border-radius: 3px; transition: all 0.2s ease; min-height: 32px;">
-                  MAX
-                </button>
-              </div>
-              <input type="number" id="purchaseAmount" placeholder="0.0" step="any" min="0" inputmode="decimal"
-                     oninput="updateDaicoCostPreview('${tribToken}', ${tokenDecimals}, '${tribAmt}', '${forAmt}', '${tokenSymbol}')"
-                     style="width: 100%; padding: 0.875rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(100, 200, 150, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 16px; border-radius: 4px;" />
-            </div>
-            <div id="daicoCostPreview" style="margin-bottom: 1rem; padding: 0.875rem; background: rgba(100, 200, 150, 0.05); border: 1px solid rgba(100, 200, 150, 0.2); border-radius: 4px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-                <span style="font-size: 0.75rem; color: rgba(230, 217, 255, 0.6);">Your Balance:</span>
-                <span style="font-size: 0.85rem; color: #e6d9ff; font-weight: 600;">${balanceFormatted} ${tokenSymbol}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 0.75rem; color: rgba(230, 217, 255, 0.6);">Estimated Cost:</span>
-                <span id="daicoCostAmount" style="font-size: 0.85rem; color: #64c896; font-weight: 600;">-- ${tokenSymbol}</span>
-              </div>
-            </div>
-            <button onclick="executeDaicoPurchase('${tribToken}', ${tokenDecimals}, ${isLoot}, '${tribAmt}', '${forAmt}')"
-                    onmouseover="this.style.background='rgba(100, 200, 150, 0.35)'; this.style.borderColor='#64c896';"
-                    onmouseout="this.style.background='rgba(100, 200, 150, 0.2)'; this.style.borderColor='rgba(100, 200, 150, 0.4)';"
-                    style="width: 100%; padding: 1rem; background: rgba(100, 200, 150, 0.2); border: 1px solid rgba(100, 200, 150, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.8rem; letter-spacing: 0.15em; cursor: pointer; text-transform: uppercase; font-weight: 600; border-radius: 4px; transition: all 0.2s ease; min-height: 48px;">
-              Purchase via DAICO
-            </button>
+        // Update LP Info if applicable
+        const lpInfoEl = document.getElementById('purchaseLpInfo');
+        if (currentDaicoPurchase.lpConfig && currentDaicoPurchase.lpConfig.lpBps > 0) {
+          const lpPct = (currentDaicoPurchase.lpConfig.lpBps / 100).toFixed(2).replace(/\.00$/, '');
+          const buyerPct = (100 - currentDaicoPurchase.lpConfig.lpBps / 100).toFixed(2).replace(/\.00$/, '');
+          const poolId = computeZammPoolId(sale.token.address, sale.forTkn, currentDaicoPurchase.lpConfig.feeOrHook);
+          const zammPoolUrl = poolId ? `https://www.zamm.finance/p/${getNetwork().chainId}/${poolId}` : null;
+          lpInfoEl.innerHTML = `
+            <span style="font-weight: 600;">LP Enabled:</span> ${lpPct}% to ZAMM liquidity • Buyers receive ${buyerPct}% of quoted rate
+            ${zammPoolUrl ? `<a href="${zammPoolUrl}" target="_blank" rel="noopener" style="margin-left: 0.5rem; color: rgba(100, 150, 255, 0.9); text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">View Pool →</a>` : ''}
           `;
+          lpInfoEl.style.display = 'block';
+        } else {
+          lpInfoEl.style.display = 'none';
+        }
+
+        // Update token displays
+        document.getElementById('payTokenSymbol').textContent = sale.token.symbol;
+        document.getElementById('payTokenIcon').innerHTML = getTokenIcon(sale.token.address);
+        document.getElementById('receiveTokenSymbol').textContent = tokenType;
+        document.getElementById('receiveTokenIcon').innerHTML = TOKEN_ICONS[sale.isLoot ? 'loot' : 'shares'] || TOKEN_ICONS.defaultCoin;
+        document.getElementById('receiveAvailable').textContent =
+          remainingNum > 0 ? `${remainingNum.toFixed(2).replace(/\.00$/, '')} ${tokenType}` : '0';
+
+        // Clear inputs
+        document.getElementById('payAmountInput').value = '';
+        document.getElementById('receiveAmountInput').value = '';
+
+        // Reset slippage buttons to default (0.5%)
+        document.querySelectorAll('.daico-slippage-btn').forEach(b => {
+          b.classList.remove('active');
+          b.style.background = 'transparent';
+          b.style.borderColor = 'rgba(230, 217, 255, 0.3)';
+          b.style.color = 'rgba(230, 217, 255, 0.6)';
+        });
+        const defaultSlippageBtn = document.querySelector('.daico-slippage-btn');
+        if (defaultSlippageBtn) {
+          defaultSlippageBtn.classList.add('active');
+          defaultSlippageBtn.style.background = 'rgba(100, 200, 150, 0.1)';
+          defaultSlippageBtn.style.borderColor = '#64c896';
+          defaultSlippageBtn.style.color = '#64c896';
+        }
+
+        // Load user balances and update button state
+        await loadDaicoUserBalances();
+      }
+
+      // Load user balances for DAICO modal
+      async function loadDaicoUserBalances() {
+        try {
+          if (!connectedAddress || !currentDaicoPurchase.tribTkn) return;
+
+          // Fetch user balance
+          if (currentDaicoPurchase.tribTkn === ethers.ZeroAddress) {
+            currentDaicoPurchase.payBalance = await provider.getBalance(connectedAddress);
+            currentDaicoPurchase.allowance = ethers.MaxUint256; // ETH doesn't need approval
+          } else {
+            const tokenContract = new ethers.Contract(currentDaicoPurchase.tribTkn, ERC20_ABI, provider);
+            currentDaicoPurchase.payBalance = await tokenContract.balanceOf(connectedAddress);
+            currentDaicoPurchase.allowance = await tokenContract.allowance(connectedAddress, DAICO_ADDRESS);
+          }
+
+          // Update balance display
+          const balanceFormatted = Number(ethers.formatUnits(currentDaicoPurchase.payBalance, currentDaicoPurchase.tokenDecimals));
+          document.getElementById('payBalance').textContent =
+            `${balanceFormatted.toFixed(2).replace(/\.00$/, '')} ${currentDaicoPurchase.tokenSymbol}`;
+
+          updateDaicoPurchaseButton();
         } catch (error) {
-          logger.error('Error loading DAICO purchase modal:', error);
-          content.innerHTML = `
-            <div style="text-align: center; padding: 2rem; color: rgba(230, 217, 255, 0.6);">
-              Error loading sale info. Please try again.
-            </div>
-          `;
+          logger.error('Error loading DAICO balances:', error);
         }
       }
 
-      // Update cost preview for DAICO purchase
-      function updateDaicoCostPreview(tribToken, tokenDecimals, tribAmt, forAmt, tokenSymbol) {
-        const amountInput = getEl('purchaseAmount').value.trim();
-        const costEl = document.getElementById('daicoCostAmount');
+      // Handle pay input changes with debounced quote
+      function handleDaicoPayInput() {
+        currentDaicoPurchase.inputMode = 'pay';
+        clearTimeout(daicoQuoteDebounce);
+        daicoQuoteDebounce = setTimeout(() => quoteDaicoBuyAmount(), 300);
+        updateDaicoPurchaseButton();
+      }
 
-        if (!costEl) return;
+      // Handle receive input changes with debounced quote
+      function handleDaicoReceiveInput() {
+        currentDaicoPurchase.inputMode = 'receive';
+        clearTimeout(daicoQuoteDebounce);
+        daicoQuoteDebounce = setTimeout(() => quoteDaicoPayAmount(), 300);
+        updateDaicoPurchaseButton();
+      }
 
-        if (!amountInput || isNaN(parseFloat(amountInput)) || parseFloat(amountInput) <= 0) {
-          costEl.textContent = `-- ${tokenSymbol}`;
+      // Quote how many tokens you get for a given pay amount
+      async function quoteDaicoBuyAmount() {
+        const payStr = document.getElementById('payAmountInput').value.trim();
+        if (!payStr || isNaN(parseFloat(payStr)) || parseFloat(payStr) <= 0) {
+          document.getElementById('receiveAmountInput').value = '';
           return;
         }
 
         try {
-          const buyAmount = ethers.parseEther(amountInput);
-          const tribAmtBn = BigInt(tribAmt);
-          const forAmtBn = BigInt(forAmt);
+          const payAmt = ethers.parseUnits(payStr, currentDaicoPurchase.tokenDecimals);
+          const daicoContract = new ethers.Contract(DAICO_ADDRESS, DAICO_ABI, provider);
+          const buyAmt = await daicoContract.quoteBuy(currentDaicoPurchase.dao, currentDaicoPurchase.tribTkn, payAmt);
 
-          // Cost = ceil((buyAmount * tribAmt) / forAmt)
-          const num = buyAmount * tribAmtBn;
-          const cost = (num + forAmtBn - 1n) / forAmtBn;
+          if (buyAmt > 0n) {
+            const formatted = Number(ethers.formatEther(buyAmt)).toFixed(2).replace(/\.00$/, '');
+            document.getElementById('receiveAmountInput').value = formatted;
+          }
+        } catch (error) {
+          logger.error('Quote error:', error);
+          // Fallback to simple calculation
+          const payAmt = ethers.parseUnits(payStr, currentDaicoPurchase.tokenDecimals);
+          const buyAmt = (payAmt * currentDaicoPurchase.forAmt) / currentDaicoPurchase.tribAmt;
+          const formatted = Number(ethers.formatEther(buyAmt)).toFixed(2).replace(/\.00$/, '');
+          document.getElementById('receiveAmountInput').value = formatted;
+        }
+        updateDaicoPurchaseButton();
+      }
 
-          const costFormatted = parseFloat(ethers.formatUnits(cost, tokenDecimals)).toFixed(2).replace(/\.00$/, '');
-          costEl.textContent = `${costFormatted} ${tokenSymbol}`;
-        } catch (e) {
-          costEl.textContent = `-- ${tokenSymbol}`;
+      // Quote how much you need to pay for a given receive amount
+      async function quoteDaicoPayAmount() {
+        const receiveStr = document.getElementById('receiveAmountInput').value.trim();
+        if (!receiveStr || isNaN(parseFloat(receiveStr)) || parseFloat(receiveStr) <= 0) {
+          document.getElementById('payAmountInput').value = '';
+          return;
+        }
+
+        try {
+          const buyAmt = ethers.parseEther(receiveStr);
+          const daicoContract = new ethers.Contract(DAICO_ADDRESS, DAICO_ABI, provider);
+          const payAmt = await daicoContract.quotePayExactOut(currentDaicoPurchase.dao, currentDaicoPurchase.tribTkn, buyAmt);
+
+          if (payAmt > 0n) {
+            const formatted = Number(ethers.formatUnits(payAmt, currentDaicoPurchase.tokenDecimals)).toFixed(2).replace(/\.00$/, '');
+            document.getElementById('payAmountInput').value = formatted;
+          }
+        } catch (error) {
+          logger.error('Quote error:', error);
+          // Fallback to simple calculation
+          const buyAmt = ethers.parseEther(receiveStr);
+          const payAmt = (buyAmt * currentDaicoPurchase.tribAmt + currentDaicoPurchase.forAmt - 1n) / currentDaicoPurchase.forAmt;
+          const formatted = Number(ethers.formatUnits(payAmt, currentDaicoPurchase.tokenDecimals)).toFixed(2).replace(/\.00$/, '');
+          document.getElementById('payAmountInput').value = formatted;
+        }
+        updateDaicoPurchaseButton();
+      }
+
+      // Set slippage tolerance
+      function setDaicoSlippage(pct, btn) {
+        currentDaicoPurchase.slippage = pct;
+        document.querySelectorAll('.daico-slippage-btn').forEach(b => {
+          b.classList.remove('active');
+          b.style.background = 'transparent';
+          b.style.borderColor = 'rgba(230, 217, 255, 0.3)';
+          b.style.color = 'rgba(230, 217, 255, 0.6)';
+        });
+        btn.classList.add('active');
+        btn.style.background = 'rgba(100, 200, 150, 0.1)';
+        btn.style.borderColor = '#64c896';
+        btn.style.color = '#64c896';
+      }
+
+      // Set max pay amount
+      function setDaicoMaxPay() {
+        if (!currentDaicoPurchase.payBalance || currentDaicoPurchase.payBalance === 0n) return;
+
+        let maxAmt = currentDaicoPurchase.payBalance;
+
+        // Reserve ETH for gas if paying with ETH
+        if (currentDaicoPurchase.tribTkn === ethers.ZeroAddress) {
+          const gasReserve = ethers.parseEther('0.01');
+          if (maxAmt > gasReserve) {
+            maxAmt = maxAmt - gasReserve;
+          } else {
+            maxAmt = 0n;
+          }
+        }
+
+        // Clip to cost of remaining supply
+        if (currentDaicoPurchase.remainingSupply > 0n && currentDaicoPurchase.tribAmt > 0n && currentDaicoPurchase.forAmt > 0n) {
+          const costForRemaining = (currentDaicoPurchase.remainingSupply * currentDaicoPurchase.tribAmt) / currentDaicoPurchase.forAmt;
+          if (costForRemaining < maxAmt) {
+            maxAmt = costForRemaining;
+          }
+        }
+
+        const formatted = Number(ethers.formatUnits(maxAmt, currentDaicoPurchase.tokenDecimals));
+        document.getElementById('payAmountInput').value = formatted.toString();
+        currentDaicoPurchase.inputMode = 'pay';
+        handleDaicoPayInput();
+      }
+
+      // Update purchase button state
+      function updateDaicoPurchaseButton() {
+        const buyBtn = document.getElementById('daicoBuyBtn');
+        const approveBtn = document.getElementById('daicoApproveBtn');
+        const payStr = document.getElementById('payAmountInput').value.trim();
+
+        if (!connectedAddress) {
+          buyBtn.textContent = 'Connect Wallet';
+          buyBtn.disabled = false;
+          approveBtn.style.display = 'none';
+          return;
+        }
+
+        if (!payStr || isNaN(parseFloat(payStr)) || parseFloat(payStr) <= 0) {
+          buyBtn.textContent = 'Enter Amount';
+          buyBtn.disabled = true;
+          approveBtn.style.display = 'none';
+          return;
+        }
+
+        const payAmt = ethers.parseUnits(payStr, currentDaicoPurchase.tokenDecimals);
+        const slippageBps = BigInt(Math.floor(currentDaicoPurchase.slippage * 100));
+
+        // For exact input (pay mode), we send payAmt directly
+        // For exact output (receive mode), we send maxPay with slippage
+        const requiredAmount = currentDaicoPurchase.inputMode === 'pay'
+          ? payAmt
+          : payAmt * (10000n + slippageBps) / 10000n;
+
+        // Check balance
+        if (payAmt > currentDaicoPurchase.payBalance) {
+          buyBtn.textContent = 'Insufficient Balance';
+          buyBtn.disabled = true;
+          approveBtn.style.display = 'none';
+          return;
+        }
+
+        // Check allowance for ERC20
+        if (currentDaicoPurchase.tribTkn !== ethers.ZeroAddress && currentDaicoPurchase.allowance < requiredAmount) {
+          approveBtn.style.display = 'block';
+          document.getElementById('daicoApproveTokenName').textContent = currentDaicoPurchase.tokenSymbol;
+          buyBtn.textContent = 'Buy';
+          buyBtn.disabled = true;
+        } else {
+          approveBtn.style.display = 'none';
+          buyBtn.textContent = 'Buy';
+          buyBtn.disabled = false;
+        }
+      }
+
+      // Approve token for DAICO purchase
+      async function approveDaicoToken() {
+        try {
+          const payStr = document.getElementById('payAmountInput').value.trim();
+          const payAmt = ethers.parseUnits(payStr, currentDaicoPurchase.tokenDecimals);
+          const slippageMultiplier = BigInt(Math.floor((100 + currentDaicoPurchase.slippage) * 100));
+          const maxPay = (payAmt * slippageMultiplier) / 10000n;
+
+          showStatus('Approving token spend... Please confirm in wallet', false);
+
+          const tokenContract = new ethers.Contract(currentDaicoPurchase.tribTkn, ERC20_ABI, signer);
+          const tx = await tokenContract.approve(DAICO_ADDRESS, maxPay, getWalletConnectTxOverrides());
+
+          showStatus(`Approval submitted. <a href="${getNetwork().explorer}/tx/${tx.hash}" target="_blank" rel="noopener" style="color: #64c896; text-decoration: underline;">View on Explorer</a>`, false);
+
+          await tx.wait();
+
+          showStatus('Approval confirmed!', false);
+
+          // Refresh allowance
+          currentDaicoPurchase.allowance = await tokenContract.allowance(connectedAddress, DAICO_ADDRESS);
+          updateDaicoPurchaseButton();
+        } catch (error) {
+          logger.error('Approval failed:', error);
+          if (isUserRejection(error)) {
+            showStatus('Approval cancelled', false);
+          } else {
+            showStatus('Approval failed: ' + (error.shortMessage || error.message?.slice(0, 50)), true);
+          }
         }
       }
 
       // Execute DAICO purchase
-      async function executeDaicoPurchase(tribToken, tokenDecimals, isLoot, tribAmt, forAmt) {
+      async function executeDaicoPurchase() {
         try {
-          const amountInput = getEl('purchaseAmount').value.trim();
-          if (!amountInput || isNaN(parseFloat(amountInput)) || parseFloat(amountInput) <= 0) {
+          if (!connectedAddress) {
+            await connectWallet();
+            return;
+          }
+
+          const receiveStr = document.getElementById('receiveAmountInput').value.trim();
+          const payStr = document.getElementById('payAmountInput').value.trim();
+
+          if (!receiveStr || isNaN(parseFloat(receiveStr)) || parseFloat(receiveStr) <= 0) {
+            showStatus('Please enter a valid amount', true);
+            return;
+          }
+          if (!payStr || isNaN(parseFloat(payStr)) || parseFloat(payStr) <= 0) {
             showStatus('Please enter a valid amount', true);
             return;
           }
 
-          const buyAmount = ethers.parseEther(amountInput);
-          const tribAmtBn = BigInt(tribAmt);
-          const forAmtBn = BigInt(forAmt);
-
-          // Calculate cost with ceiling division
-          // cost = ceil((buyAmount * tribAmt) / forAmt)
-          const num = buyAmount * tribAmtBn;
-          const cost = (num + forAmtBn - 1n) / forAmtBn;
-
-          // Add slippage for maxPay (5%)
-          const maxPay = (cost * 105n) / 100n;
-
-          const daicoContract = new ethers.Contract(DAICO_ADDRESS, DAICO_ABI, signer);
-          const daoAddress = currentDAO.dao.dao;
-
-          // For ERC20 payments, check allowance and approve if needed
-          if (tribToken !== ethers.ZeroAddress) {
-            showStatus('Checking token allowance...', false);
-
-            const tokenContract = new ethers.Contract(tribToken, ERC20_ABI, signer);
-
-            // Check user balance
-            const userBalance = await tokenContract.balanceOf(connectedAddress);
-            if (userBalance < cost) {
-              showStatus(`Insufficient balance. Need ${parseFloat(ethers.formatUnits(cost, tokenDecimals)).toFixed(2).replace(/\.00$/, '')} tokens`, true);
-              return;
-            }
-
-            // Check allowance to DAICO contract
-            const currentAllowance = await tokenContract.allowance(connectedAddress, DAICO_ADDRESS);
-
-            if (currentAllowance < maxPay) {
-              showStatus('Approving token spend... Please confirm in wallet', false);
-
-              // Request approval for the DAICO contract
-              const approveTx = await tokenContract.approve(DAICO_ADDRESS, maxPay, getWalletConnectTxOverrides());
-
-              showStatus(`Approval transaction submitted. <a href="${getNetwork().explorer}/tx/${approveTx.hash}" target="_blank" rel="noopener" style="color: #64c896; text-decoration: underline;">View on Explorer</a>`, false);
-
-              await approveTx.wait();
-
-              showStatus('Approval confirmed! Proceeding with purchase...', false);
-            }
-          }
+          const buyAmount = ethers.parseEther(receiveStr);
+          const payAmt = ethers.parseUnits(payStr, currentDaicoPurchase.tokenDecimals);
+          const slippageBps = BigInt(Math.floor(currentDaicoPurchase.slippage * 100));
+          const isETH = currentDaicoPurchase.tribTkn === ethers.ZeroAddress;
 
           showStatus('Confirming DAICO purchase... Please sign the transaction', false);
 
+          const daicoContract = new ethers.Contract(DAICO_ADDRESS, DAICO_ABI, signer);
+
           let tx;
-          // Use buyExactOut for exact output amount
-          if (tribToken === ethers.ZeroAddress) {
-            // ETH payment - send maxPay as value, contract will refund excess
-            tx = await daicoContract.buyExactOut(daoAddress, tribToken, buyAmount, maxPay, getWalletConnectTxOverrides({ value: maxPay }));
+          if (currentDaicoPurchase.inputMode === 'pay') {
+            // Exact input (buy) - used when MAX is clicked
+            // Slippage applied to minimum output (we accept slightly less tokens)
+            const minOut = buyAmount * (10000n - slippageBps) / 10000n;
+            tx = await daicoContract.buy(
+              currentDaicoPurchase.dao,
+              currentDaicoPurchase.tribTkn,
+              payAmt,
+              minOut,
+              getWalletConnectTxOverrides({ value: isETH ? payAmt : 0n })
+            );
           } else {
-            // ERC20 payment
-            tx = await daicoContract.buyExactOut(daoAddress, tribToken, buyAmount, maxPay, getWalletConnectTxOverrides());
+            // Exact output (buyExactOut) - used when user types in receive amount
+            // Slippage applied to maximum pay (we accept paying slightly more)
+            const maxPay = payAmt * (10000n + slippageBps) / 10000n;
+            tx = await daicoContract.buyExactOut(
+              currentDaicoPurchase.dao,
+              currentDaicoPurchase.tribTkn,
+              buyAmount,
+              maxPay,
+              getWalletConnectTxOverrides({ value: isETH ? maxPay : 0n })
+            );
           }
 
-          const tokenType = isLoot ? 'LOOT' : 'SHARES';
+          const tokenType = currentDaicoPurchase.isLoot ? 'LOOT' : 'SHARES';
           showStatus(`Transaction submitted. <a href="${getNetwork().explorer}/tx/${tx.hash}" target="_blank" rel="noopener" style="color: #64c896; text-decoration: underline;">View on Explorer</a>`, false);
 
           await tx.wait();
 
-          showStatus(`✨ DAICO purchase successful! You received ${amountInput} ${tokenType}. <a href="${getNetwork().explorer}/tx/${tx.hash}" target="_blank" rel="noopener" style="color: #64c896; text-decoration: underline;">View transaction</a>`, false);
+          showStatus(`✨ Purchase successful! You received ${receiveStr} ${tokenType}. <a href="${getNetwork().explorer}/tx/${tx.hash}" target="_blank" rel="noopener" style="color: #64c896; text-decoration: underline;">View transaction</a>`, false);
 
           closePurchaseModal();
           await refreshCurrentDAO();
