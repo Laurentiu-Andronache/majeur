@@ -19213,8 +19213,8 @@
           }
         }
 
-        const formatted = Number(ethers.formatUnits(maxAmt, currentDaicoPurchase.tokenDecimals));
-        document.getElementById('payAmountInput').value = formatted.toString();
+        const formatted = ethers.formatUnits(maxAmt, currentDaicoPurchase.tokenDecimals);
+        document.getElementById('payAmountInput').value = formatted;
         currentDaicoPurchase.inputMode = 'pay';
         handleDaicoPayInput();
       }

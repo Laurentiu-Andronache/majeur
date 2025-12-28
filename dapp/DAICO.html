@@ -9055,8 +9055,8 @@
                 }
             }
 
-            const formatted = Number(ethers.formatUnits(maxAmt, tribInfo.decimals));
-            document.getElementById('payAmountInput').value = formatted.toString();
+            const formatted = ethers.formatUnits(maxAmt, tribInfo.decimals);
+            document.getElementById('payAmountInput').value = formatted;
             currentPurchase.inputMode = 'pay';
             handlePayInput();
         }
