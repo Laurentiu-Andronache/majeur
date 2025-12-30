@@ -39,6 +39,16 @@ All contracts are deployed at the same CREATE2 addresses across supported networ
 
 > [daicowtf.eth](https://daicowtf.eth.limo/)
 
+## Zero to Hero
+
+Start this tutorial as a Majeur newb, end up an expert that could even contribute code!
+
+1. [Introduction](./0-to-hero-0.md) — Course overview and setup
+2. [Repository Structure](./0-to-hero-1.md) — Understanding every folder and file
+3. [Unvoted Proposals & Rewards](./0-to-hero-2.md) — Reading DAO state and claiming futarchy rewards
+4. [Submit & Execute Proposals](./0-to-hero-3.md) — Creating governance proposals and voting
+5. Check back because more parts will be added soon!
+
 ## At a Glance
 
 ```
