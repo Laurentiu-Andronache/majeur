@@ -172,3 +172,83 @@ ipfs-car pack Majeur.html > majeur.car
 # Upload car to web3.storage or similar
 # Set ENS contenthash to ipfs://Qm...
 ```
+
+## Building Documentation
+
+The project uses [mdbook](https://rust-lang.github.io/mdBook/) for documentation. The built docs live in `docs/book/` and can be viewed at the project's GitHub Pages.
+
+### Documentation Structure
+
+Documentation follows a **single-source-of-truth** pattern using symlinks:
+
+```
+/README.md              ← Main readme (source of truth)
+/tutorials/             ← Tutorial files (source of truth)
+  ├── 0-to-hero-0.md
+  ├── 0-to-hero-1.md
+  └── ...
+/assets/                ← Shared assets (source of truth)
+
+/docs/src/              ← mdbook source directory
+  ├── README.md         → symlink to ../../README.md
+  ├── tutorials/        → symlink to ../../tutorials/
+  ├── assets/           → symlink to ../../assets/
+  └── SUMMARY.md        ← mdbook table of contents
+```
+
+This ensures:
+- GitHub renders docs directly from root-level files
+- mdbook builds from the same files via symlinks
+- No duplication, no sync issues
+
+### Installing mdbook
+
+```bash
+# Using Cargo (Rust package manager)
+cargo install mdbook
+
+# macOS with Homebrew
+brew install mdbook
+
+# Or download prebuilt binaries from:
+# https://github.com/rust-lang/mdBook/releases
+```
+
+### Serving Documentation Locally
+
+```bash
+cd docs
+mdbook serve --open
+```
+
+This starts a local server at `http://localhost:3000` with hot reload.
+
+To just build without serving:
+
+```bash
+cd docs
+mdbook build
+# Output in docs/book/
+```
+
+### Windows Compatibility Note
+
+Symlinks require special handling on Windows:
+
+1. **Developer Mode** (Windows 10+): Enable in Settings → Update & Security → For developers. This allows creating symlinks without admin rights.
+
+2. **Git configuration**: Ensure symlinks are enabled:
+   ```bash
+   git config --global core.symlinks true
+   ```
+
+3. **Clone with symlinks**: When cloning on Windows, symlinks may be created as text files containing the target path. Re-clone after enabling the settings above, or manually recreate the symlinks:
+   ```bash
+   cd docs/src
+   rm README.md tutorials assets
+   mklink README.md ..\..\README.md
+   mklink /D tutorials ..\..\tutorials
+   mklink /D assets ..\..\assets
+   ```
+
+If symlinks aren't working, you can still build by copying files instead, but this creates duplication that must be kept in sync manually.
