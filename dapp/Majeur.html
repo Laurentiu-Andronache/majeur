@@ -1468,6 +1468,7 @@
       .custom-dropdown {
         scrollbar-width: thin;
         scrollbar-color: rgba(157, 123, 255, 0.3) rgba(0, 0, 0, 0.2);
+        overscroll-behavior: contain;
       }
 
       .custom-dropdown::-webkit-scrollbar {
@@ -2359,6 +2360,12 @@
 
       .wallet-modal-overlay.show {
         display: flex;
+      }
+
+      /* Prevent background scroll when any modal is open */
+      body:has(.wallet-modal-overlay.show),
+      body:has(.nft-modal.show) {
+        overflow: hidden;
       }
 
       .wallet-modal {
@@ -6400,6 +6407,13 @@
                   <!-- Dropdown options will be populated here -->
                 </div>
               </div>
+              <!-- Custom Token Input -->
+              <div id="depositCustomTokenContainer" style="display: none; margin-top: 0.5rem;">
+                <input type="text" id="depositCustomToken" placeholder="Enter token address: 0x..."
+                       oninput="detectDepositToken(this.value)"
+                       style="width: 100%; padding: 0.7rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: monospace; font-size: 0.85rem; border-radius: 4px;">
+                <div id="depositTokenStatus" style="font-size: 0.7rem; margin-top: 0.35rem;"></div>
+              </div>
             </div>
 
             <!-- Amount Input -->
@@ -6413,9 +6427,6 @@
               <div style="position: relative;">
                 <input type="text" id="depositAmount" placeholder="0.0" inputmode="decimal"
                        style="width: 100%; padding: 0.7rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.9rem; border-radius: 4px;">
-                <div style="font-size: 0.65rem; color: rgba(230, 217, 255, 0.5); margin-top: 0.35rem;">
-                  Click <span id="depositMaxButton" onclick="setDepositMax()" style="color: #9d7bff; cursor: pointer; text-decoration: underline;">here</span> to deposit max
-                </div>
               </div>
             </div>
 
@@ -6433,7 +6444,7 @@
                       onmouseout="this.style.background='rgba(157, 123, 255, 0.1)'">
                 Cancel
               </button>
-              <button onclick="executeDeposit()"
+              <button id="depositSubmitBtn" onclick="executeDeposit()"
                       style="flex: 1; padding: 0.85rem; background: rgba(157, 123, 255, 0.2); border: 1px solid rgba(157, 123, 255, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.15em; cursor: pointer; transition: all 0.3s ease; text-transform: uppercase; font-weight: 600; border-radius: 4px;"
                       onmouseover="this.style.background='rgba(157, 123, 255, 0.35)'; this.style.borderColor='#9d7bff'"
                       onmouseout="this.style.background='rgba(157, 123, 255, 0.2)'; this.style.borderColor='rgba(157, 123, 255, 0.4)'">
@@ -6474,6 +6485,13 @@
                     <!-- Dropdown options will be populated here -->
                   </div>
                 </div>
+                <!-- Custom Token Input -->
+                <div id="tributeCustomTokenContainer" style="display: none; margin-top: 0.5rem;">
+                  <input type="text" id="tributeCustomToken" placeholder="Enter token address: 0x..."
+                         oninput="detectTributeToken(this.value)"
+                         style="width: 100%; padding: 0.7rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: monospace; font-size: 0.85rem; border-radius: 4px;">
+                  <div id="tributeTokenStatus" style="font-size: 0.7rem; margin-top: 0.35rem;"></div>
+                </div>
               </div>
 
               <!-- Tribute Amount -->
@@ -6505,6 +6523,13 @@
                     <!-- Dropdown options will be populated here -->
                   </div>
                 </div>
+                <!-- Custom Token Input -->
+                <div id="requestCustomTokenContainer" style="display: none; margin-top: 0.5rem;">
+                  <input type="text" id="requestCustomToken" placeholder="Enter token address: 0x..."
+                         oninput="detectRequestToken(this.value)"
+                         style="width: 100%; padding: 0.7rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(157, 123, 255, 0.3); color: #e6d9ff; font-family: monospace; font-size: 0.85rem; border-radius: 4px;">
+                  <div id="requestTokenStatus" style="font-size: 0.7rem; margin-top: 0.35rem;"></div>
+                </div>
               </div>
 
               <!-- Request Amount -->
@@ -6523,7 +6548,7 @@
                       onmouseout="this.style.background='rgba(157, 123, 255, 0.1)'">
                 Cancel
               </button>
-              <button onclick="executeTribute()"
+              <button id="tributeSubmitBtn" onclick="executeTribute()"
                       style="flex: 1; padding: 0.85rem; background: rgba(157, 123, 255, 0.2); border: 1px solid rgba(157, 123, 255, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.15em; cursor: pointer; transition: all 0.3s ease; text-transform: uppercase; font-weight: 600; border-radius: 4px;"
                       onmouseover="this.style.background='rgba(157, 123, 255, 0.35)'; this.style.borderColor='#9d7bff'"
                       onmouseout="this.style.background='rgba(157, 123, 255, 0.2)'; this.style.borderColor='rgba(157, 123, 255, 0.4)'">
@@ -11166,28 +11191,41 @@
       }
 
       // Get icon for a token address
-      function getTokenIcon(address) {
+      // Get icon for token by symbol - maps known symbols to their icons
+      function getTokenIconBySymbol(symbol) {
+        if (!symbol) return TOKEN_ICONS.defaultCoin;
+        const sym = symbol.toLowerCase();
+
+        // Map symbols to icons (includes aliases)
+        if (sym === 'eth' || sym === 'weth') return TOKEN_ICONS.eth;
+        if (sym === 'usdc') return TOKEN_ICONS.usdc;
+        if (sym === 'usdt') return TOKEN_ICONS.usdt;
+        if (sym === 'dai') return TOKEN_ICONS.dai;
+        if (sym === 'wsteth' || sym === 'steth') return TOKEN_ICONS.wsteth;
+        if (sym === 'reth') return TOKEN_ICONS.reth;
+
+        return TOKEN_ICONS.defaultCoin;
+      }
+
+      // Get icon for token by address and/or symbol
+      function getTokenIcon(address, symbol = null) {
+        // If symbol provided, try that first
+        if (symbol) {
+          const iconBySymbol = getTokenIconBySymbol(symbol);
+          if (iconBySymbol !== TOKEN_ICONS.defaultCoin) return iconBySymbol;
+        }
+
         const addr = address?.toLowerCase();
         if (!addr || addr === ethers.ZeroAddress.toLowerCase()) return TOKEN_ICONS.eth;
 
-        // Check for common tokens across networks
-        const symbolMap = {
-          'eth': TOKEN_ICONS.eth,
-          'usdc': TOKEN_ICONS.usdc,
-          'usdt': TOKEN_ICONS.usdt,
-          'dai': TOKEN_ICONS.dai,
-          'wsteth': TOKEN_ICONS.wsteth,
-          'reth': TOKEN_ICONS.reth
-        };
-
+        // Try to get symbol from network token metadata
         const network = getNetwork();
         const meta = network.tokenMeta[address] || network.tokenMeta[addr];
         if (meta) {
-          const iconKey = meta.symbol.toLowerCase();
-          if (symbolMap[iconKey]) return symbolMap[iconKey];
+          return getTokenIconBySymbol(meta.symbol);
         }
 
-        return TOKEN_ICONS.defaultCoin || `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="14" fill="none" stroke="#9d7bff" stroke-width="2"/><circle cx="16" cy="16" r="8" fill="none" stroke="#9d7bff" stroke-width="1.5" opacity="0.5"/></svg>`;
+        return TOKEN_ICONS.defaultCoin;
       }
 
       // Get tribute/payment tokens for current network (used for token selection dropdowns)
@@ -11223,12 +11261,33 @@
               address: tokenAddr,
               symbol: meta.symbol,
               decimals: meta.decimals,
-              icon: getTokenIcon(tokenAddr)
+              icon: getTokenIconBySymbol(meta.symbol)
             });
           }
         }
 
         return result;
+      }
+
+      // Get treasury tokens list - prioritizes DAO metadata, falls back to network defaults
+      function getTreasuryTokensList() {
+        // Priority: DAO metadata treasury_tokens, else network hardcoded
+        if (currentDAOMetadata?.treasury_tokens?.length > 0) {
+          const tokens = [
+            { address: ethers.ZeroAddress, symbol: 'ETH', decimals: 18, icon: getTokenIconBySymbol('ETH') }
+          ];
+          for (const t of currentDAOMetadata.treasury_tokens) {
+            tokens.push({
+              address: t.address,
+              symbol: t.symbol,
+              decimals: t.decimals || 18,
+              icon: getTokenIconBySymbol(t.symbol),
+              fromMetadata: true
+            });
+          }
+          return tokens;
+        }
+        return getNetworkTokens();
       }
 
       // Get token address by symbol for current network
@@ -13613,7 +13672,7 @@
                 address: customToken.address,
                 balance: balance,
                 decimals: customToken.decimals,
-                icon: TOKEN_ICONS.defaultCoin,
+                icon: getTokenIconBySymbol(customToken.symbol),
                 isCustomSale: true
               });
             } catch (error) {
@@ -14156,10 +14215,10 @@
 
         depositAssets = [];
 
-        // Add standard assets with icons (network-specific)
-        const standardAssets = getNetworkTokens();
+        // Add treasury assets (from DAO metadata or network defaults)
+        const treasuryAssets = getTreasuryTokensList();
 
-        for (const asset of standardAssets) {
+        for (const asset of treasuryAssets) {
           depositAssets.push(asset);
           const option = document.createElement('div');
           const index = depositAssets.length - 1;
@@ -14177,11 +14236,12 @@
         // Add custom sale tokens
         if (customSaleTokens.length > 0) {
           for (const customToken of customSaleTokens) {
+            const tokenIcon = getTokenIconBySymbol(customToken.symbol);
             depositAssets.push({
               symbol: customToken.symbol,
               address: customToken.address,
               decimals: customToken.decimals,
-              icon: TOKEN_ICONS.defaultCoin
+              icon: tokenIcon
             });
             const option = document.createElement('div');
             const index = depositAssets.length - 1;
@@ -14190,18 +14250,34 @@
             option.onmouseover = () => option.style.background = 'rgba(157, 123, 255, 0.2)';
             option.onmouseout = () => option.style.background = 'transparent';
             option.innerHTML = `
-              <div style="width: 24px; height: 24px; flex-shrink: 0;">${TOKEN_ICONS.defaultCoin}</div>
+              <div style="width: 24px; height: 24px; flex-shrink: 0;">${tokenIcon}</div>
               <span style="color: #e6d9ff; font-family: 'EB Garamond', serif; font-size: 0.9rem;">${escapeHtml(customToken.symbol)} <span style="font-size: 0.75rem; opacity: 0.6;">(SALE)</span></span>
             `;
             dropdown.appendChild(option);
           }
         }
 
+        // Add "Custom Token..." option at the end
+        const customOption = document.createElement('div');
+        customOption.onclick = () => selectDepositAsset(-1); // -1 indicates custom
+        customOption.style.cssText = 'padding: 0.7rem; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; transition: background 0.2s; border-top: 1px solid rgba(157, 123, 255, 0.2);';
+        customOption.onmouseover = () => customOption.style.background = 'rgba(157, 123, 255, 0.2)';
+        customOption.onmouseout = () => customOption.style.background = 'transparent';
+        customOption.innerHTML = `
+          <div style="width: 24px; height: 24px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #9d7bff; font-size: 1.2rem;">+</div>
+          <span style="color: #9d7bff; font-family: 'EB Garamond', serif; font-size: 0.9rem; font-style: italic;">Custom Token...</span>
+        `;
+        dropdown.appendChild(customOption);
+
         // Reset form
         selectedDepositAssetIndex = null;
+        customDepositToken = null;
         document.getElementById('depositAssetDisplay').innerHTML = '<span>Choose an asset...</span>';
         getEl('depositAmount').value = '';
         getEl('depositUserBalance').textContent = '0';
+        getEl('depositCustomTokenContainer').style.display = 'none';
+        getEl('depositCustomToken').value = '';
+        getEl('depositTokenStatus').innerHTML = '';
       }
 
       function toggleDepositAssetDropdown() {
@@ -14211,20 +14287,32 @@
 
       async function selectDepositAsset(index) {
         selectedDepositAssetIndex = index;
-        const asset = depositAssets[index];
-
-        // Update display
-        const display = document.getElementById('depositAssetDisplay');
-        display.innerHTML = `
-          <div style="width: 24px; height: 24px; flex-shrink: 0;">${asset.icon}</div>
-          <span>${asset.symbol}</span>
-        `;
 
         // Close dropdown
         getEl('depositAssetDropdown').style.display = 'none';
 
-        // Update balance
-        await updateDepositBalance();
+        const display = document.getElementById('depositAssetDisplay');
+        const customContainer = getEl('depositCustomTokenContainer');
+
+        if (index === -1) {
+          // Custom token selected
+          display.innerHTML = `
+            <div style="width: 24px; height: 24px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #9d7bff; font-size: 1.2rem;">+</div>
+            <span style="color: #9d7bff; font-style: italic;">Custom Token</span>
+          `;
+          customContainer.style.display = 'block';
+          getEl('depositCustomToken').focus();
+          getEl('depositUserBalance').textContent = '0';
+        } else {
+          const asset = depositAssets[index];
+          display.innerHTML = `
+            <div style="width: 24px; height: 24px; flex-shrink: 0;">${asset.icon}</div>
+            <span>${asset.symbol}</span>
+          `;
+          customContainer.style.display = 'none';
+          customDepositToken = null;
+          await updateDepositBalance();
+        }
       }
 
       function closeDepositModal() {
@@ -14237,7 +14325,17 @@
           return;
         }
 
-        const asset = depositAssets[selectedDepositAssetIndex];
+        // Handle custom token
+        let asset;
+        if (selectedDepositAssetIndex === -1) {
+          if (!customDepositToken) {
+            getEl('depositUserBalance').textContent = '0';
+            return;
+          }
+          asset = customDepositToken;
+        } else {
+          asset = depositAssets[selectedDepositAssetIndex];
+        }
 
         try {
           let balance;
@@ -14250,13 +14348,18 @@
             balance = await tokenContract.balanceOf(await signer.getAddress());
           }
 
-          const formatted = parseFloat(ethers.formatUnits(balance, asset.decimals)).toFixed(2).replace(/\.00$/, '');
-          getEl('depositUserBalance').textContent = `${formatted} ${asset.symbol}`;
+          const displayFormatted = parseFloat(ethers.formatUnits(balance, asset.decimals)).toFixed(2).replace(/\.00$/, '');
+          const fullPrecision = ethers.formatUnits(balance, asset.decimals);
+          getEl('depositUserBalance').textContent = `${displayFormatted} ${asset.symbol}`;
           getEl('depositUserBalance').dataset.rawBalance = balance.toString();
           getEl('depositUserBalance').dataset.decimals = asset.decimals;
+
+          // Auto-fill max amount with full precision
+          getEl('depositAmount').value = fullPrecision;
         } catch (error) {
           logger.error('Error fetching balance:', error);
           getEl('depositUserBalance').textContent = '0';
+          getEl('depositAmount').value = '';
         }
       }
 
@@ -14271,11 +14374,37 @@
         }
 
         try {
-          const formatted = parseFloat(ethers.formatUnits(rawBalance, decimals)).toFixed(2).replace(/\.00$/, '');
-          getEl('depositAmount').value = formatted;
+          const fullPrecision = ethers.formatUnits(rawBalance, decimals);
+          getEl('depositAmount').value = fullPrecision;
 
           // Visual feedback
           const input = getEl('depositAmount');
+          input.style.borderColor = '#9d7bff';
+          setTimeout(() => {
+            input.style.borderColor = 'rgba(157, 123, 255, 0.3)';
+          }, 500);
+        } catch (error) {
+          logger.error('Error setting max:', error);
+          showStatus('Failed to set max amount', true);
+        }
+      }
+
+      function setTributeMax() {
+        const balanceEl = getEl('tributeUserBalance');
+        const rawBalance = balanceEl.dataset.rawBalance;
+        const decimals = balanceEl.dataset.decimals;
+
+        if (!rawBalance || !decimals) {
+          showStatus('Please select an asset first', true);
+          return;
+        }
+
+        try {
+          const fullPrecision = ethers.formatUnits(rawBalance, decimals);
+          getEl('tributeAmount').value = fullPrecision;
+
+          // Visual feedback
+          const input = getEl('tributeAmount');
           input.style.borderColor = '#9d7bff';
           setTimeout(() => {
             input.style.borderColor = 'rgba(157, 123, 255, 0.3)';
@@ -14298,7 +14427,18 @@
             return;
           }
 
-          const asset = depositAssets[selectedDepositAssetIndex];
+          // Handle custom token
+          let asset;
+          if (selectedDepositAssetIndex === -1) {
+            if (!customDepositToken) {
+              showStatus('Please enter a valid token address', true);
+              return;
+            }
+            asset = customDepositToken;
+          } else {
+            asset = depositAssets[selectedDepositAssetIndex];
+          }
+
           const amountInput = getEl('depositAmount').value.trim();
 
           if (!amountInput || isNaN(parseFloat(amountInput)) || parseFloat(amountInput) <= 0) {
@@ -14318,6 +14458,9 @@
           }
 
           const daoAddress = currentDAO.dao.dao;
+
+          // Enable loading state
+          setButtonLoading('depositSubmitBtn', true, 'Depositing...');
 
           if (asset.address === ethers.ZeroAddress) {
             // ETH deposit - simple transfer
@@ -14344,6 +14487,7 @@
             showStatus(`✨ Deposited ${amountInput} ${asset.symbol} successfully! <a href="${getNetwork().explorer}/tx/${tx.hash}" target="_blank" rel="noopener" style="color: #9d7bff; text-decoration: underline;">View transaction</a>`, false);
           }
 
+          setButtonLoading('depositSubmitBtn', false, null, 'Deposit');
           closeDepositModal();
 
           // Refresh treasury display
@@ -14352,6 +14496,7 @@
           }, 2000);
 
         } catch (error) {
+          setButtonLoading('depositSubmitBtn', false, null, 'Deposit');
           logger.error('Deposit failed:', error);
 
           if (isUserRejection(error)) {
@@ -14398,10 +14543,10 @@
         tributeDropdown.innerHTML = '';
         tributeAssets = [];
 
-        // Add standard assets (network-specific)
-        const standardAssets = getNetworkTokens();
+        // Add treasury assets (from DAO metadata or network defaults)
+        const treasuryAssets = getTreasuryTokensList();
 
-        for (const asset of standardAssets) {
+        for (const asset of treasuryAssets) {
           tributeAssets.push(asset);
           const option = document.createElement('div');
           const index = tributeAssets.length - 1;
@@ -14416,6 +14561,18 @@
           tributeDropdown.appendChild(option);
         }
 
+        // Add "Custom Token..." option for tribute
+        const tributeCustomOption = document.createElement('div');
+        tributeCustomOption.onclick = () => selectTributeAsset(-1);
+        tributeCustomOption.style.cssText = 'padding: 0.7rem; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; transition: background 0.2s; border-top: 1px solid rgba(157, 123, 255, 0.2);';
+        tributeCustomOption.onmouseover = () => tributeCustomOption.style.background = 'rgba(157, 123, 255, 0.2)';
+        tributeCustomOption.onmouseout = () => tributeCustomOption.style.background = 'transparent';
+        tributeCustomOption.innerHTML = `
+          <div style="width: 24px; height: 24px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #9d7bff; font-size: 1.2rem;">+</div>
+          <span style="color: #9d7bff; font-family: 'EB Garamond', serif; font-size: 0.9rem; font-style: italic;">Custom Token...</span>
+        `;
+        tributeDropdown.appendChild(tributeCustomOption);
+
         // Populate request asset dropdown (what user wants from DAO treasury)
         const requestDropdown = getEl('requestAssetDropdown');
         requestDropdown.innerHTML = '';
@@ -14424,8 +14581,8 @@
         // Prioritize Shares and Loot at the top
         const daoMeta = currentDAO.dao.meta;
         const priorityAssets = [
-          { symbol: 'Shares', address: daoMeta.sharesToken, decimals: 18, icon: TOKEN_ICONS.defaultCoin, isGovernanceToken: true },
-          { symbol: 'Loot', address: daoMeta.lootToken, decimals: 18, icon: TOKEN_ICONS.defaultCoin, isGovernanceToken: true }
+          { symbol: 'Shares', address: daoMeta.sharesToken, decimals: 18, icon: getTokenIconBySymbol('Shares'), isGovernanceToken: true },
+          { symbol: 'Loot', address: daoMeta.lootToken, decimals: 18, icon: getTokenIconBySymbol('Loot'), isGovernanceToken: true }
         ];
 
         for (const asset of priorityAssets) {
@@ -14444,8 +14601,8 @@
           requestDropdown.appendChild(option);
         }
 
-        // Add standard treasury assets
-        for (const asset of standardAssets) {
+        // Add treasury assets for request
+        for (const asset of treasuryAssets) {
           requestAssets.push(asset);
           const option = document.createElement('div');
           const index = requestAssets.length - 1;
@@ -14460,14 +14617,34 @@
           requestDropdown.appendChild(option);
         }
 
+        // Add "Custom Token..." option for request
+        const requestCustomOption = document.createElement('div');
+        requestCustomOption.onclick = () => selectRequestAsset(-1);
+        requestCustomOption.style.cssText = 'padding: 0.7rem; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; transition: background 0.2s; border-top: 1px solid rgba(157, 123, 255, 0.2);';
+        requestCustomOption.onmouseover = () => requestCustomOption.style.background = 'rgba(157, 123, 255, 0.2)';
+        requestCustomOption.onmouseout = () => requestCustomOption.style.background = 'transparent';
+        requestCustomOption.innerHTML = `
+          <div style="width: 24px; height: 24px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #9d7bff; font-size: 1.2rem;">+</div>
+          <span style="color: #9d7bff; font-family: 'EB Garamond', serif; font-size: 0.9rem; font-style: italic;">Custom Token...</span>
+        `;
+        requestDropdown.appendChild(requestCustomOption);
+
         // Reset form
         selectedTributeAssetIndex = null;
         selectedRequestAssetIndex = null;
+        customTributeToken = null;
+        customRequestToken = null;
         getEl('tributeAssetDisplay').innerHTML = '<span>Choose asset to offer...</span>';
         getEl('requestAssetDisplay').innerHTML = '<span>Choose asset to request...</span>';
         document.getElementById('tributeAmount').value = '';
         document.getElementById('requestAmount').value = '';
         getEl('tributeUserBalance').textContent = '0';
+        getEl('tributeCustomTokenContainer').style.display = 'none';
+        getEl('tributeCustomToken').value = '';
+        getEl('tributeTokenStatus').innerHTML = '';
+        getEl('requestCustomTokenContainer').style.display = 'none';
+        getEl('requestCustomToken').value = '';
+        getEl('requestTokenStatus').innerHTML = '';
       }
 
       function toggleTributeAssetDropdown() {
@@ -14482,31 +14659,58 @@
 
       async function selectTributeAsset(index) {
         selectedTributeAssetIndex = index;
-        const asset = tributeAssets[index];
-
-        const display = getEl('tributeAssetDisplay');
-        display.innerHTML = `
-          <div style="width: 24px; height: 24px; flex-shrink: 0;">${asset.icon}</div>
-          <span>${asset.symbol}</span>
-        `;
 
         getEl('tributeAssetDropdown').style.display = 'none';
 
-        // Update balance
-        await updateTributeBalance();
+        const display = getEl('tributeAssetDisplay');
+        const customContainer = getEl('tributeCustomTokenContainer');
+
+        if (index === -1) {
+          // Custom token selected
+          display.innerHTML = `
+            <div style="width: 24px; height: 24px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #9d7bff; font-size: 1.2rem;">+</div>
+            <span style="color: #9d7bff; font-style: italic;">Custom Token</span>
+          `;
+          customContainer.style.display = 'block';
+          getEl('tributeCustomToken').focus();
+          getEl('tributeUserBalance').textContent = '0';
+        } else {
+          const asset = tributeAssets[index];
+          display.innerHTML = `
+            <div style="width: 24px; height: 24px; flex-shrink: 0;">${asset.icon}</div>
+            <span>${asset.symbol}</span>
+          `;
+          customContainer.style.display = 'none';
+          customTributeToken = null;
+          await updateTributeBalance();
+        }
       }
 
       async function selectRequestAsset(index) {
         selectedRequestAssetIndex = index;
-        const asset = requestAssets[index];
-
-        const display = getEl('requestAssetDisplay');
-        display.innerHTML = `
-          <div style="width: 24px; height: 24px; flex-shrink: 0;">${asset.icon}</div>
-          <span>${asset.symbol}</span>
-        `;
 
         getEl('requestAssetDropdown').style.display = 'none';
+
+        const display = getEl('requestAssetDisplay');
+        const customContainer = getEl('requestCustomTokenContainer');
+
+        if (index === -1) {
+          // Custom token selected
+          display.innerHTML = `
+            <div style="width: 24px; height: 24px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #9d7bff; font-size: 1.2rem;">+</div>
+            <span style="color: #9d7bff; font-style: italic;">Custom Token</span>
+          `;
+          customContainer.style.display = 'block';
+          getEl('requestCustomToken').focus();
+        } else {
+          const asset = requestAssets[index];
+          display.innerHTML = `
+            <div style="width: 24px; height: 24px; flex-shrink: 0;">${asset.icon}</div>
+            <span>${asset.symbol}</span>
+          `;
+          customContainer.style.display = 'none';
+          customRequestToken = null;
+        }
       }
 
       async function updateTributeBalance() {
@@ -14515,7 +14719,17 @@
           return;
         }
 
-        const asset = tributeAssets[selectedTributeAssetIndex];
+        // Handle custom token
+        let asset;
+        if (selectedTributeAssetIndex === -1) {
+          if (!customTributeToken) {
+            getEl('tributeUserBalance').textContent = '0';
+            return;
+          }
+          asset = customTributeToken;
+        } else {
+          asset = tributeAssets[selectedTributeAssetIndex];
+        }
 
         try {
           let balance;
@@ -14526,11 +14740,18 @@
             balance = await tokenContract.balanceOf(await signer.getAddress());
           }
 
-          const formatted = parseFloat(ethers.formatUnits(balance, asset.decimals)).toFixed(2).replace(/\.00$/, '');
-          getEl('tributeUserBalance').textContent = `${formatted} ${asset.symbol}`;
+          const displayFormatted = parseFloat(ethers.formatUnits(balance, asset.decimals)).toFixed(2).replace(/\.00$/, '');
+          const fullPrecision = ethers.formatUnits(balance, asset.decimals);
+          getEl('tributeUserBalance').textContent = `${displayFormatted} ${asset.symbol}`;
+          getEl('tributeUserBalance').dataset.rawBalance = balance.toString();
+          getEl('tributeUserBalance').dataset.decimals = asset.decimals;
+
+          // Auto-fill max amount with full precision
+          getEl('tributeAmount').value = fullPrecision;
         } catch (error) {
           logger.error('Error fetching balance:', error);
           getEl('tributeUserBalance').textContent = '0';
+          getEl('tributeAmount').value = '';
         }
       }
 
@@ -14555,8 +14776,29 @@
             return;
           }
 
-          const tribAsset = tributeAssets[selectedTributeAssetIndex];
-          const reqAsset = requestAssets[selectedRequestAssetIndex];
+          // Handle custom tribute token
+          let tribAsset;
+          if (selectedTributeAssetIndex === -1) {
+            if (!customTributeToken) {
+              showStatus('Please enter a valid token address to offer', true);
+              return;
+            }
+            tribAsset = customTributeToken;
+          } else {
+            tribAsset = tributeAssets[selectedTributeAssetIndex];
+          }
+
+          // Handle custom request token
+          let reqAsset;
+          if (selectedRequestAssetIndex === -1) {
+            if (!customRequestToken) {
+              showStatus('Please enter a valid token address to request', true);
+              return;
+            }
+            reqAsset = customRequestToken;
+          } else {
+            reqAsset = requestAssets[selectedRequestAssetIndex];
+          }
 
           const tribAmountInput = document.getElementById('tributeAmount').value.trim();
           const reqAmountInput = document.getElementById('requestAmount').value.trim();
@@ -14576,6 +14818,9 @@
 
           const tributeContract = new ethers.Contract(TRIBUTE_ADDRESS, TRIBUTE_ABI, signer);
           const daoAddress = currentDAO.dao.dao;
+
+          // Enable loading state
+          setButtonLoading('tributeSubmitBtn', true, 'Creating...');
 
           showStatus('Creating tribute offer...', false);
 
@@ -14619,10 +14864,12 @@
 
           showStatus(`✨ Tribute offer created successfully! <a href="${getNetwork().explorer}/tx/${tx.hash}" target="_blank" rel="noopener" style="color: #9d7bff; text-decoration: underline;">View transaction</a>`, false);
 
+          setButtonLoading('tributeSubmitBtn', false, null, 'Create Tribute');
           closeTributeModal();
           await renderTributes();
 
         } catch (error) {
+          setButtonLoading('tributeSubmitBtn', false, null, 'Create Tribute');
           logger.error('Error creating tribute:', error);
 
           let errorMessage = 'Failed to create tribute';
@@ -16179,7 +16426,7 @@
             balance: ethBalance,
             symbol: 'ETH',
             decimals: 18,
-            icon: TOKEN_ICONS.eth
+            icon: getTokenIconBySymbol('ETH')
           });
         } catch (error) {
           logger.error('Error fetching ETH balance:', error);
@@ -16188,7 +16435,7 @@
             balance: 0n,
             symbol: 'ETH',
             decimals: 18,
-            icon: TOKEN_ICONS.eth
+            icon: getTokenIconBySymbol('ETH')
           });
         }
 
@@ -16213,23 +16460,12 @@
               tokenContract.decimals().catch(() => 18) // Default to 18 if decimals() fails
             ]);
 
-            // Get icon based on symbol
-            const symbolLower = symbol.toLowerCase();
-            let icon = TOKEN_ICONS.defaultCoin;
-            if (symbolLower === 'eth') icon = TOKEN_ICONS.eth;
-            else if (symbolLower === 'usdc') icon = TOKEN_ICONS.usdc;
-            else if (symbolLower === 'usdt') icon = TOKEN_ICONS.usdt;
-            else if (symbolLower === 'dai') icon = TOKEN_ICONS.dai;
-            else if (symbolLower === 'wsteth') icon = TOKEN_ICONS.wsteth;
-            else if (symbolLower === 'reth') icon = TOKEN_ICONS.reth;
-            else if (symbolLower === 'weth') icon = TOKEN_ICONS.eth; // Use ETH icon for WETH
-
             assets.push({
               address: tokenAddress,
               balance: balance,
               symbol: symbol,
               decimals: Number(decimals),
-              icon: icon
+              icon: getTokenIconBySymbol(symbol)
             });
           } catch (error) {
             logger.error(`Error fetching balance for ${tokenInfo.symbol || tokenInfo.address}:`, error);
@@ -16239,7 +16475,7 @@
               balance: 0n,
               symbol: tokenInfo.symbol || '???',
               decimals: 18,
-              icon: TOKEN_ICONS.defaultCoin
+              icon: getTokenIconBySymbol(tokenInfo.symbol)
             });
           }
         }
@@ -16287,7 +16523,7 @@
                 symbol: customToken.symbol,
                 balance: balance,
                 decimals: customToken.decimals,
-                icon: TOKEN_ICONS.defaultCoin,
+                icon: getTokenIconBySymbol(customToken.symbol),
                 address: customToken.address,
                 isCustomSale: true
               });
@@ -16384,13 +16620,12 @@
             // Get token info for tribute
             let tribSymbol = 'ETH';
             let tribDecimals = 18;
-            let tribIcon = TOKEN_ICONS.eth;
 
             if (tribute.tribTkn !== ethers.ZeroAddress) {
               tribSymbol = await getTokenSymbol(tribute.tribTkn);
               tribDecimals = await getTokenDecimals(tribute.tribTkn);
-              tribIcon = getTokenIcon(tribute.tribTkn);
             }
+            const tribIcon = getTokenIconBySymbol(tribSymbol);
 
             // Get token info for request
             let forSymbol = 'ETH';
@@ -16476,6 +16711,179 @@
           return await tokenContract.decimals();
         } catch (error) {
           return 18;
+        }
+      }
+
+      // Custom token state for modals
+      let customDepositToken = null;
+      let customTributeToken = null;
+      let customRequestToken = null;
+
+      // Cache for fetched token icons
+      const tokenIconCache = new Map();
+
+      // Fetch token icon from external sources
+      async function fetchTokenIcon(address, chainId) {
+        const checksumAddr = ethers.getAddress(address);
+        const cacheKey = `${chainId}-${checksumAddr}`;
+
+        if (tokenIconCache.has(cacheKey)) {
+          return tokenIconCache.get(cacheKey);
+        }
+
+        // Map chainId to Trust Wallet chain name
+        const chainNames = {
+          1: 'ethereum',
+          8453: 'base',
+          42161: 'arbitrum',
+          11155111: 'ethereum' // Sepolia uses Ethereum icons
+        };
+        const chainName = chainNames[chainId] || 'ethereum';
+
+        // Try Trust Wallet assets
+        const trustWalletUrl = `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/${chainName}/assets/${checksumAddr}/logo.png`;
+
+        try {
+          const response = await fetch(trustWalletUrl, { method: 'HEAD' });
+          if (response.ok) {
+            const iconHtml = `<img src="${trustWalletUrl}" style="width: 100%; height: 100%; border-radius: 50%;" onerror="this.outerHTML='${escapeHtml(getTokenIcon(address))}'">`;
+            tokenIconCache.set(cacheKey, iconHtml);
+            return iconHtml;
+          }
+        } catch (e) {
+          // Silently fail, use fallback
+        }
+
+        // Fallback to default icon
+        const fallbackIcon = getTokenIcon(address);
+        tokenIconCache.set(cacheKey, fallbackIcon);
+        return fallbackIcon;
+      }
+
+      // Validate and detect ERC20 token - strict validation
+      async function validateAndDetectToken(address) {
+        if (!address || address.length < 42) return null;
+        const trimmed = address.trim();
+        if (!ethers.isAddress(trimmed)) return { error: 'Invalid address format' };
+
+        try {
+          const contract = new ethers.Contract(trimmed, ERC20_ABI, provider);
+          const chainId = Number((await provider.getNetwork()).chainId);
+
+          // Fetch token data and icon in parallel
+          const [symbol, decimals, icon] = await Promise.all([
+            contract.symbol(),
+            contract.decimals(),
+            fetchTokenIcon(trimmed, chainId).catch(() => getTokenIcon(trimmed))
+          ]);
+
+          return {
+            address: trimmed,
+            symbol,
+            decimals: Number(decimals),
+            icon,
+            isCustom: true
+          };
+        } catch (e) {
+          return { error: 'Not a valid ERC20 token' };
+        }
+      }
+
+      // Detect custom deposit token
+      async function detectDepositToken(address) {
+        const statusEl = document.getElementById('depositTokenStatus');
+        if (!address || address.length < 42) {
+          statusEl.innerHTML = '';
+          customDepositToken = null;
+          return;
+        }
+
+        statusEl.innerHTML = '<span style="color: rgba(230, 217, 255, 0.5);">Detecting...</span>';
+
+        const result = await validateAndDetectToken(address);
+        if (result?.error) {
+          statusEl.innerHTML = `<span style="color: #ff6b6b;">${result.error}</span>`;
+          customDepositToken = null;
+        } else if (result) {
+          customDepositToken = result;
+          statusEl.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <div style="width: 20px; height: 20px; flex-shrink: 0;">${result.icon}</div>
+              <span style="color: #3fb950;">✓ ${escapeHtml(result.symbol)} (${result.decimals} decimals)</span>
+            </div>
+          `;
+          // Update the display to show the detected token
+          const display = document.getElementById('depositAssetDisplay');
+          display.innerHTML = `
+            <div style="width: 24px; height: 24px; flex-shrink: 0;">${result.icon}</div>
+            <span>${escapeHtml(result.symbol)}</span>
+          `;
+          updateDepositBalance();
+        }
+      }
+
+      // Detect custom tribute token
+      async function detectTributeToken(address) {
+        const statusEl = document.getElementById('tributeTokenStatus');
+        if (!address || address.length < 42) {
+          statusEl.innerHTML = '';
+          customTributeToken = null;
+          return;
+        }
+
+        statusEl.innerHTML = '<span style="color: rgba(230, 217, 255, 0.5);">Detecting...</span>';
+
+        const result = await validateAndDetectToken(address);
+        if (result?.error) {
+          statusEl.innerHTML = `<span style="color: #ff6b6b;">${result.error}</span>`;
+          customTributeToken = null;
+        } else if (result) {
+          customTributeToken = result;
+          statusEl.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <div style="width: 20px; height: 20px; flex-shrink: 0;">${result.icon}</div>
+              <span style="color: #3fb950;">✓ ${escapeHtml(result.symbol)} (${result.decimals} decimals)</span>
+            </div>
+          `;
+          // Update the display to show the detected token
+          const display = getEl('tributeAssetDisplay');
+          display.innerHTML = `
+            <div style="width: 24px; height: 24px; flex-shrink: 0;">${result.icon}</div>
+            <span>${escapeHtml(result.symbol)}</span>
+          `;
+          updateTributeBalance();
+        }
+      }
+
+      // Detect custom request token
+      async function detectRequestToken(address) {
+        const statusEl = document.getElementById('requestTokenStatus');
+        if (!address || address.length < 42) {
+          statusEl.innerHTML = '';
+          customRequestToken = null;
+          return;
+        }
+
+        statusEl.innerHTML = '<span style="color: rgba(230, 217, 255, 0.5);">Detecting...</span>';
+
+        const result = await validateAndDetectToken(address);
+        if (result?.error) {
+          statusEl.innerHTML = `<span style="color: #ff6b6b;">${result.error}</span>`;
+          customRequestToken = null;
+        } else if (result) {
+          customRequestToken = result;
+          statusEl.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <div style="width: 20px; height: 20px; flex-shrink: 0;">${result.icon}</div>
+              <span style="color: #3fb950;">✓ ${escapeHtml(result.symbol)} (${result.decimals} decimals)</span>
+            </div>
+          `;
+          // Update the display to show the detected token
+          const display = getEl('requestAssetDisplay');
+          display.innerHTML = `
+            <div style="width: 24px; height: 24px; flex-shrink: 0;">${result.icon}</div>
+            <span>${escapeHtml(result.symbol)}</span>
+          `;
         }
       }
 
@@ -22172,14 +22580,14 @@
 
           // Check allowances for all supported tokens (parallel queries)
           const tokens = [
-            { symbol: 'ETH', address: ethers.ZeroAddress, decimals: 18, icon: TOKEN_ICONS.eth },
-            { symbol: 'USDC', address: TOKEN_ADDRESSES.usdc, decimals: 6, icon: TOKEN_ICONS.usdc },
-            { symbol: 'USDT', address: TOKEN_ADDRESSES.usdt, decimals: 6, icon: TOKEN_ICONS.usdt },
-            { symbol: 'DAI', address: TOKEN_ADDRESSES.dai, decimals: 18, icon: TOKEN_ICONS.dai },
-            { symbol: 'wstETH', address: TOKEN_ADDRESSES.wsteth, decimals: 18, icon: TOKEN_ICONS.wsteth },
-            { symbol: 'rETH', address: TOKEN_ADDRESSES.reth, decimals: 18, icon: TOKEN_ICONS.reth },
-            { symbol: 'Shares', address: currentDAO.dao.meta.sharesToken, decimals: 18, icon: TOKEN_ICONS.defaultCoin },
-            { symbol: 'Loot', address: currentDAO.dao.meta.lootToken, decimals: 18, icon: TOKEN_ICONS.defaultCoin }
+            { symbol: 'ETH', address: ethers.ZeroAddress, decimals: 18, icon: getTokenIconBySymbol('ETH') },
+            { symbol: 'USDC', address: TOKEN_ADDRESSES.usdc, decimals: 6, icon: getTokenIconBySymbol('USDC') },
+            { symbol: 'USDT', address: TOKEN_ADDRESSES.usdt, decimals: 6, icon: getTokenIconBySymbol('USDT') },
+            { symbol: 'DAI', address: TOKEN_ADDRESSES.dai, decimals: 18, icon: getTokenIconBySymbol('DAI') },
+            { symbol: 'wstETH', address: TOKEN_ADDRESSES.wsteth, decimals: 18, icon: getTokenIconBySymbol('wstETH') },
+            { symbol: 'rETH', address: TOKEN_ADDRESSES.reth, decimals: 18, icon: getTokenIconBySymbol('rETH') },
+            { symbol: 'Shares', address: currentDAO.dao.meta.sharesToken, decimals: 18, icon: getTokenIconBySymbol('Shares') },
+            { symbol: 'Loot', address: currentDAO.dao.meta.lootToken, decimals: 18, icon: getTokenIconBySymbol('Loot') }
           ];
 
           // Fetch all allowances in parallel
@@ -27376,6 +27784,8 @@
           closePurchaseModal();
           closeRagequitModal();
           closeHotkeysModal();
+          closeDepositModal();
+          closeTributeModal();
         }
 
         // Skip hotkeys if focused on input/textarea
@@ -27446,6 +27856,25 @@
       });
 
       let statusTimeout = null;
+
+      // Button loading state helper
+      function setButtonLoading(buttonId, isLoading, loadingText = 'Processing...', originalText = null) {
+        const btn = document.getElementById(buttonId);
+        if (!btn) return;
+
+        if (isLoading) {
+          btn.dataset.originalText = btn.textContent.trim();
+          btn.disabled = true;
+          btn.style.opacity = '0.6';
+          btn.style.cursor = 'not-allowed';
+          btn.innerHTML = `<span class="spinner" style="display: inline-block; width: 12px; height: 12px; margin-right: 8px; vertical-align: middle;"></span>${loadingText}`;
+        } else {
+          btn.disabled = false;
+          btn.style.opacity = '1';
+          btn.style.cursor = 'pointer';
+          btn.textContent = originalText || btn.dataset.originalText || 'Submit';
+        }
+      }
 
       function showStatus(message, isError = false, type = 'info', autoDismiss = true) {
         const statusEl = document.getElementById('statusMessage');
