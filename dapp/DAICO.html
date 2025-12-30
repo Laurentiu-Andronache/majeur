@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' https: data: blob:; connect-src *;">
     <title>DAICO.wtf</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path fill='%23000' d='M50,2 L58,18 L78,8 L72,28 L95,30 L80,45 L98,58 L75,62 L82,85 L60,75 L50,98 L40,75 L18,85 L25,62 L2,58 L20,45 L5,30 L28,28 L22,8 L42,18 Z'/><text x='50' y='44' font-family='sans-serif' font-size='18' font-weight='bold' font-style='italic' fill='%23FF8C42' text-anchor='middle'>DAICO</text><text x='50' y='64' font-family='sans-serif' font-size='16' font-weight='bold' font-style='italic' fill='%23FF8C42' text-anchor='middle'>.WTF</text></svg>" type="image/svg+xml">
@@ -260,7 +260,7 @@
             min-height: 100dvh;
             background: var(--pink);
             position: relative;
-            overflow: hidden;
+            overflow-x: clip;
             display: flex;
             flex-direction: column;
         }
@@ -416,6 +416,223 @@
         .launch-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
+        }
+
+        /* Hide old scattered buttons - replaced by nav menu */
+        .launch-btn,
+        .github-link {
+            display: none !important;
+        }
+
+        /* DESKTOP NAVIGATION (visible on wide screens) - vertical menu */
+        .desktop-nav {
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: var(--spacing-sm);
+            left: var(--spacing-sm);
+            z-index: 1000;
+            gap: 4px;
+            padding: 8px;
+            background: rgba(26, 26, 26, 0.9);
+            border: 2px solid var(--cyan);
+            backdrop-filter: blur(10px);
+            min-width: 160px;
+        }
+
+        .desktop-nav .nav-link {
+            background: transparent;
+            border: none;
+            padding: 12px 16px;
+            color: var(--cyan);
+            font-family: 'Oswald', sans-serif;
+            font-style: italic;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: left;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .desktop-nav .nav-link:hover {
+            background: var(--cyan);
+            color: var(--black);
+        }
+
+        /* HAMBURGER MENU TOGGLE (hidden on desktop, visible on mobile) */
+        .hamburger-toggle {
+            display: none;
+            position: fixed;
+            top: var(--spacing-sm);
+            left: var(--spacing-sm);
+            z-index: 1001;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 44px;
+            height: 44px;
+            padding: 8px;
+            background: rgba(26, 26, 26, 0.9);
+            border: 2px solid var(--cyan);
+            cursor: pointer;
+            gap: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .hamburger-toggle:hover {
+            background: var(--cyan);
+        }
+
+        .hamburger-toggle:hover span {
+            background: var(--black);
+        }
+
+        .hamburger-toggle span {
+            display: block;
+            width: 20px;
+            height: 2px;
+            background: var(--cyan);
+            transition: all 0.3s ease;
+        }
+
+        .hamburger-toggle.active span:nth-child(1) {
+            transform: rotate(45deg) translate(5px, 5px);
+        }
+
+        .hamburger-toggle.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .hamburger-toggle.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(5px, -5px);
+        }
+
+        /* MOBILE MENU DROPDOWN */
+        .mobile-menu {
+            display: none;
+            position: fixed;
+            top: calc(var(--spacing-sm) + 50px);
+            left: var(--spacing-sm);
+            z-index: 1000;
+            flex-direction: column;
+            gap: 4px;
+            padding: 8px;
+            background: rgba(26, 26, 26, 0.95);
+            border: 2px solid var(--cyan);
+            backdrop-filter: blur(10px);
+            min-width: 180px;
+        }
+
+        .mobile-menu.open {
+            display: flex;
+        }
+
+        .mobile-menu .nav-link {
+            background: transparent;
+            border: none;
+            padding: 12px 16px;
+            color: var(--cyan);
+            font-family: 'Oswald', sans-serif;
+            font-style: italic;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: left;
+            transition: all 0.2s;
+        }
+
+        .mobile-menu .nav-link:hover {
+            background: var(--cyan);
+            color: var(--black);
+        }
+
+        /* NAV TOGGLE (Hide Intro setting) */
+        .nav-toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            color: var(--cyan);
+            font-family: 'Oswald', sans-serif;
+            font-style: italic;
+            font-size: 0.85rem;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            user-select: none;
+        }
+
+        .mobile-menu .nav-toggle-label {
+            padding: 12px 16px;
+            font-size: 0.9rem;
+        }
+
+        .nav-toggle-label:hover {
+            background: rgba(0, 255, 255, 0.1);
+        }
+
+        .nav-toggle-label input[type="checkbox"] {
+            position: absolute;
+            opacity: 0;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 36px;
+            height: 18px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 9px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 12px;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .nav-toggle-label:has(input:checked) .toggle-switch::after {
+            left: 20px;
+            background: var(--cyan);
+            box-shadow: 0 0 8px rgba(0, 255, 255, 0.6);
+        }
+
+        .nav-toggle-label:has(input:checked) .toggle-switch {
+            background: rgba(0, 255, 255, 0.2);
+            border-color: var(--cyan);
+        }
+
+        /* Hide intro content when toggle is enabled - hides everything before summary section */
+        body.hide-intro .hero,
+        body.hide-intro .section-fund,
+        body.hide-intro .section-ctrl,
+        body.hide-intro .section-grow {
+            display: none !important;
+        }
+
+        /* Mobile/zoom: hide desktop nav, show hamburger */
+        @media (max-width: 1600px) {
+            .desktop-nav {
+                display: none;
+            }
+
+            .hamburger-toggle {
+                display: flex;
+            }
         }
 
         @keyframes fadeSlide {
@@ -1539,14 +1756,8 @@
 
         .form-row {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
             gap: 1rem;
-        }
-
-        @media (max-width: 600px) {
-            .form-row {
-                grid-template-columns: 1fr;
-            }
         }
 
         .form-checkbox {
@@ -1895,6 +2106,7 @@
             width: 100%;
             max-width: 700px;
             padding: var(--spacing-md);
+            overflow-x: clip;
         }
 
         .wizard-header {
@@ -1968,7 +2180,7 @@
         /* Split choice buttons */
         .wizard-choice {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
             gap: 1rem;
             margin-bottom: 2rem;
         }
@@ -2125,7 +2337,7 @@
         /* Raise amount grid */
         .wizard-raise-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
             gap: 1rem;
         }
 
@@ -2186,12 +2398,6 @@
 
         .wizard-raise-btn.custom:hover .wizard-raise-price {
             color: rgba(255, 255, 255, 0.7);
-        }
-
-        @media (max-width: 500px) {
-            .wizard-raise-grid {
-                grid-template-columns: 1fr;
-            }
         }
 
         .wizard-choice-desc {
@@ -2964,6 +3170,7 @@
             min-height: 60vh;
             padding: var(--spacing-xl) var(--spacing-md);
             border-top: 6px solid var(--cyan);
+            overflow-x: clip;
         }
 
         .active-daicos-header {
@@ -3843,10 +4050,6 @@
         }
 
         @media (max-width: 600px) {
-            .wizard-choice {
-                grid-template-columns: 1fr;
-            }
-
             .wizard-input-row {
                 grid-template-columns: 1fr;
             }
@@ -4665,8 +4868,36 @@
     </style>
 </head>
 <body>
-    <!-- LAUNCH BUTTON - Fixed top left, visible on all pages -->
-    <button id="launchBtn" class="launch-btn" onclick="document.getElementById('summary-section').scrollIntoView({behavior: 'smooth'})">Launch DAICO</button>
+    <!-- DESKTOP NAVIGATION (visible on wide screens) -->
+    <nav class="desktop-nav" id="desktopNav">
+        <button class="nav-link" onclick="document.getElementById('summary-section').scrollIntoView({behavior: 'smooth'});">Launch DAICO</button>
+        <button class="nav-link" onclick="document.getElementById('active-daicos-section').scrollIntoView({behavior: 'smooth'});">Sales</button>
+        <a href="https://github.com/z0r0z/majeur" target="_blank" rel="noopener noreferrer" class="nav-link">GitHub</a>
+        <label class="nav-toggle-label" title="Hide introductory content">
+            <input type="checkbox" id="hideIntroToggleDesktop" onchange="toggleHideIntro(event)">
+            <span class="toggle-switch"></span>
+            <span>Hide Intro</span>
+        </label>
+    </nav>
+
+    <!-- HAMBURGER MENU (visible on mobile/zoom) -->
+    <button class="hamburger-toggle" id="hamburgerToggle" onclick="toggleMobileMenu()">
+        <span></span>
+        <span></span>
+        <span></span>
+    </button>
+
+    <!-- MOBILE MENU DROPDOWN -->
+    <div class="mobile-menu" id="mobileMenu">
+        <button class="nav-link" onclick="document.getElementById('summary-section').scrollIntoView({behavior: 'smooth'}); toggleMobileMenu();">Launch DAICO</button>
+        <button class="nav-link" onclick="document.getElementById('active-daicos-section').scrollIntoView({behavior: 'smooth'}); toggleMobileMenu();">Sales</button>
+        <a href="https://github.com/z0r0z/majeur" target="_blank" rel="noopener noreferrer" class="nav-link">GitHub</a>
+        <label class="nav-toggle-label" title="Hide introductory content">
+            <input type="checkbox" id="hideIntroToggleMobile" onchange="toggleHideIntro(event)">
+            <span class="toggle-switch"></span>
+            <span>Hide Intro</span>
+        </label>
+    </div>
 
     <!-- WALLET HEADER (Network & Wallet - top right) -->
     <div class="wallet-header">
@@ -5696,6 +5927,58 @@
             }
             return url;
         }
+
+        // ==================== HAMBURGER MENU & HIDE INTRO ====================
+
+        function toggleMobileMenu() {
+            const mobileMenu = document.getElementById('mobileMenu');
+            const hamburger = document.getElementById('hamburgerToggle');
+            if (mobileMenu) mobileMenu.classList.toggle('open');
+            if (hamburger) hamburger.classList.toggle('active');
+        }
+
+        function toggleHideIntro(event) {
+            const isChecked = event?.target?.checked ?? false;
+            document.body.classList.toggle('hide-intro', isChecked);
+            localStorage.setItem('daicoHideIntro', isChecked ? 'true' : 'false');
+            // Sync both checkboxes
+            const desktopToggle = document.getElementById('hideIntroToggleDesktop');
+            const mobileToggle = document.getElementById('hideIntroToggleMobile');
+            if (desktopToggle) desktopToggle.checked = isChecked;
+            if (mobileToggle) mobileToggle.checked = isChecked;
+        }
+
+        function initHideIntroSetting() {
+            const saved = localStorage.getItem('daicoHideIntro');
+            const hideIntro = saved === 'true';
+            document.body.classList.toggle('hide-intro', hideIntro);
+            // Sync both checkboxes
+            const desktopToggle = document.getElementById('hideIntroToggleDesktop');
+            const mobileToggle = document.getElementById('hideIntroToggleMobile');
+            if (desktopToggle) desktopToggle.checked = hideIntro;
+            if (mobileToggle) mobileToggle.checked = hideIntro;
+            // Auto-scroll to SALES section if hide intro is enabled
+            if (hideIntro) {
+                // Wait for page to render, then smooth scroll to SALES
+                setTimeout(() => {
+                    document.getElementById('active-daicos-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 300);
+            }
+        }
+
+        // Close mobile menu when clicking outside
+        document.addEventListener('click', (e) => {
+            const mobileMenu = document.getElementById('mobileMenu');
+            const hamburger = document.getElementById('hamburgerToggle');
+            if (mobileMenu && mobileMenu.classList.contains('open')) {
+                if (!mobileMenu.contains(e.target) && !hamburger.contains(e.target)) {
+                    mobileMenu.classList.remove('open');
+                    hamburger.classList.remove('active');
+                }
+            }
+        });
+
+        // ==================== END HAMBURGER MENU ====================
 
         // Network configuration
         const NETWORKS = {
@@ -8310,6 +8593,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             updateSummaryPricePreview();
             updateSummaryTapDisplay();
+            initHideIntroSetting();
         });
 
         // ==================== END SUMMARY ====================
