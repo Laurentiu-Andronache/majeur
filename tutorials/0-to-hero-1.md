@@ -11,6 +11,7 @@ majeur/
 ├── test/                   # Test suite (Foundry)
 ├── dapp/                   # Frontend applications (HTML)
 ├── docs/                   # Documentation (mdBook)
+├── tutorials/              # Zero to Hero tutorial series
 ├── assets/                 # SVG diagrams and examples
 ├── lib/                    # Git submodule dependencies
 ├── foundry.toml            # Foundry configuration
@@ -207,26 +208,46 @@ Documentation for the dApps. Development setup, architecture, deployment.
 
 ---
 
+## `tutorials/` — Zero to Hero Tutorial Series
+
+Step-by-step tutorials for learning Majeur, from beginner to expert.
+
+| File | Topic |
+|------|-------|
+| `0-to-hero-0.md` | Introduction — Course overview and setup |
+| `0-to-hero-1.md` | Repository Structure — Understanding every folder and file (you are here!) |
+| `0-to-hero-2.md` | Unvoted Proposals & Rewards — Reading DAO state and claiming futarchy rewards |
+| `0-to-hero-3.md` | Submit & Execute Proposals — Creating governance proposals and voting |
+
+These tutorials are the source files. They're also symlinked into `docs/src/` so they appear in the mdBook alongside the contract documentation.
+
+---
+
 ## `docs/` — Documentation
 
-Auto-generated contract documentation using mdBook.
+Auto-generated contract documentation using mdBook. The book combines:
+- **Contract docs** — Auto-generated from Solidity source via `forge doc`
+- **Tutorials** — Linked from `/tutorials/` via symlinks (single source of truth)
 
-| File | Purpose |
-|------|---------|
+| File/Folder | Purpose |
+|-------------|---------|
 | `book.toml` | mdBook configuration |
 | `book.css` | Custom styling |
 | `solidity.min.js` | Syntax highlighting for Solidity |
-| `src/` | Markdown files (auto-generated from contracts) |
+| `src/SUMMARY.md` | Book structure and navigation |
+| `src/src/` | Auto-generated contract documentation |
+| `src/README.md` | Symlink → `../../README.md` |
+| `src/tutorials/` | Symlink → `../../tutorials/` |
+| `src/assets/` | Symlink → `../../assets/` |
+
+**Why symlinks?** The tutorials and README exist once at the repo root for GitHub viewing, but are also included in the mdBook via symlinks. This avoids duplication and keeps a single source of truth.
 
 **Generating the documentation**:
 
-0. **Install Rust and mdBook**:
+0. **Install Rust and mdBook** (if needed):
     ```bash
-    # Install Rust (if not already installed)
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
     source $HOME/.cargo/env
-
-    # Then install mdbook
     cargo install mdbook
     ```
 
@@ -238,15 +259,13 @@ Auto-generated contract documentation using mdBook.
 
 2. **Build the mdBook**:
    ```bash
-   cd docs
-   mdbook build
+   cd docs && mdbook build
    ```
    This creates the HTML output in `docs/book/`.
 
 3. **Preview locally** (optional):
    ```bash
-   cd docs
-   mdbook serve
+   cd docs && mdbook serve
    ```
    Serves the documentation at `http://localhost:3000` with live reload.
 
@@ -274,10 +293,6 @@ Git submodules. Don't modify directly.
 |-----------|---------|
 | `solady` | Gas-optimized Solidity utilities (ERC20, ERC721, etc.) |
 | `forge-std` | Foundry testing framework |
-| `ZAMM` | AMM/liquidity protocol |
-
-// ... existing code ...
-
 | `ZAMM` | AMM/liquidity protocol |
 
 **To update all submodules**: `git submodule update --remote`
