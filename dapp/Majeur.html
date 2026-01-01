@@ -23268,6 +23268,9 @@
         renderGovernanceInfo();
         initializeDaysFilter();
 
+        // Start metadata fetch early - runs in parallel with other renders
+        const metadataPromise = fetchAndStoreDAOMetadata(daoAddress);
+
         // === FIRE ASYNC RENDERS IN PARALLEL WITH TIMING ===
         const independentRenders = [
           timedRender('renderChatroom', () => renderChatroom()),
@@ -23278,9 +23281,11 @@
         ];
 
         // Sales must complete before treasury (treasury needs customSaleTokens)
+        // Also wait for metadata so custom treasury tokens are available
         const salesThenTreasury = timedRender('renderSalesInfo', () => renderSalesInfo())
-          .then(() => {
+          .then(async () => {
             if (!isStaleRender(thisRenderId, daoAddress)) {
+              await metadataPromise.catch(() => {}); // Wait for metadata, ignore errors
               return timedRender('renderTreasury', () => renderTreasury());
             }
           });
@@ -23305,19 +23310,12 @@
           switchDaoView('dao');
         }
 
-        // Fetch and store metadata in background (don't block DAO opening)
-        // When done, update metadata tab visibility and re-render treasury if custom tokens
-        const capturedDaoAddress = daoAddress;
-        fetchAndStoreDAOMetadata(daoAddress).then(() => {
-          // Only update UI if we're still viewing the same DAO
-          if (currentDAO?.dao?.dao === capturedDaoAddress) {
+        // Update metadata tab visibility (metadata already fetched above)
+        metadataPromise.then(() => {
+          if (currentDAO?.dao?.dao === daoAddress) {
             updateMetadataTabVisibility();
-            // Re-render treasury with custom tokens if metadata has them
-            if (currentDAOMetadata?.treasury_tokens?.length > 0) {
-              renderTreasury();
-            }
           }
-        });
+        }).catch(() => {}); // Ignore errors
 
         // Add special gif for index 0, 1, 2, 3, and 4 DAOs
         // Find global index by matching DAO address to ensure correct GIF assignment
