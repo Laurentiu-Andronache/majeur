@@ -2584,12 +2584,25 @@
         transform: translateY(-5px);
       }
 
+      .dao-tile-header {
+        display: flex;
+        align-items: stretch;
+        gap: 1rem;
+      }
+
+      .dao-tile-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-width: 0;
+      }
+
       .dao-tile-emblem {
-        position: absolute;
-        top: 1rem;
-        right: 1rem;
-        width: 32px;
-        height: 32px;
+        flex-shrink: 0;
+        align-self: center;
+        width: 48px;
+        height: 48px;
         border: 1px solid rgba(157, 123, 255, 0.2);
         border-radius: 4px;
         overflow: hidden;
@@ -2602,12 +2615,6 @@
       .dao-tile-emblem.url-image {
         background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(245, 245, 250, 0.95) 100%);
         padding: 2px;
-      }
-
-      /* For all DAOs view, position emblem below member badge */
-      .all-dao-tile .dao-tile-emblem {
-        top: 3.5rem;
-        right: 1rem;
       }
 
       .dao-tile:hover .dao-tile-emblem {
@@ -2630,73 +2637,10 @@
         border-radius: 2px;
       }
 
-      /* Special GIF for DAO index 0 and 1 */
-      .dao-special-gif {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 80%;
-        max-width: 200px;
-        height: auto;
-        opacity: 0.15;
-        pointer-events: none;
-        z-index: 1;
-        transition: all 0.3s ease;
-        filter: brightness(1.2) saturate(1.3);
-        mix-blend-mode: screen;
-      }
-
-      .dao-tile:hover .dao-special-gif {
-        opacity: 0.3;
-        transform: translate(-50%, -50%) scale(1.05);
-      }
-
-      /* Special GIF in dashboard */
-      .dao-dashboard-gif {
-        position: fixed;
-        bottom: 2rem;
-        right: 2rem;
-        width: 150px;
-        height: auto;
-        opacity: 0.25;
-        pointer-events: none;
-        z-index: 5;
-        transition: all 0.3s ease;
-        filter: brightness(1.2) saturate(1.3);
-        mix-blend-mode: screen;
-        border-radius: 8px;
-        animation: floatGif 6s ease-in-out infinite;
-      }
-
-      @keyframes floatGif {
-        0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(-10px); }
-      }
-
-      .dao-dashboard-gif:hover {
-        opacity: 0.5;
-        transform: scale(1.1);
-      }
-
-      @media (max-width: 768px) {
-        .dao-special-gif {
-          width: 70%;
-          max-width: 150px;
-        }
-
-        .dao-dashboard-gif {
-          width: 100px;
-          bottom: 1rem;
-          right: 1rem;
-        }
-      }
-
       .dao-tile-name {
         font-family: "Cinzel", serif;
         font-size: 1.4rem;
         color: #e6d9ff;
-        margin-bottom: 0.5rem;
         letter-spacing: 0.1em;
       }
 
@@ -2704,7 +2648,6 @@
         font-family: "EB Garamond", serif;
         font-size: 0.9rem;
         color: rgba(230, 217, 255, 0.6);
-        margin-bottom: 1rem;
         font-style: italic;
       }
 
@@ -3243,18 +3186,6 @@
 
         .dao-view-toggle {
           gap: 0.25rem;
-        }
-
-        .dao-tile-emblem {
-          width: 24px;
-          height: 24px;
-          top: 0.75rem;
-          right: 0.75rem;
-        }
-
-        .all-dao-tile .dao-tile-emblem {
-          top: 3rem;
-          right: 0.75rem;
         }
       }
 
@@ -15526,9 +15457,13 @@
           tile.onclick = () => openDAO(index, 'all');
 
           tile.innerHTML = `
-            <div class="dao-tile-emblem" id="emblem-all-${index}"></div>
-            <div class="dao-tile-name">${escapeHtml(dao.meta.name)}</div>
-            <div class="dao-tile-symbol">${escapeHtml(dao.meta.symbol)}</div>
+            <div class="dao-tile-header">
+              <div class="dao-tile-info">
+                <div class="dao-tile-name">${escapeHtml(dao.meta.name)}</div>
+                <div class="dao-tile-symbol">${escapeHtml(dao.meta.symbol)}</div>
+              </div>
+              <div class="dao-tile-emblem" id="emblem-all-${index}"></div>
+            </div>
             <div class="dao-tile-stats">
               <div class="dao-stat">
                 <div class="dao-stat-label">Total Shares</div>
@@ -15551,22 +15486,6 @@
           `;
 
           allDaosTiles.appendChild(tile);
-
-          // Add special gif for index 0, 1, 2, 3, and 4
-          if (index >= 0 && index <= 4) {
-            const gifImg = document.createElement('img');
-            const gifUrls = [
-              'https://content.wrappr.wtf/ipfs/bafybeidc4tl6ysvwhwbpql7xk5ol5cd22dvpmlyy76zjun4ikhrb43oqb4', // Index 0
-              'https://content.wrappr.wtf/ipfs/bafybeibgfu4gh7miouopugf7tclpt4os2zr2rznhlomnletfbj5amdw4gu',   // Index 1
-              'https://content.wrappr.wtf/ipfs/bafybeieemrl6ip5w7tgrpdsitw4ry2in3bko7c3oxqa7vr3lisozjbfhra',   // Index 2
-              'https://content.wrappr.wtf/ipfs/bafybeiefycihryp3uybt3f3g5dr6tjonxzl6p5mq6ato74ewvf22i4p3zi',   // Index 3
-              'https://content.wrappr.wtf/ipfs/bafybeiet7oxnshiv6agrmnhgdpfpmmnhfmw5px2wpozd62jhdvorzdp4fq'    // Index 4
-            ];
-            gifImg.src = gifUrls[index];
-            gifImg.className = 'dao-special-gif';
-            gifImg.alt = 'Special DAO Animation';
-            tile.appendChild(gifImg);
-          }
 
           // Render emblem asynchronously
           renderTileEmblem(dao.dao, `emblem-all-${index}`);
@@ -15809,9 +15728,13 @@
           const lootBN = member.loot;
 
           tile.innerHTML = `
-            <div class="dao-tile-emblem" id="emblem-user-${index}"></div>
-            <div class="dao-tile-name">${escapeHtml(dao.meta.name)}</div>
-            <div class="dao-tile-symbol">${escapeHtml(dao.meta.symbol)}</div>
+            <div class="dao-tile-header">
+              <div class="dao-tile-info">
+                <div class="dao-tile-name">${escapeHtml(dao.meta.name)}</div>
+                <div class="dao-tile-symbol">${escapeHtml(dao.meta.symbol)}</div>
+              </div>
+              <div class="dao-tile-emblem" id="emblem-user-${index}"></div>
+            </div>
             <div class="dao-tile-stats">
               <div class="dao-stat">
                 <div class="dao-stat-label">Your Shares</div>
@@ -15834,27 +15757,6 @@
           `;
 
           daoTiles.appendChild(tile);
-
-          // Find global index by matching DAO address
-          const globalIndex = allDAOs.findIndex(globalDao =>
-            globalDao.dao.toLowerCase() === dao.dao.toLowerCase()
-          );
-
-          // Add special gif for global index 0, 1, 2, 3, and 4
-          if (globalIndex >= 0 && globalIndex <= 4) {
-            const gifImg = document.createElement('img');
-            const gifUrls = [
-              'https://content.wrappr.wtf/ipfs/bafybeidc4tl6ysvwhwbpql7xk5ol5cd22dvpmlyy76zjun4ikhrb43oqb4', // Index 0
-              'https://content.wrappr.wtf/ipfs/bafybeibgfu4gh7miouopugf7tclpt4os2zr2rznhlomnletfbj5amdw4gu',   // Index 1
-              'https://content.wrappr.wtf/ipfs/bafybeieemrl6ip5w7tgrpdsitw4ry2in3bko7c3oxqa7vr3lisozjbfhra',   // Index 2
-              'https://content.wrappr.wtf/ipfs/bafybeiefycihryp3uybt3f3g5dr6tjonxzl6p5mq6ato74ewvf22i4p3zi',   // Index 3
-              'https://content.wrappr.wtf/ipfs/bafybeiet7oxnshiv6agrmnhgdpfpmmnhfmw5px2wpozd62jhdvorzdp4fq'    // Index 4
-            ];
-            gifImg.src = gifUrls[globalIndex];
-            gifImg.className = 'dao-special-gif';
-            gifImg.alt = 'Special DAO Animation';
-            tile.appendChild(gifImg);
-          }
 
           // Render emblem asynchronously
           renderTileEmblem(dao.dao, `emblem-user-${index}`);
@@ -23578,37 +23480,6 @@
             updateMetadataTabVisibility();
           }
         }).catch(() => {}); // Ignore errors
-
-        // Add special gif for index 0, 1, 2, 3, and 4 DAOs
-        // Find global index by matching DAO address to ensure correct GIF assignment
-        const globalIndex = allDAOs.findIndex(globalDao =>
-          globalDao.dao.toLowerCase() === currentDAO.dao.dao.toLowerCase()
-        );
-
-        let existingGif = document.getElementById('dashboardGif');
-        if (globalIndex >= 0 && globalIndex <= 4) {
-          const gifUrls = [
-            'https://content.wrappr.wtf/ipfs/bafybeidc4tl6ysvwhwbpql7xk5ol5cd22dvpmlyy76zjun4ikhrb43oqb4', // Index 0
-            'https://content.wrappr.wtf/ipfs/bafybeibgfu4gh7miouopugf7tclpt4os2zr2rznhlomnletfbj5amdw4gu',   // Index 1
-            'https://content.wrappr.wtf/ipfs/bafybeieemrl6ip5w7tgrpdsitw4ry2in3bko7c3oxqa7vr3lisozjbfhra',   // Index 2
-            'https://content.wrappr.wtf/ipfs/bafybeiefycihryp3uybt3f3g5dr6tjonxzl6p5mq6ato74ewvf22i4p3zi',   // Index 3
-            'https://content.wrappr.wtf/ipfs/bafybeiet7oxnshiv6agrmnhgdpfpmmnhfmw5px2wpozd62jhdvorzdp4fq'    // Index 4
-          ];
-
-          if (!existingGif) {
-            existingGif = document.createElement('img');
-            existingGif.id = 'dashboardGif';
-            existingGif.className = 'dao-dashboard-gif';
-            existingGif.alt = 'Special DAO Animation';
-            document.body.appendChild(existingGif);
-          }
-          existingGif.src = gifUrls[globalIndex];
-          existingGif.style.display = 'block';
-        } else {
-          if (existingGif) {
-            existingGif.style.display = 'none';
-          }
-        }
 
         console.timeEnd('openDAO:total');
       }
