@@ -9418,7 +9418,7 @@
                 const shortOps = daoData.tap.ops.slice(0, 6) + '...' + daoData.tap.ops.slice(-4);
                 opsDisplay.textContent = shortOps;
                 // Try reverse ENS lookup (async, update when ready)
-                provider.lookupAddress(daoData.tap.ops).then(ensName => {
+                initScanner().then(scanner => scanner?.lookupAddress(daoData.tap.ops)).then(ensName => {
                     if (ensName) {
                         opsDisplay.textContent = ensName;
                     }
