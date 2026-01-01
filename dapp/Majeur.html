@@ -2710,8 +2710,8 @@
 
       .dao-tile-stats {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr));
-        gap: 1rem;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem 1rem;
         margin-top: 1.5rem;
         padding-top: 1.5rem;
         border-top: 1px solid rgba(157, 123, 255, 0.2);
@@ -2733,6 +2733,50 @@
       .dao-stat-value {
         color: #9d7bff;
         font-size: 1.1rem;
+      }
+
+      .dao-stat-badges {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        align-items: flex-start;
+      }
+
+      .dao-stat:last-child:nth-child(odd) {
+        grid-column: span 2;
+      }
+
+      .dao-stat:last-child:nth-child(odd) .dao-stat-badges {
+        flex-direction: row;
+      }
+
+      .dao-status-badge {
+        font-size: 0.55rem;
+        padding: 0.1rem 0.35rem;
+        border-radius: 2px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .dao-status-badge.vote {
+        background: rgba(157, 123, 255, 0.2);
+        color: #9d7bff;
+        border: 1px solid rgba(157, 123, 255, 0.3);
+      }
+
+      .dao-status-badge.tribute {
+        background: rgba(157, 123, 255, 0.12);
+        color: rgba(230, 217, 255, 0.75);
+        border: 1px solid rgba(157, 123, 255, 0.2);
+      }
+
+      .dao-status-badge.sale {
+        background: rgba(212, 165, 116, 0.2);
+        color: var(--accent-gold-light);
+        border: 1px solid var(--accent-gold-3);
       }
 
       /* ALL DAOS GALLERY */
@@ -11913,6 +11957,57 @@
           ],
           "stateMutability": "view",
           "type": "function"
+        },
+        {
+          "inputs": [
+            {"internalType": "uint256", "name": "daoStart", "type": "uint256"},
+            {"internalType": "uint256", "name": "daoCount", "type": "uint256"},
+            {"internalType": "address[]", "name": "tribTokens", "type": "address[]"}
+          ],
+          "name": "scanDAICOs",
+          "outputs": [{
+            "components": [
+              {"internalType": "address", "name": "dao", "type": "address"},
+              {"components": [
+                {"internalType": "string", "name": "name", "type": "string"},
+                {"internalType": "string", "name": "symbol", "type": "string"},
+                {"internalType": "string", "name": "contractURI", "type": "string"},
+                {"internalType": "address", "name": "sharesToken", "type": "address"},
+                {"internalType": "address", "name": "lootToken", "type": "address"},
+                {"internalType": "address", "name": "badgesToken", "type": "address"},
+                {"internalType": "address", "name": "renderer", "type": "address"}
+              ], "internalType": "struct DAOMeta", "name": "meta", "type": "tuple"},
+              {"components": [
+                {"internalType": "address", "name": "tribTkn", "type": "address"},
+                {"internalType": "uint256", "name": "tribAmt", "type": "uint256"},
+                {"internalType": "uint256", "name": "forAmt", "type": "uint256"},
+                {"internalType": "address", "name": "forTkn", "type": "address"},
+                {"internalType": "uint40", "name": "deadline", "type": "uint40"},
+                {"internalType": "uint256", "name": "remainingSupply", "type": "uint256"},
+                {"internalType": "uint256", "name": "totalSupply", "type": "uint256"},
+                {"internalType": "uint256", "name": "treasuryBalance", "type": "uint256"},
+                {"internalType": "uint256", "name": "allowance", "type": "uint256"},
+                {"internalType": "uint16", "name": "lpBps", "type": "uint16"},
+                {"internalType": "uint16", "name": "maxSlipBps", "type": "uint16"},
+                {"internalType": "uint256", "name": "feeOrHook", "type": "uint256"}
+              ], "internalType": "struct SaleView[]", "name": "sales", "type": "tuple[]"},
+              {"components": [
+                {"internalType": "address", "name": "ops", "type": "address"},
+                {"internalType": "address", "name": "tribTkn", "type": "address"},
+                {"internalType": "uint128", "name": "ratePerSec", "type": "uint128"},
+                {"internalType": "uint64", "name": "lastClaim", "type": "uint64"},
+                {"internalType": "uint256", "name": "claimable", "type": "uint256"},
+                {"internalType": "uint256", "name": "pending", "type": "uint256"},
+                {"internalType": "uint256", "name": "treasuryBalance", "type": "uint256"},
+                {"internalType": "uint256", "name": "tapAllowance", "type": "uint256"}
+              ], "internalType": "struct TapView", "name": "tap", "type": "tuple"}
+            ],
+            "internalType": "struct DAICOView[]",
+            "name": "daicos",
+            "type": "tuple[]"
+          }],
+          "stateMutability": "view",
+          "type": "function"
         }
       ];
 
@@ -12876,6 +12971,8 @@
       let currentActiveDaicoSales = []; // Active DAICO sales for current DAO (for purchase modal)
       let currentDaoTributes = [];
       let tributeRefreshTimestamp = 0;
+      let daicoStatusMap = new Map(); // dao address -> boolean (has active sale)
+      let tributeStatusMap = new Map(); // dao address -> boolean (has tribute offers)
 
       // Connection state management
       let isConnecting = false;
@@ -15369,6 +15466,27 @@
         }
       }
 
+      // Generate status badges HTML for DAO tiles
+      function getStatusBadgesHTML(dao) {
+        const daoAddr = dao.dao.toLowerCase();
+        const hasActiveProposals = dao.proposals?.some(p => Number(p.state) === 1);
+        const hasDAICO = daicoStatusMap.get(daoAddr);
+        const hasTribute = tributeStatusMap.get(daoAddr);
+
+        if (!hasActiveProposals && !hasDAICO && !hasTribute) return '';
+
+        return `
+          <div class="dao-stat">
+            <div class="dao-stat-label">Status</div>
+            <div class="dao-stat-badges">
+              ${hasActiveProposals ? '<span class="dao-status-badge vote">VOTE</span>' : ''}
+              ${hasTribute ? '<span class="dao-status-badge tribute">TRIBUTE</span>' : ''}
+              ${hasDAICO ? '<span class="dao-status-badge sale">SALE</span>' : ''}
+            </div>
+          </div>
+        `;
+      }
+
       // Render all DAOs gallery
       function renderAllDAOsGallery() {
         const allDaosTiles = DOMCache.allDaosTiles;
@@ -15415,6 +15533,7 @@
                 <div class="dao-stat-label">Members</div>
                 <div class="dao-stat-value">${dao.members.length}</div>
               </div>
+              ${getStatusBadgesHTML(dao)}
             </div>
           `;
 
@@ -15473,6 +15592,9 @@
             renderDAOGallery();
           }
 
+          // Fetch status data asynchronously (don't block initial render)
+          fetchDAOStatusData();
+
           return allDAOs;
         } catch (error) {
           logger.error('Error fetching all DAOs:', error);
@@ -15483,6 +15605,61 @@
           }
 
           return [];
+        }
+      }
+
+      // Fetch DAICO and tribute status data for gallery badges
+      async function fetchDAOStatusData() {
+        try {
+          const tribTokens = getNetwork().treasuryTokens || [];
+          const currentTime = Math.floor(Date.now() / 1000);
+
+          // Fetch DAICO status via scanDAICOs
+          await withRpcFallback(async (activeProvider) => {
+            const viewHelper = new ethers.Contract(VIEW_HELPER_ADDRESS, VIEW_HELPER_ABI, activeProvider);
+            const daicoResults = await viewHelper.scanDAICOs(0, 100, tribTokens);
+
+            daicoStatusMap.clear();
+            for (const daico of daicoResults) {
+              // Only count as active if has remaining supply and not expired
+              const hasActiveSale = daico.sales?.some(s => {
+                const hasSupply = s.remainingSupply && s.remainingSupply > 0n;
+                const notExpired = !s.deadline || s.deadline === 0n || Number(s.deadline) > currentTime;
+                return s.forAmt > 0n && s.tribAmt > 0n && s.forTkn !== ethers.ZeroAddress && hasSupply && notExpired;
+              });
+              if (hasActiveSale) {
+                daicoStatusMap.set(daico.dao.toLowerCase(), true);
+              }
+            }
+          });
+
+          // Fetch tribute counts for each DAO
+          const daoAddresses = [...new Set([
+            ...userDAOs.map(d => d.dao.dao.toLowerCase()),
+            ...allDAOs.map(d => d.dao.toLowerCase())
+          ])];
+
+          await withRpcFallback(async (activeProvider) => {
+            const tributeContract = new ethers.Contract(TRIBUTE_ADDRESS, TRIBUTE_ABI, activeProvider);
+            tributeStatusMap.clear();
+
+            await Promise.all(daoAddresses.map(async (addr) => {
+              try {
+                const tributes = await tributeContract.getActiveDaoTributes(addr);
+                if (tributes && tributes.length > 0) {
+                  tributeStatusMap.set(addr, true);
+                }
+              } catch { /* ignore */ }
+            }));
+          });
+
+          // Re-render galleries with status data
+          renderAllDAOsGallery();
+          if (userDAOs.length > 0) {
+            renderDAOGallery();
+          }
+        } catch (e) {
+          console.warn('Failed to fetch DAO status data:', e);
         }
       }
 
@@ -15639,6 +15816,7 @@
                 <div class="dao-stat-label">Messages</div>
                 <div class="dao-stat-value">${dao.messages.length}</div>
               </div>
+              ${getStatusBadgesHTML(dao)}
             </div>
           `;
 
@@ -16149,60 +16327,71 @@
 
           // Fetch DAICO data using batched view helper (single RPC call for all sales + tap)
           currentDAICO = await fetchDAICOData(capturedDaoAddress);
-
           // Check if stale after async work
           if (isStaleRender(thisRenderId, capturedDaoAddress)) return;
 
           // Process DAICO sales from batched response
           currentActiveDaicoSales = []; // Reset global array
           const activeDaicoSales = currentActiveDaicoSales;
+          const completedDaicoSales = [];
           let tapInfo = null;
           let claimableTap = 0n;
 
           if (currentDAICO) {
             const now = Math.floor(Date.now() / 1000);
-            const sharesAddress = currentDAO.dao.meta.sharesToken?.toLowerCase();
             const lootAddress = currentDAO.dao.meta.lootToken?.toLowerCase();
 
             // Process sales from view helper response
             for (const sale of currentDAICO.sales) {
-              // Check if sale is active: tribAmt > 0, forAmt > 0, not expired
-              const isExpired = sale.deadline > 0 && Number(sale.deadline) < now;
-              if (sale.tribAmt > 0n && sale.forAmt > 0n && sale.forTkn !== ethers.ZeroAddress && !isExpired) {
-                const forTknLower = sale.forTkn.toLowerCase();
-                const isLoot = forTknLower === lootAddress;
+              // Skip sales with no configuration
+              if (!sale.tribAmt || sale.tribAmt === 0n || !sale.forAmt || sale.forAmt === 0n || sale.forTkn === ethers.ZeroAddress) {
+                continue;
+              }
 
-                // Find token info for the tribute token
-                const token = allTokens.find(t => t.address.toLowerCase() === sale.tribTkn.toLowerCase()) || {
-                  symbol: sale.tribTkn === ethers.ZeroAddress ? 'ETH' : 'Token',
-                  address: sale.tribTkn,
-                  decimals: 18
+              const forTknLower = sale.forTkn.toLowerCase();
+              const isLoot = forTknLower === lootAddress;
+
+              // Find token info for the tribute token
+              const token = allTokens.find(t => t.address.toLowerCase() === sale.tribTkn.toLowerCase()) || {
+                symbol: sale.tribTkn === ethers.ZeroAddress ? 'ETH' : 'Token',
+                address: sale.tribTkn,
+                decimals: 18
+              };
+
+              // LP config is already included in SaleView
+              let lpConfig = null;
+              if (sale.lpBps > 0) {
+                lpConfig = {
+                  lpBps: Number(sale.lpBps),
+                  maxSlipBps: Number(sale.maxSlipBps),
+                  feeOrHook: Number(sale.feeOrHook || 30)
                 };
+              }
 
-                // LP config is already included in SaleView
-                let lpConfig = null;
-                if (sale.lpBps > 0) {
-                  lpConfig = {
-                    lpBps: Number(sale.lpBps),
-                    maxSlipBps: Number(sale.maxSlipBps),
-                    feeOrHook: Number(sale.feeOrHook || 30)
-                  };
-                }
+              const saleData = {
+                token: token,
+                tribAmt: sale.tribAmt,
+                forTkn: sale.forTkn,
+                forAmt: sale.forAmt,
+                deadline: sale.deadline,
+                isLoot: isLoot,
+                available: sale.allowance,
+                remainingSupply: sale.remainingSupply,
+                totalSupply: sale.totalSupply,
+                treasuryBalance: sale.treasuryBalance,
+                lpConfig: lpConfig,
+                isDaico: true
+              };
 
-                activeDaicoSales.push({
-                  token: token,
-                  tribAmt: sale.tribAmt,
-                  forTkn: sale.forTkn,
-                  forAmt: sale.forAmt,
-                  deadline: sale.deadline,
-                  isLoot: isLoot,
-                  available: sale.allowance, // Already fetched by view helper
-                  remainingSupply: sale.remainingSupply,
-                  totalSupply: sale.totalSupply,
-                  treasuryBalance: sale.treasuryBalance,
-                  lpConfig: lpConfig,
-                  isDaico: true
-                });
+              // Determine if sale is active or completed
+              const hasSupply = sale.remainingSupply && sale.remainingSupply > 0n;
+              const isExpired = sale.deadline > 0n && Number(sale.deadline) < now;
+
+              if (hasSupply && !isExpired) {
+                activeDaicoSales.push(saleData);
+              } else {
+                // Sold out or expired = completed
+                completedDaicoSales.push(saleData);
               }
             }
 
@@ -16219,9 +16408,9 @@
             }
           }
 
-          // Check if there's anything to display (sales or tap)
+          // Check if there's anything to display (active sales, completed sales, or tap)
           const hasTap = tapInfo && tapInfo.ops !== ethers.ZeroAddress && tapInfo.ratePerSec > 0n;
-          if (activeSales.length === 0 && activeDaicoSales.length === 0 && !hasTap) {
+          if (activeSales.length === 0 && activeDaicoSales.length === 0 && completedDaicoSales.length === 0 && !hasTap) {
             salesSection.style.display = 'none';
             return;
           }
@@ -16305,7 +16494,7 @@
             `;
           }
 
-          // Render DAICO sales
+          // Render active DAICO sales
           for (let saleIndex = 0; saleIndex < activeDaicoSales.length; saleIndex++) {
             const sale = activeDaicoSales[saleIndex];
             const tokenType = sale.isLoot ? 'LOOT' : 'SHARES';
@@ -16448,7 +16637,7 @@
                   </div>
                 </div>
                 ${claimableFormatted > 0 ? `
-                <button onclick="claimDaicoTap('${daoAddress}')"
+                <button onclick="claimDaicoTap('${currentDAO.dao.dao}')"
                         onmouseover="this.style.background='rgba(255, 180, 100, 0.35)'; this.style.borderColor='#ffb464';"
                         onmouseout="this.style.background='rgba(255, 180, 100, 0.2)'; this.style.borderColor='rgba(255, 180, 100, 0.4)';"
                         style="width: 100%; padding: 0.75rem; background: rgba(255, 180, 100, 0.2); border: 1px solid rgba(255, 180, 100, 0.4); color: #e6d9ff; font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.12em; cursor: pointer; text-transform: uppercase; transition: all 0.2s ease; font-weight: 600; border-radius: 4px; min-height: 44px; margin-top: 0.5rem;">
@@ -16457,6 +16646,66 @@
                 ` : '<div style="font-size: 0.7rem; color: rgba(255, 180, 100, 0.6); text-align: center; padding: 0.5rem 0;">Nothing to claim yet</div>'}
               </div>
             `;
+          }
+
+          // Render completed DAICO sales section
+          if (completedDaicoSales.length > 0) {
+            salesHTML += `
+              <div class="treasury-section">
+                <h4 class="treasury-title">Completed Sales</h4>
+            `;
+
+            for (const sale of completedDaicoSales) {
+              const tokenType = sale.isLoot ? 'LOOT' : 'SHARES';
+
+              // Format the ratio
+              const tribAmtFormatted = parseFloat(ethers.formatUnits(sale.tribAmt, sale.token.decimals));
+              const forAmtFormatted = parseFloat(ethers.formatEther(sale.forAmt));
+              const pricePerToken = tribAmtFormatted / forAmtFormatted;
+              const pricePerMillion = pricePerToken * 1_000_000;
+              const priceFormatted = `${pricePerMillion.toFixed(2).replace(/\.00$/, '')} ${sale.token.symbol} / 1M ${tokenType}`;
+
+              // Total sold = totalSupply - remainingSupply (or totalSupply if sold out)
+              const totalSoldNum = sale.totalSupply
+                ? parseFloat(ethers.formatEther(sale.totalSupply - (sale.remainingSupply || 0n)))
+                : 0;
+              const totalSoldFormatted = totalSoldNum > 0 ? `${totalSoldNum.toFixed(2).replace(/\.00$/, '')} ${tokenType}` : 'N/A';
+
+              // Treasury raised
+              const treasuryNum = sale.treasuryBalance
+                ? parseFloat(ethers.formatUnits(sale.treasuryBalance, sale.token.decimals))
+                : 0;
+              const treasuryFormatted = treasuryNum > 0 ? `${treasuryNum.toFixed(2).replace(/\.00$/, '')} ${sale.token.symbol}` : 'N/A';
+
+              // Status: sold out or expired
+              const isExpired = sale.deadline > 0n && Number(sale.deadline) < Math.floor(Date.now() / 1000);
+              const statusText = isExpired ? 'Expired' : 'Sold Out';
+
+              salesHTML += `
+                <div style="padding: 0.5rem; background: rgba(230, 217, 255, 0.03); border: 1px solid rgba(230, 217, 255, 0.1); border-radius: 4px; margin-bottom: 0.5rem; opacity: 0.7;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                    <div style="font-size: 0.75rem; color: rgba(230, 217, 255, 0.6);">${tokenType} DAICO SALE</div>
+                    <div style="font-size: 0.65rem; color: rgba(230, 217, 255, 0.4); background: rgba(230, 217, 255, 0.08); padding: 0.15rem 0.4rem; border-radius: 2px;">${statusText}</div>
+                  </div>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; font-size: 0.7rem;">
+                    <div>
+                      <div style="color: rgba(230, 217, 255, 0.4);">Price</div>
+                      <div style="color: rgba(230, 217, 255, 0.6);">${priceFormatted}</div>
+                    </div>
+                    <div>
+                      <div style="color: rgba(230, 217, 255, 0.4);">Total Sold</div>
+                      <div style="color: rgba(230, 217, 255, 0.6);">${totalSoldFormatted}</div>
+                    </div>
+                    <div>
+                      <div style="color: rgba(230, 217, 255, 0.4);">Raised</div>
+                      <div style="color: rgba(230, 217, 255, 0.6);">${treasuryFormatted}</div>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }
+
+            salesHTML += `</div>`;
           }
 
           salesInfo.innerHTML = salesHTML;
