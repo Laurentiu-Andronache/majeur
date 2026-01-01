@@ -2737,6 +2737,18 @@
         background: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(250, 250, 255, 1) 100%);
       }
 
+      /* Button effect on emblem hover (matches .dao-emblem:hover) */
+      .dao-tile-emblem:hover {
+        border-color: #9d7bff;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(157, 123, 255, 0.2);
+        cursor: pointer;
+      }
+
+      .dao-tile-emblem.url-image:hover {
+        box-shadow: 0 4px 12px rgba(157, 123, 255, 0.3);
+      }
+
       .dao-tile-emblem img {
         width: 100%;
         height: 100%;
@@ -25512,6 +25524,7 @@
             tileEmblemMetadata.set(emblemId, { image: imageUrl });
             emblem.addEventListener('mouseenter', (e) => showEmblemPopup(emblemId, e));
             emblem.addEventListener('mouseleave', hideEmblemPopup);
+            emblem.addEventListener('click', (e) => { e.stopPropagation(); openNFTModal(tileEmblemMetadata.get(emblemId), 'DAO Emblem'); });
             return;
           }
 
@@ -25532,6 +25545,7 @@
             tileEmblemMetadata.set(emblemId, { image: contractURI });
             emblem.addEventListener('mouseenter', (e) => showEmblemPopup(emblemId, e));
             emblem.addEventListener('mouseleave', hideEmblemPopup);
+            emblem.addEventListener('click', (e) => { e.stopPropagation(); openNFTModal(tileEmblemMetadata.get(emblemId), 'DAO Emblem'); });
             return;
           } else {
             // Try to fetch as JSON (convert IPFS URLs to gateway URLs)
@@ -25554,6 +25568,7 @@
               tileEmblemMetadata.set(emblemId, { image: fetchUrl });
               emblem.addEventListener('mouseenter', (e) => showEmblemPopup(emblemId, e));
               emblem.addEventListener('mouseleave', hideEmblemPopup);
+              emblem.addEventListener('click', (e) => { e.stopPropagation(); openNFTModal(tileEmblemMetadata.get(emblemId), 'DAO Emblem'); });
               return;
             }
 
@@ -25578,6 +25593,7 @@
             tileEmblemMetadata.set(emblemId, metadata);
             emblem.addEventListener('mouseenter', (e) => showEmblemPopup(emblemId, e));
             emblem.addEventListener('mouseleave', hideEmblemPopup);
+            emblem.addEventListener('click', (e) => { e.stopPropagation(); openNFTModal(metadata, 'DAO Emblem'); });
           } else if (metadata && metadata.description) {
             // No image but has description - show truncated description in tile
             emblem.classList.add('description-only');
@@ -25589,6 +25605,7 @@
             tileEmblemMetadata.set(emblemId, metadata);
             emblem.addEventListener('mouseenter', (e) => showEmblemPopup(emblemId, e));
             emblem.addEventListener('mouseleave', hideEmblemPopup);
+            emblem.addEventListener('click', (e) => { e.stopPropagation(); openNFTModal(metadata, 'DAO Emblem'); });
           }
         } catch (error) {
           logger.error('Error rendering tile emblem:', error);
