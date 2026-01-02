@@ -13116,15 +13116,19 @@
 
         const stillHidden = container.querySelectorAll('.chatroom-message.message-hidden').length;
 
-        // Update or remove buttons
+        // Remove existing buttons first
         const existingButtons = container.querySelector('.show-more-container');
-        if (stillHidden === 0) {
-          if (existingButtons) existingButtons.remove();
-        } else if (existingButtons) {
-          existingButtons.innerHTML = `
+        if (existingButtons) existingButtons.remove();
+
+        // Recreate buttons if there are still hidden items
+        if (stillHidden > 0) {
+          const showMoreContainer = document.createElement('div');
+          showMoreContainer.className = 'show-more-container';
+          showMoreContainer.innerHTML = `
             <button class="show-more-btn" onclick="showMoreMessages()">Show more (${stillHidden} hidden)</button>
             <button class="show-more-btn" onclick="showAllMessages()">Show all</button>
           `;
+          container.appendChild(showMoreContainer);
         }
 
         // Update the limit tracker
@@ -13166,15 +13170,19 @@
 
         const stillHidden = container.querySelectorAll('.proposal-item.proposal-hidden').length;
 
-        // Update or remove buttons
+        // Remove existing buttons first
         const existingButtons = container.querySelector('.show-more-container');
-        if (stillHidden === 0) {
-          if (existingButtons) existingButtons.remove();
-        } else if (existingButtons) {
-          existingButtons.innerHTML = `
+        if (existingButtons) existingButtons.remove();
+
+        // Recreate buttons if there are still hidden items
+        if (stillHidden > 0) {
+          const showMoreContainer = document.createElement('div');
+          showMoreContainer.className = 'show-more-container';
+          showMoreContainer.innerHTML = `
             <button class="show-more-btn" onclick="showMoreProposals()">Show more (${stillHidden} hidden)</button>
             <button class="show-more-btn" onclick="showAllProposals()">Show all</button>
           `;
+          container.appendChild(showMoreContainer);
         }
 
         // Update the limit tracker
@@ -26862,21 +26870,18 @@
             const molochContract = new ethers.Contract(daoAddress, MOLOCH_ABI, activeProvider);
             const totalMessageCount = Number(await molochContract.getMessageCount());
 
-            // Check if we need to fetch newer messages
-            // If we have messages but they're not the latest ones, fetch the correct range
-            const desiredCount = 20;
-            const neededStart = Math.max(0, totalMessageCount - desiredCount);
-
+            // Fetch ALL messages so "Show more" can reveal them all
             // Check if current messages are stale (don't include the latest messages)
             const hasLatestMessage = messages.some(m => Number(m.index) === totalMessageCount - 1);
+            const hasAllMessages = messages.length === totalMessageCount;
 
-            if (totalMessageCount > 0 && !hasLatestMessage) {
-              // Fetch the latest messages using ViewHelper
+            if (totalMessageCount > 0 && (!hasLatestMessage || !hasAllMessages)) {
+              // Fetch ALL messages using ViewHelper
               const viewHelper = new ethers.Contract(VIEW_HELPER_ADDRESS, VIEW_HELPER_ABI, activeProvider);
-              const latestMessages = await viewHelper.getDAOMessages(daoAddress, neededStart, desiredCount);
+              const allMessages = await viewHelper.getDAOMessages(daoAddress, 0, totalMessageCount);
 
-              // Update messages with the latest ones
-              messages = latestMessages.map(m => ({ index: m.index, text: m.text }));
+              // Update messages with all fetched messages
+              messages = allMessages.map(m => ({ index: m.index, text: m.text }));
 
               // Also update currentDAO so other parts of the app have correct data
               if (currentDAO?.dao?.dao === daoAddress) {
@@ -27173,26 +27178,25 @@
               // Check if stale after async work
               if (isStaleRender(thisRenderId, capturedDaoAddress)) return;
 
-              // Check if we have the latest proposals
-              const desiredCount = 20;
-              const neededStart = Math.max(0, totalProposalCount - desiredCount);
-              proposalStartIndex = neededStart;
+              // Fetch ALL proposals so "Show more" can reveal them all
+              proposalStartIndex = 0;
 
-              // Check if we need to fetch newer proposals
-              // Our current proposals might be from an older range
+              // Check if we need to fetch all proposals
+              const hasAllProposals = proposals.length === totalProposalCount;
               const currentMaxIndex = proposals.length > 0 ?
                 Math.max(...proposals.map((_, i) => i)) : -1;
-              const needsLatestProposals = proposals.length === 0 ||
+              const needsProposals = proposals.length === 0 ||
+                !hasAllProposals ||
                 (totalProposalCount > proposals.length && currentMaxIndex < totalProposalCount - 1);
 
-              if (needsLatestProposals && totalProposalCount > 0) {
-                // Fetch latest proposals via getDAOFullState
+              if (needsProposals && totalProposalCount > 0) {
+                // Fetch ALL proposals via getDAOFullState
                 const daoState = await viewHelper.getDAOFullState(
                   daoAddress,
-                  neededStart,      // proposalStart
-                  desiredCount,     // proposalCount
-                  0,                // messageStart (we'll fetch all messages separately)
-                  0,                // messageCount (skip messages here)
+                  0,                    // proposalStart - start from beginning
+                  totalProposalCount,   // proposalCount - fetch ALL
+                  0,                    // messageStart (we'll fetch all messages separately)
+                  0,                    // messageCount (skip messages here)
                   treasuryTokens
                 );
 
